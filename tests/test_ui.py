@@ -19,10 +19,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 pytest.importorskip("PySide6", reason="La interfaz requiere PySide6")
 
-from PySide6.QtWidgets import QApplication  # noqa: E402
-
 from tienda_pos.db.seed import codigo_demo  # noqa: E402
-from tienda_pos.domain.models import Rol, Usuario  # noqa: E402
 from tienda_pos.repositories import codigos as repo_codigos  # noqa: E402
 from tienda_pos.repositories import ventas as repo_ventas  # noqa: E402
 from tienda_pos.ui import dialogos  # noqa: E402
@@ -32,41 +29,6 @@ from tienda_pos.ui.main_window import VentanaPrincipal  # noqa: E402
 COLA = codigo_demo(0)
 LECHE = codigo_demo(10)
 INEXISTENTE = "7790000000017"
-
-
-@pytest.fixture(scope="session")
-def app() -> QApplication:
-    return QApplication.instance() or QApplication([])
-
-
-@pytest.fixture
-def ventana(app, conexion, monkeypatch):
-    """Ventana principal con el catálogo de ejemplo cargado.
-
-    Los diálogos modales se sustituyen por respuestas automáticas: sin esto, cualquier
-    prueba que cobre una venta se quedaría esperando un clic para siempre.
-    """
-    from tienda_pos.db.connection import transaccion
-    from tienda_pos.db.seed import cargar_datos_demo
-
-    with transaccion(conexion):
-        cargar_datos_demo(conexion)
-
-    monkeypatch.setattr(dialogos, "confirmar", lambda *a, **k: True)
-    monkeypatch.setattr(dialogos, "mostrar_error", lambda *a, **k: None)
-    monkeypatch.setattr(dialogos, "mostrar_info", lambda *a, **k: None)
-
-    ventana = VentanaPrincipal(conexion)
-    ventana.establecer_usuario(Usuario(id=1, nombre="Ana Pérez", rol=Rol.CAJERO))
-    # Sin mostrar la ventana, Qt considera que ningún widget está visible ni tiene el foco,
-    # y las comprobaciones de foco (que aquí son parte del comportamiento a probar) darían
-    # siempre falso.
-    ventana.show()
-    ventana.activateWindow()
-    ventana.mostrar_venta()
-    QApplication.processEvents()
-    yield ventana
-    ventana.close()
 
 
 class TestPantallaDeVenta:

@@ -38,10 +38,37 @@ def ejecutar() -> int:
         )
         return 1
 
+    usuario = _iniciar_sesion(conexion)
+    if usuario is _CANCELADO:
+        # El usuario cerró la ventana de acceso: se sale sin ruido, sin ventana huérfana.
+        conexion.close()
+        return 0
+
     ventana = VentanaPrincipal(conexion)
+    ventana.establecer_usuario(usuario)
     ventana.show()
     ventana.mostrar_venta()
 
     codigo = app.exec()
     conexion.close()
     return codigo
+
+
+# Centinela para distinguir "canceló el acceso" de "no hay usuarios configurados".
+_CANCELADO = object()
+
+
+def _iniciar_sesion(conexion):
+    """Pide el PIN al arrancar.
+
+    Si la base no tiene usuarios (una instalación limpia sin datos de ejemplo) se entra sin
+    sesión, para que el sistema no quede inutilizable antes de poder crear el primero.
+    """
+    from .repositories import usuarios as repo_usuarios
+    from .ui.login_dialog import DialogoLogin
+
+    if repo_usuarios.contar(conexion) == 0:
+        return None
+
+    usuario = DialogoLogin.pedir(conexion)
+    return usuario if usuario is not None else _CANCELADO

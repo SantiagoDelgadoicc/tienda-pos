@@ -66,11 +66,11 @@ se puede consultar un precio, armar un carrito y cerrar una venta, sin que nada 
 
 ## Fase 3 — Administración, acceso e informe del día
 
-- [ ] Diálogo de PIN al iniciar y modo administrador
-- [ ] Alta, edición y baja lógica de productos (solo administrador)
-- [ ] Descuento manual sobre la venta (monto o porcentaje)
-- [ ] Pantalla de ventas del día: listado, total y detalle
-- [ ] Stock visible en la ficha del producto
+- [x] Diálogo de PIN al iniciar y modo administrador
+- [x] Alta, edición y baja lógica de productos (solo administrador)
+- [x] Descuento manual sobre la venta (monto o porcentaje)
+- [x] Pantalla de ventas del día: listado, total y detalle
+- [x] Stock visible en la ficha del producto
 
 **Criterio de aceptación:** un administrador da de alta un producto, lo escanea, lo vende,
 lo ve reflejado en el informe del día y comprueba el stock descontado.

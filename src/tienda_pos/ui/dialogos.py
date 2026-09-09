@@ -168,3 +168,116 @@ class DialogoTexto(QDialog):
     @property
     def texto(self) -> str:
         return self.campo.text().strip()
+
+
+class DialogoDescuento(QDialog):
+    """Pide un descuento para la venta, por monto fijo o por porcentaje.
+
+    Se ofrecen las dos formas porque en una tienda pequena conviven: "te dejo en cinco mil"
+    (monto) y "te hago el diez por ciento" (porcentaje). Obligar a convertir mentalmente una
+    en la otra delante del cliente es pedir errores.
+    """
+
+    def __init__(self, subtotal_clp: int, padre: QWidget | None = None) -> None:
+        from PySide6.QtWidgets import QLineEdit, QRadioButton
+
+        super().__init__(padre)
+        self.setWindowTitle("Descuento")
+        self.setMinimumWidth(400)
+        self._subtotal = subtotal_clp
+        self.quitar = False
+
+        columna = QVBoxLayout(self)
+        columna.setContentsMargins(26, 24, 26, 20)
+        columna.setSpacing(10)
+
+        titulo = QLabel("Aplicar descuento")
+        titulo.setObjectName("tituloPantalla")
+        columna.addWidget(titulo)
+
+        from ..utils.money import formatear_clp
+
+        actual = QLabel(f"Subtotal de la venta: {formatear_clp(subtotal_clp)}")
+        actual.setObjectName("subtitulo")
+        columna.addWidget(actual)
+
+        self.opcion_monto = QRadioButton("Descontar un monto en pesos")
+        self.opcion_monto.setChecked(True)
+        self.opcion_porcentaje = QRadioButton("Descontar un porcentaje")
+        columna.addWidget(self.opcion_monto)
+        columna.addWidget(self.opcion_porcentaje)
+
+        self.campo = QLineEdit()
+        self.campo.setPlaceholderText("Por ejemplo: 500")
+        self.campo.returnPressed.connect(self._validar)
+        columna.addWidget(self.campo)
+
+        self.error = QLabel()
+        self.error.setObjectName("mensajeError")
+        self.error.setWordWrap(True)
+        self.error.hide()
+        columna.addWidget(self.error)
+
+        botones = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        botones.button(QDialogButtonBox.StandardButton.Ok).setText("Aplicar")
+        botones.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
+        quitar = botones.addButton("Quitar descuento", QDialogButtonBox.ButtonRole.ResetRole)
+        quitar.clicked.connect(self._quitar)
+        botones.accepted.connect(self._validar)
+        botones.rejected.connect(self.reject)
+        columna.addWidget(botones)
+
+        self.campo.setFocus()
+
+    def _quitar(self) -> None:
+        self.quitar = True
+        self.accept()
+
+    def _validar(self) -> None:
+        from ..utils.money import parsear_clp
+
+        texto = self.campo.text().strip().replace("%", "")
+        if not texto:
+            self.error.setText("Escriba el descuento.")
+            self.error.show()
+            return
+
+        if self.opcion_porcentaje.isChecked():
+            try:
+                valor = float(texto.replace(",", "."))
+            except ValueError:
+                self.error.setText("El porcentaje debe ser un numero, por ejemplo 10.")
+                self.error.show()
+                return
+            if not 0 <= valor <= 100:
+                self.error.setText("El porcentaje debe estar entre 0 y 100.")
+                self.error.show()
+                return
+        else:
+            try:
+                valor = parsear_clp(texto)
+            except ValueError:
+                self.error.setText("El monto debe ser un numero, por ejemplo 500.")
+                self.error.show()
+                return
+            if valor < 0:
+                self.error.setText("El descuento no puede ser negativo.")
+                self.error.show()
+                return
+            if valor > self._subtotal:
+                self.error.setText("El descuento no puede superar el total de la venta.")
+                self.error.show()
+                return
+
+        self._valor = valor
+        self.accept()
+
+    @property
+    def es_porcentaje(self) -> bool:
+        return self.opcion_porcentaje.isChecked()
+
+    @property
+    def valor(self) -> float:
+        return getattr(self, "_valor", 0)

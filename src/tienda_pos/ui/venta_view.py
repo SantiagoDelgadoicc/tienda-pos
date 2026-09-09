@@ -30,7 +30,7 @@ from ..services import catalogo
 from ..services import venta as servicio_venta
 from ..services.venta import Carrito
 from ..utils.money import formatear_clp
-from . import dialogos
+from . import dialogos, tablas
 
 # Cuánto tiempo permanece visible un mensaje de éxito o de error antes de desvanecerse.
 _MENSAJE_MS = 5000
@@ -114,19 +114,10 @@ class VentaView(QWidget):
         for columna in (2, 3, 4):
             cabecera.setSectionResizeMode(columna, QHeaderView.ResizeMode.ResizeToContents)
 
-        # Cada cabecera se alinea como sus datos: los textos a la izquierda, las cantidades
-        # al centro y los importes a la derecha. Si no coinciden, la tabla se lee torcida.
-        alineaciones = (
-            Qt.AlignmentFlag.AlignLeft,
-            Qt.AlignmentFlag.AlignLeft,
-            Qt.AlignmentFlag.AlignRight,
-            Qt.AlignmentFlag.AlignCenter,
-            Qt.AlignmentFlag.AlignRight,
+        tablas.alinear_cabeceras(
+            self.tabla,
+            (tablas.IZQUIERDA, tablas.IZQUIERDA, tablas.DERECHA, tablas.CENTRO, tablas.DERECHA),
         )
-        for columna, alineacion in enumerate(alineaciones):
-            self.tabla.horizontalHeaderItem(columna).setTextAlignment(
-                alineacion | Qt.AlignmentFlag.AlignVCenter
-            )
         return self.tabla
 
     def _panel_totales(self) -> QWidget:
@@ -177,6 +168,11 @@ class VentaView(QWidget):
         self.boton_quitar.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.boton_quitar.clicked.connect(self.quitar_linea_seleccionada)
         columna.addWidget(self.boton_quitar)
+
+        self.boton_descuento = QPushButton("Descuento   (F4)")
+        self.boton_descuento.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.boton_descuento.clicked.connect(self.aplicar_descuento)
+        columna.addWidget(self.boton_descuento)
 
         self.boton_vaciar = QPushButton("Cancelar venta   (F6)")
         self.boton_vaciar.setObjectName("botonPeligro")
@@ -287,6 +283,36 @@ class VentaView(QWidget):
         self._refrescar()
         self.enfocar_escaneo()
 
+    def aplicar_descuento(self) -> None:
+        """Aplica, cambia o quita el descuento de la venta en curso."""
+        if self._carrito.esta_vacio:
+            self._avisar("Agregue productos antes de aplicar un descuento.", exito=False)
+            self.enfocar_escaneo()
+            return
+
+        dialogo = dialogos.DialogoDescuento(self._carrito.subtotal_clp, self)
+        if not dialogo.exec():
+            self.enfocar_escaneo()
+            return
+
+        try:
+            if dialogo.quitar:
+                self._carrito.quitar_descuento()
+                self._avisar("Descuento retirado.", exito=True)
+            elif dialogo.es_porcentaje:
+                self._carrito.aplicar_descuento_porcentaje(dialogo.valor)
+                self._avisar(f"Descuento del {dialogo.valor:g}% aplicado.", exito=True)
+            else:
+                self._carrito.aplicar_descuento_monto(int(dialogo.valor))
+                self._avisar(
+                    f"Descuento de {formatear_clp(int(dialogo.valor))} aplicado.", exito=True
+                )
+        except ErrorDominio as error:
+            self._avisar(str(error), exito=False)
+
+        self._refrescar()
+        self.enfocar_escaneo()
+
     def cancelar_venta(self) -> None:
         if self._carrito.esta_vacio:
             self.enfocar_escaneo()
@@ -365,6 +391,7 @@ class VentaView(QWidget):
         hay_productos = not self._carrito.esta_vacio
         self.boton_cobrar.setEnabled(hay_productos)
         self.boton_quitar.setEnabled(hay_productos)
+        self.boton_descuento.setEnabled(hay_productos)
         self.boton_vaciar.setEnabled(hay_productos)
 
     def _celda(

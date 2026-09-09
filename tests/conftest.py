@@ -2,19 +2,29 @@
 
 Las pruebas usan una base de datos en memoria: son rápidas, no dejan basura en el disco y no
 pueden tocar por accidente los datos reales de la carpeta de la aplicación.
+
+Las pruebas de interfaz usan la plataforma "offscreen" de Qt, de modo que funcionan igual en
+un equipo de desarrollo que en un servidor de integración continua, sin abrir ventanas.
 """
 
 from __future__ import annotations
 
+import os
 import sqlite3
 
 import pytest
 
-from tienda_pos.db.inicio import abrir_base_datos
-from tienda_pos.db.connection import transaccion
-from tienda_pos.domain.models import Producto, Rol, Usuario
-from tienda_pos.repositories import productos as repo_productos
-from tienda_pos.services import auth
+# Debe fijarse antes de que se importe Qt en cualquier módulo.
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+from tienda_pos.db.connection import transaccion  # noqa: E402
+from tienda_pos.db.inicio import abrir_base_datos  # noqa: E402
+from tienda_pos.domain.models import Producto, Rol, Usuario  # noqa: E402
+from tienda_pos.repositories import productos as repo_productos  # noqa: E402
+from tienda_pos.services import auth  # noqa: E402
+
+
+# --------------------------------------------------------------------------- datos
 
 
 @pytest.fixture
@@ -53,3 +63,67 @@ def admin(conexion: sqlite3.Connection) -> Usuario:
 def cajero(conexion: sqlite3.Connection) -> Usuario:
     with transaccion(conexion):
         return auth.crear_usuario(conexion, "Cajero", Rol.CAJERO, "1111")
+
+
+# --------------------------------------------------------------------------- interfaz
+
+
+@pytest.fixture(scope="session")
+def app():
+    """Aplicación Qt única para toda la sesión de pruebas.
+
+    Qt no admite más de una QApplication por proceso, de ahí el alcance de sesión.
+    """
+    pytest.importorskip("PySide6", reason="La interfaz requiere PySide6")
+    from PySide6.QtWidgets import QApplication
+
+    return QApplication.instance() or QApplication([])
+
+
+@pytest.fixture
+def ventana(app, conexion, monkeypatch):
+    """Ventana principal con el catálogo de ejemplo cargado y sin diálogos bloqueantes.
+
+    Los diálogos modales se sustituyen por respuestas automáticas: sin esto, cualquier
+    prueba que cobre una venta se quedaría esperando un clic para siempre.
+    """
+    from PySide6.QtWidgets import QApplication
+
+    from tienda_pos.db.seed import cargar_datos_demo
+    from tienda_pos.ui import dialogos
+    from tienda_pos.ui.main_window import VentanaPrincipal
+
+    with transaccion(conexion):
+        cargar_datos_demo(conexion)
+
+    monkeypatch.setattr(dialogos, "confirmar", lambda *a, **k: True)
+    monkeypatch.setattr(dialogos, "mostrar_error", lambda *a, **k: None)
+    monkeypatch.setattr(dialogos, "mostrar_info", lambda *a, **k: None)
+
+    ventana = VentanaPrincipal(conexion)
+    ventana.establecer_usuario(Usuario(id=1, nombre="Ana Pérez", rol=Rol.CAJERO))
+    # Sin mostrar la ventana, Qt considera que ningún widget está visible ni tiene el foco,
+    # y las comprobaciones de foco (que aquí son parte de lo que se prueba) darían siempre
+    # falso.
+    ventana.show()
+    ventana.activateWindow()
+    ventana.mostrar_venta()
+    QApplication.processEvents()
+
+    yield ventana
+    ventana.close()
+
+
+@pytest.fixture
+def como_admin(ventana, conexion, monkeypatch):
+    """Hace que cualquier petición de autorización se resuelva con el administrador demo.
+
+    Devuelve la ventana, ya preparada para entrar a las pantallas reservadas.
+    """
+    from tienda_pos.ui import main_window as modulo
+
+    administrador = auth.autenticar(conexion, "Administrador", "1234")
+    monkeypatch.setattr(
+        modulo.DialogoLogin, "pedir", staticmethod(lambda *a, **k: administrador)
+    )
+    return ventana

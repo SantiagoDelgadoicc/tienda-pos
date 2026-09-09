@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tienda-pos"
+version = "0.1.0"
+description = "Prototipo de punto de venta para tienda pequena: codigo de barras, precio, venta e inventario minimo"
+requires-python = ">=3.11"
+dependencies = ["PySide6>=6.8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+tienda_pos = ["db/*.sql", "assets/*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"

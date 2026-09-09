@@ -22,7 +22,7 @@ Documento vivo. Se actualiza a medida que avanzamos.
 - [x] `docs/PLAN.md`
 - [x] `docs/PREGUNTAS-CLIENTE.md`
 - [x] `docs/DECISIONES.md`
-- [ ] Primer commit y push
+- [x] Primer commit y push
 
 **Criterio de aceptación:** el repositorio existe, tiene su primer commit y los documentos
 son comprensibles para alguien ajeno al proyecto.
@@ -31,19 +31,19 @@ son comprensibles para alguien ajeno al proyecto.
 
 ## Fase 1 — Núcleo de datos y negocio (sin interfaz)
 
-- [ ] `config.py`: rutas de datos en `%LOCALAPPDATA%\TiendaPOS\`
-- [ ] `utils/money.py`: formato y aritmética de CLP en enteros
-- [ ] `db/schema.sql`: esquema completo
-- [ ] `db/connection.py`: conexión única, PRAGMAs (WAL, `foreign_keys`), transacciones
-- [ ] `db/migrations.py`: versionado del esquema con `PRAGMA user_version`
-- [ ] `db/seed.py`: catálogo demo de minimarket (~60 productos con EAN-13 válidos)
-- [ ] `domain/models.py` y `domain/errors.py`
-- [ ] `repositories/`: productos, ventas, usuarios
-- [ ] `services/catalogo.py`: búsqueda por código exacto y por nombre parcial
-- [ ] `services/venta.py`: carrito, agrupación de repetidos, descuento, totales y cierre
+- [x] `config.py`: rutas de datos en `%LOCALAPPDATA%\TiendaPOS\`
+- [x] `utils/money.py`: formato y aritmética de CLP en enteros
+- [x] `db/schema.sql`: esquema completo
+- [x] `db/connection.py`: conexión única, PRAGMAs (WAL, `foreign_keys`), transacciones
+- [x] `db/migrations.py`: versionado del esquema con `PRAGMA user_version`
+- [x] `db/seed.py`: catálogo demo de minimarket (~60 productos con EAN-13 válidos)
+- [x] `domain/models.py` y `domain/errors.py`
+- [x] `repositories/`: productos, ventas, usuarios
+- [x] `services/catalogo.py`: búsqueda por código exacto y por nombre parcial
+- [x] `services/venta.py`: carrito, agrupación de repetidos, descuento, totales y cierre
       transaccional con descuento de stock
-- [ ] `services/auth.py`: PIN con hash y salt, roles
-- [ ] Pruebas `pytest` de todo lo anterior
+- [x] `services/auth.py`: PIN con hash y salt, roles
+- [x] Pruebas `pytest` de todo lo anterior
 
 **Criterio de aceptación:** las pruebas pasan, incluyendo código inexistente, stock
 insuficiente, descuento mayor que el total y fallo a mitad del cierre de venta, que debe

@@ -1,0 +1,2 @@
+# Dependencias de ejecución
+PySide6==6.8.1

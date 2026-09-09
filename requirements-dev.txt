@@ -1,0 +1,6 @@
+-r requirements.txt
+
+# Dependencias de desarrollo
+pytest==8.3.4
+pytest-cov==6.0.0
+pyinstaller==6.11.1

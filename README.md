@@ -7,9 +7,23 @@ No es una aplicación web y no requiere internet.
 El núcleo es lo que pidió el cliente: **código de barras → producto → precio**.
 Alrededor de eso, el prototipo demuestra una venta completa e inventario mínimo.
 
+![Pantalla de venta](docs/img/02-venta-con-carrito.png)
+
+## Qué hace
+
+- **Consulta de precio** a pantalla completa (F2), con el precio en letra grande.
+- **Venta**: escaneo, carrito con agrupación de repetidos, descuento por monto o porcentaje,
+  y cierre que registra la venta y descuenta el stock.
+- **Catálogo**: alta, edición y baja de productos, con filtro y aviso de stock bajo.
+- **Ventas del día**: total, número de ventas, artículos y detalle de cada una.
+- **Acceso con PIN** y rol de administrador para lo que puede hacer daño.
+- **Códigos no encontrados**: lo que se escanea y no existe queda anotado para cargarlo luego.
+- Funciona **sin internet**, con respaldo automático de la base de datos en cada arranque.
+
 ## Estado
 
-En desarrollo. Ver [docs/PLAN.md](docs/PLAN.md) para el avance por fases.
+Prototipo funcional, listo para presentar. Ver [docs/PLAN.md](docs/PLAN.md) para el avance por
+fases y las decisiones pendientes.
 
 ## Requisitos
 
@@ -21,8 +35,8 @@ En desarrollo. Ver [docs/PLAN.md](docs/PLAN.md) para el avance por fases.
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
-python -m tienda_pos
+pip install -r requirements-dev.txt
+python main.py
 ```
 
 ## Pruebas
@@ -31,16 +45,30 @@ python -m tienda_pos
 pytest
 ```
 
+## Construir el ejecutable
+
+```bash
+python tools/construir.py
+python tools/crear_acceso_directo.py
+```
+
+Genera `dist/TiendaPOS/TiendaPOS.exe` y deja un acceso directo en el escritorio.
+Para comprobar la instalación en otro equipo: `TiendaPOS.exe --verificar`.
+
 ## Documentación
 
 | Documento | Para qué sirve |
 |---|---|
-| [CLAUDE.md](CLAUDE.md) | Contexto, reglas y convenciones del proyecto |
-| [docs/PLAN.md](docs/PLAN.md) | Fases, hitos, tareas y criterios de aceptación |
-| [docs/PREGUNTAS-CLIENTE.md](docs/PREGUNTAS-CLIENTE.md) | Preguntas de negocio pendientes para la reunión con el cliente |
+| [docs/GUION-DEMO.md](docs/GUION-DEMO.md) | Guion paso a paso de la demostración al cliente |
+| [docs/PREGUNTAS-CLIENTE.md](docs/PREGUNTAS-CLIENTE.md) | Preguntas de negocio pendientes para la reunión |
+| [docs/MANUAL-USUARIO.md](docs/MANUAL-USUARIO.md) | Manual para quien opera la caja |
+| [docs/TECNICA.md](docs/TECNICA.md) | Arquitectura, pruebas, empaquetado y deuda técnica |
 | [docs/DECISIONES.md](docs/DECISIONES.md) | Decisiones técnicas importantes y su justificación |
+| [docs/PLAN.md](docs/PLAN.md) | Fases, tareas y criterios de aceptación |
+| [CLAUDE.md](CLAUDE.md) | Contexto, reglas y convenciones del proyecto |
 
 ## Aviso
 
 Este es un **prototipo de demostración**. No emite boletas ni facturas, no está conectado al
-SII, no registra medios de pago y no funciona en varias cajas simultáneas.
+SII, no registra medios de pago, no funciona en varias cajas simultáneas y no maneja productos
+por peso. Los productos y precios que trae son un catálogo de ejemplo inventado.

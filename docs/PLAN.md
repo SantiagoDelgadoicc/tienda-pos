@@ -105,11 +105,11 @@ cierre forzado a mitad de venta) no pierde datos ni cierra el programa.
 
 ## Fase 6 — Documentación y demo
 
-- [ ] `docs/MANUAL-USUARIO.md` con capturas
-- [ ] `docs/TECNICA.md`
-- [ ] `docs/GUION-DEMO.md`
-- [ ] `docs/PREGUNTAS-CLIENTE.md` finalizado
-- [ ] README actualizado
+- [x] `docs/MANUAL-USUARIO.md` con capturas
+- [x] `docs/TECNICA.md`
+- [x] `docs/GUION-DEMO.md`
+- [x] `docs/PREGUNTAS-CLIENTE.md` finalizado
+- [x] README actualizado
 
 **Criterio de aceptación:** alguien ajeno instala, ejecuta y realiza una venta guiándose
 solo por la documentación.

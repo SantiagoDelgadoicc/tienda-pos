@@ -142,3 +142,59 @@ descuenta al vender.
 **Consecuencias.** **Esto es deuda técnica, y está registrada como tal.** Si el cliente quiere
 saber por qué su stock no cuadra, hará falta una tabla de movimientos. El cambio es aditivo y
 no rompe lo construido, pero implica trabajo. Ver la pregunta A3 en `PREGUNTAS-CLIENTE.md`.
+
+---
+
+## D-009 — Una venta sin stock suficiente se rechaza
+
+**Fecha:** 2026-09-09 · **Estado:** aceptada
+
+**Contexto.** Al cerrar una venta, el sistema comprueba el stock contra la base de datos. Si
+no alcanza, hay dos posturas defendibles: bloquear la venta, o permitirla y dejar el stock en
+negativo. Muchos puntos de venta reales hacen lo segundo, porque el inventario casi nunca está
+perfectamente al día y bloquear una venta por un dato desactualizado enfada al cliente que
+está esperando en la caja.
+
+**Decisión.** Se bloquea, con un mensaje que dice el producto, cuánto queda y cuánto se pide.
+El comportamiento está en la constante `PERMITIR_STOCK_NEGATIVO` de `config.py`.
+
+**Consecuencias.** El prototipo demuestra control de inventario de verdad, que es lo que se
+quiere enseñar. El catálogo de ejemplo tiene stock generoso, así que la demostración no se
+topa con el bloqueo. **Es una decisión de negocio disfrazada de detalle técnico:** si el
+cliente dice que prefiere vender igual, se cambia una constante. Está en la pregunta A3 de
+`PREGUNTAS-CLIENTE.md`.
+
+---
+
+## D-010 — El ejecutable se distribuye en carpeta, no como archivo único
+
+**Fecha:** 2026-09-09 · **Estado:** aceptada
+
+**Contexto.** PyInstaller puede generar un solo `.exe` o una carpeta con el ejecutable y sus
+dependencias. El archivo único es mucho más cómodo de enviar.
+
+**Decisión.** Se distribuye la carpeta, con un acceso directo en el escritorio que apunta al
+ejecutable. La opción `--unico` de `tools/construir.py` sigue disponible.
+
+**Consecuencias.** El archivo único se descomprime en una carpeta temporal en cada arranque y
+añade entre dos y tres segundos, lo que incumpliría el criterio de aceptación de abrir en
+menos de tres segundos. Medido con la carpeta: **0,93 s**. A cambio, instalar significa copiar
+una carpeta en lugar de un archivo. Para enviar el prototipo por correo, el archivo único
+sigue siendo la mejor opción.
+
+---
+
+## D-011 — El programa incluye su propia comprobación de arranque
+
+**Fecha:** 2026-09-09 · **Estado:** aceptada
+
+**Contexto.** Antes de una demostración hace falta saber si el ejecutable funciona en el
+equipo del cliente. Hacer una venta a mano para comprobarlo es lento y deja datos de prueba
+en la base.
+
+**Decisión.** `TiendaPOS.exe --verificar` arranca el sistema entero sin mostrar nada, mide el
+tiempo y escribe un informe en la carpeta de datos, devolviendo 0 si todo fue bien.
+
+**Consecuencias.** Se puede validar la instalación en segundos, y ante un problema el informe
+dice qué falló en lugar de dejar una ventana que no aparece. La misma función se ejecuta como
+prueba automatizada, así que no es código muerto que solo se usa a mano.

@@ -1,0 +1,32 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Empaquetado
+build/
+dist/
+*.spec.bak
+
+# Datos locales: NUNCA versionar la base de datos ni los respaldos
+*.db
+*.db-wal
+*.db-shm
+*.sqlite3
+backups/
+logs/
+*.log
+
+# Editores y sistema
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

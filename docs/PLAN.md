@@ -53,11 +53,11 @@ revertir por completo sin dejar datos a medias.
 
 ## Fase 2 — Interfaz de venta y consulta de precio ← primera demo presentable
 
-- [ ] Ventana principal, gestión del foco y atajos de teclado
-- [ ] Campo de escaneo, tabla del carrito y totales
-- [ ] Pantalla de consulta de precio (F2), tipografía grande
-- [ ] Diálogo de código no encontrado
-- [ ] Cierre de venta con confirmación
+- [x] Ventana principal, gestión del foco y atajos de teclado
+- [x] Campo de escaneo, tabla del carrito y totales
+- [x] Pantalla de consulta de precio (F2), tipografía grande
+- [x] Diálogo de código no encontrado
+- [x] Cierre de venta con confirmación
 
 **Criterio de aceptación:** tecleando códigos (equivalente exacto a lo que envía la pistola)
 se puede consultar un precio, armar un carrito y cerrar una venta, sin que nada se rompa.

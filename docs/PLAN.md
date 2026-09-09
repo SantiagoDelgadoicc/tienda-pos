@@ -79,12 +79,12 @@ lo ve reflejado en el informe del día y comprueba el stock descontado.
 
 ## Fase 4 — Robustez
 
-- [ ] Manejador global de excepciones con diálogo legible; la aplicación no se cierra
-- [ ] Logging rotativo
-- [ ] Respaldo automático de la base al iniciar, con retención de los últimos 7
-- [ ] Sonidos distintos para éxito y error
-- [ ] Validación del formato del código y detección pistola/teclado
-- [ ] Pruebas de los caminos de error
+- [x] Manejador global de excepciones con diálogo legible; la aplicación no se cierra
+- [x] Logging rotativo
+- [x] Respaldo automático de la base al iniciar, con retención de los últimos 7
+- [x] Sonidos distintos para éxito y error
+- [x] Validación del formato del código y detección pistola/teclado
+- [x] Pruebas de los caminos de error
 
 **Criterio de aceptación:** provocar errores a propósito (base bloqueada, código con basura,
 cierre forzado a mitad de venta) no pierde datos ni cierra el programa.

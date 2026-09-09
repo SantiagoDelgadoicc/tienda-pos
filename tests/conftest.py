@@ -22,6 +22,10 @@ from tienda_pos.db.inicio import abrir_base_datos  # noqa: E402
 from tienda_pos.domain.models import Producto, Rol, Usuario  # noqa: E402
 from tienda_pos.repositories import productos as repo_productos  # noqa: E402
 from tienda_pos.services import auth  # noqa: E402
+from tienda_pos.utils import sonido  # noqa: E402
+
+# Las pruebas no deben hacer sonar el equipo cada vez que simulan un escaneo.
+sonido.silenciar()
 
 
 # --------------------------------------------------------------------------- datos

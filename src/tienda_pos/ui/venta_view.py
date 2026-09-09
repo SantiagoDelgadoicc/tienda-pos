@@ -29,11 +29,17 @@ from ..domain.models import Usuario
 from ..services import catalogo
 from ..services import venta as servicio_venta
 from ..services.venta import Carrito
+from ..utils import sonido
 from ..utils.money import formatear_clp
+from ..utils.scanner import DetectorLector
 from . import dialogos, tablas
 
 # Cuánto tiempo permanece visible un mensaje de éxito o de error antes de desvanecerse.
 _MENSAJE_MS = 5000
+
+# Margen que se espera tras una ráfaga de lector antes de confirmar sin Enter. Suficiente
+# para que llegue el Enter si el lector lo envía, e imperceptible si no lo hace.
+_ESPERA_LECTOR_MS = 120
 
 _COLUMNAS = ("Código", "Producto", "Precio", "Cant.", "Subtotal")
 
@@ -51,6 +57,10 @@ class VentaView(QWidget):
         self._conexion = conexion
         self._carrito = Carrito()
         self.usuario: Usuario | None = None
+        self._detector = DetectorLector()
+        self._auto = QTimer(self)
+        self._auto.setSingleShot(True)
+        self._auto.timeout.connect(self._confirmar_automatico)
 
         self._construir()
         self._refrescar()
@@ -85,6 +95,7 @@ class VentaView(QWidget):
         self.campo_codigo.setPlaceholderText("Código de barras")
         self.campo_codigo.setClearButtonEnabled(True)
         self.campo_codigo.returnPressed.connect(self._procesar_codigo)
+        self.campo_codigo.textEdited.connect(self._teclear)
         columna.addWidget(self.campo_codigo)
 
         self.mensaje = QLabel()
@@ -195,10 +206,32 @@ class VentaView(QWidget):
         self.campo_codigo.setFocus()
         self.campo_codigo.selectAll()
 
+    def _teclear(self, texto: str) -> None:
+        """Sigue la cadencia de escritura para reconocer una pistola sin Enter.
+
+        Muchos lectores vienen configurados para enviar Enter al final, pero no todos. Si no
+        lo hacen, el codigo se queda en el campo y parece que el lector no funciona. Al
+        detectar una rafaga imposible para una persona, se confirma solo.
+        """
+        self._auto.stop()
+        if not texto:
+            self._detector.reiniciar()
+            return
+
+        self._detector.registrar()
+        if self._detector.es_lector:
+            self._auto.start(_ESPERA_LECTOR_MS)
+
+    def _confirmar_automatico(self) -> None:
+        if self.campo_codigo.text().strip():
+            self._procesar_codigo()
+
     def _procesar_codigo(self) -> None:
         codigo = self.campo_codigo.text().strip()
         if not codigo:
             return
+        self._auto.stop()
+        self._detector.reiniciar()
         self.campo_codigo.clear()
         self.agregar_por_codigo(codigo)
 
@@ -427,6 +460,7 @@ class VentaView(QWidget):
         Se usa un mensaje en línea y no un diálogo porque interrumpir el flujo con una
         ventana modal por cada producto escaneado haría el sistema inusable.
         """
+        sonido.exito() if exito else sonido.error()
         self.mensaje.setText(texto)
         self.mensaje.setObjectName("mensajeExito" if exito else "mensajeError")
         # Qt no reevalúa la hoja de estilos al cambiar el objectName; hay que forzarlo.

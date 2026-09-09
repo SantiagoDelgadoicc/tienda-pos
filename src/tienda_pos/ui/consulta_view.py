@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from ..domain.errors import ErrorDominio, ProductoNoEncontrado
 from ..services import catalogo
+from ..utils import sonido
 from ..utils.money import formatear_clp
 
 #: Tiempo que un precio permanece en pantalla antes de volver al estado de espera.
@@ -140,6 +141,7 @@ class ConsultaView(QWidget):
             self._mostrar_aviso(str(error))
             return
 
+        sonido.exito()
         self.etiqueta_espera.hide()
         self.etiqueta_nombre.setText(producto.nombre)
         self.etiqueta_nombre.show()
@@ -157,6 +159,7 @@ class ConsultaView(QWidget):
         self.enfocar_escaneo()
 
     def _mostrar_no_encontrado(self, codigo: str) -> None:
+        sonido.error()
         self.etiqueta_espera.hide()
         self.etiqueta_nombre.setText("Producto no encontrado")
         self.etiqueta_nombre.show()
@@ -171,6 +174,7 @@ class ConsultaView(QWidget):
         self.enfocar_escaneo()
 
     def _mostrar_aviso(self, mensaje: str) -> None:
+        sonido.error()
         self.etiqueta_espera.setText(mensaje)
         self.etiqueta_espera.show()
         self.etiqueta_nombre.hide()

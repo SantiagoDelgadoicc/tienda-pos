@@ -227,3 +227,40 @@ class TestManejadorGlobalDeErrores:
 
         assert permitidos[: errores._MAX_DIALOGOS] == [True] * errores._MAX_DIALOGOS
         assert not any(permitidos[errores._MAX_DIALOGOS :])
+
+
+class TestAutocomprobacion:
+    def test_arranca_el_sistema_completo_y_da_correcto(self, app, tmp_path, monkeypatch) -> None:
+        """La misma comprobación que se ejecuta sobre el .exe en el equipo del cliente."""
+        from tienda_pos import app as modulo_app
+
+        monkeypatch.setenv("TIENDA_POS_HOME", str(tmp_path / "datos"))
+        logging_setup.reiniciar_para_pruebas()
+        try:
+            codigo = modulo_app.verificar()
+        finally:
+            logging_setup.reiniciar_para_pruebas()
+
+        assert codigo == 0
+        informe = (tmp_path / "datos" / "autocomprobacion.txt").read_text(encoding="utf-8")
+        assert "RESULTADO: CORRECTO" in informe
+        assert "Productos en el catálogo: 65" in informe
+
+    def test_informa_del_fallo_en_lugar_de_reventar(self, app, tmp_path, monkeypatch) -> None:
+        from tienda_pos import app as modulo_app
+
+        monkeypatch.setenv("TIENDA_POS_HOME", str(tmp_path / "datos"))
+
+        def no_abre(*args, **kwargs):
+            raise sqlite3.OperationalError("base inaccesible simulada")
+
+        monkeypatch.setattr(modulo_app, "abrir_base_datos", no_abre)
+        logging_setup.reiniciar_para_pruebas()
+        try:
+            codigo = modulo_app.verificar()
+        finally:
+            logging_setup.reiniciar_para_pruebas()
+
+        assert codigo == 1
+        informe = (tmp_path / "datos" / "autocomprobacion.txt").read_text(encoding="utf-8")
+        assert "RESULTADO: FALLO" in informe

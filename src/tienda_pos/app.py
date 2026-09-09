@@ -59,6 +59,53 @@ def _iniciar_sesion(conexion):
     return usuario
 
 
+def verificar() -> int:
+    """Comprobación de arranque, sin interfaz visible ni intervención de nadie.
+
+    Existe para poder responder con hechos a la pregunta "¿esto funciona en el computador
+    del cliente?" antes de la demostración: arranca todo el sistema, crea la base, monta la
+    ventana y mide cuánto tarda. Devuelve 0 si todo fue bien.
+
+    El resultado se escribe en un archivo además de devolverse como código de salida, porque
+    el ejecutable se construye sin consola y no habría dónde leerlo.
+    """
+    import time
+
+    from .utils.logging_setup import configurar
+
+    inicio = time.perf_counter()
+    informe = config.directorio_datos() / "autocomprobacion.txt"
+    lineas: list[str] = []
+
+    try:
+        config.asegurar_directorios()
+        configurar()
+        app = _crear_aplicacion()
+
+        conexion = abrir_base_datos()
+        from .repositories import productos as repo_productos
+
+        lineas.append(f"Productos en el catálogo: {repo_productos.contar(conexion)}")
+
+        ventana = VentanaPrincipal(conexion)
+        ventana.mostrar_venta()
+        app.processEvents()
+        ventana.close()
+        conexion.close()
+
+        transcurrido = time.perf_counter() - inicio
+        lineas.append(f"Arranque completo en {transcurrido:.2f} s")
+        lineas.append("RESULTADO: CORRECTO")
+        codigo = 0
+    except Exception as error:  # noqa: BLE001 - es una comprobación: interesa cualquier fallo
+        _logger.exception("La autocomprobación falló")
+        lineas.append(f"RESULTADO: FALLO · {error!r}")
+        codigo = 1
+
+    informe.write_text("\n".join(lineas) + "\n", encoding="utf-8")
+    return codigo
+
+
 def ejecutar() -> int:
     """Punto de entrada. Devuelve el código de salida del proceso."""
     from .utils.logging_setup import configurar

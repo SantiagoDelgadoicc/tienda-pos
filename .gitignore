@@ -30,3 +30,6 @@ logs/
 .idea/
 Thumbs.db
 desktop.ini
+
+# PyInstaller genera el .spec en cada construccion desde tools/construir.py
+*.spec

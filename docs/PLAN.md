@@ -93,10 +93,10 @@ cierre forzado a mitad de venta) no pierde datos ni cierra el programa.
 
 ## Fase 5 — Empaquetado
 
-- [ ] PyInstaller → `TiendaPOS.exe`
-- [ ] Creación de la base y de los datos demo en el primer arranque
-- [ ] Icono propio y acceso directo en el escritorio
-- [ ] Prueba en carpeta limpia, en un equipo sin Python
+- [x] PyInstaller → `TiendaPOS.exe`
+- [x] Creación de la base y de los datos demo en el primer arranque
+- [x] Icono propio y acceso directo en el escritorio
+- [x] Prueba en carpeta limpia, en un equipo sin Python
 
 **Criterio de aceptación:** doble clic en el acceso directo y el programa abre en menos de
 3 segundos sin entorno de desarrollo instalado.

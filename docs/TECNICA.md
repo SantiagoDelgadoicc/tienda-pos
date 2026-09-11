@@ -34,7 +34,7 @@ python main.py
 pytest
 ```
 
-185 pruebas, unos 20 segundos. No necesitan pantalla: las de interfaz usan la plataforma
+239 pruebas, unos 35 segundos. No necesitan pantalla: las de interfaz usan la plataforma
 `offscreen` de Qt, que `tests/conftest.py` activa automáticamente.
 
 ```bash
@@ -50,10 +50,12 @@ Los archivos de prueba, y qué cubre cada uno:
 | `test_utils.py` | Formato de dinero y códigos de barras |
 | `test_db.py` | Esquema, migraciones, transacciones, datos de ejemplo |
 | `test_catalogo.py` | Búsqueda por código y por nombre, permisos, alta y baja |
-| `test_venta.py` | Carrito, descuentos, cierre transaccional |
+| `test_venta.py` | Carrito, descuentos de venta y de producto, cierre transaccional |
 | `test_auth.py` | PIN, hash con sal, permisos |
-| `test_ui.py` | Pantalla de venta y de consulta |
+| `test_ui.py` | Pantalla de venta y de consulta, teclado y celdas de acción |
 | `test_ui_admin.py` | Descuento, catálogo, informes, autorización |
+| `test_preferencias.py` | Archivo de preferencias y paletas de los temas |
+| `test_ui_configuracion.py` | Rueda de configuración y cambio de tema en caliente |
 | `test_robustez.py` | Respaldos, registro, errores, detección de lector |
 | `test_rendimiento.py` | Búsqueda con 5.000 productos y uso del índice |
 
@@ -93,7 +95,7 @@ SQLite en `%LOCALAPPDATA%\TiendaPOS\tienda.db`, en modo WAL y con `foreign_keys 
 | `producto` | Catálogo. Baja lógica con `activo` |
 | `usuario` | Nombre, rol, PIN con hash scrypt y sal propia |
 | `venta` | Cabecera: folio, fecha, subtotal, descuento, total |
-| `venta_linea` | Detalle, con **copia** del código, nombre y precio del momento |
+| `venta_linea` | Detalle, con **copia** del código, nombre y precio del momento, y el descuento de la línea |
 | `codigo_no_encontrado` | Códigos escaneados que no están en el catálogo |
 | `meta` | Pares clave/valor |
 
@@ -112,6 +114,13 @@ instaladas que ya la aplicaron.
 
 No se usa `executescript` porque hace un COMMIT implícito y rompería la atomicidad de cada
 migración; el script se trocea con `sqlite3.complete_statement`.
+
+Versiones publicadas:
+
+| Versión | Cambio |
+|---|---|
+| 1 | Esquema inicial (`db/schema.sql`) |
+| 2 | `venta_linea.descuento_clp`, para el descuento aplicado a un solo producto (D-012) |
 
 ## 6. Construir el ejecutable
 
@@ -159,6 +168,17 @@ fuentes del sistema y todo el texto sale como cajas vacías.
 - **Qt centra las cabeceras de tabla por defecto.** `ui/tablas.py` las alinea con sus datos.
 - **La comprobación de permisos vive en `services/`**, no en la interfaz. Ocultar un botón no
   es control de acceso.
+- **Nada de widgets dentro de una tabla que se redibuja.** Qt no destruye los que quedan en
+  filas eliminadas y flotan sobre la tabla. Las acciones por fila del carrito son celdas con
+  un símbolo más `cellClicked` (D-014).
+- **Ningún color se escribe a mano en una pantalla.** Todos salen de `ui/estilos.py`, sea por
+  la hoja de estilos o leyendo `estilos.actual`; si no, el tema oscuro no los alcanza.
+- **Un cambio de tema repinta la hoja de estilos completa,** pero no los colores que una
+  pantalla haya fijado celda a celda: por eso `VentanaPrincipal.aplicar_tema()` llama a
+  `vista_venta.repintar()`.
+- **Las teclas del carrito se interceptan en el campo de escaneo** con un `eventFilter`, y
+  solo cuando está vacío (salvo ↑ y ↓). Si hay un código a medio escribir, las flechas siguen
+  siendo del campo.
 
 ## 9. Dónde están los datos en ejecución
 
@@ -166,6 +186,7 @@ fuentes del sistema y todo el texto sale como cajas vacías.
 
 ```
 tienda.db              base de datos
+preferencias.json      tema, sonido y demás ajustes del equipo
 backups/               copias automáticas (las 7 últimas)
 logs/tienda_pos.log    registro rotativo (5 archivos de 1 MB)
 autocomprobacion.txt   resultado del último --verificar
@@ -195,3 +216,40 @@ Deuda técnica y límites conocidos, para que nadie los descubra por sorpresa:
   base. Es la primera pieza que falta para una instalación real, y lo único del sistema que se
   documenta como "hágalo" sin que se pueda hacer.
 - **Sin actualización automática.** Actualizar significa reemplazar la carpeta a mano.
+
+## 11. ¿Se puede hacer un instalador? (valoración, no compromiso)
+
+Sí, y con el empaquetado actual es trabajo acotado. Nada de lo que sigue está hecho ni
+decidido: es la respuesta a una pregunta de viabilidad.
+
+**Por qué es viable hoy.** El punto que suele arruinar un instalador ya está resuelto: el
+programa **nunca escribe en su propia carpeta**. La base de datos, los respaldos, los logs y
+las preferencias viven en `%LOCALAPPDATA%\TiendaPOS\`, así que el ejecutable puede instalarse
+en `Archivos de Programa` —que es de solo lectura para el usuario— sin que nada falle. Lo que
+falta es empaquetar `dist/TiendaPOS/` y crear accesos directos, que es exactamente lo que hace
+un instalador.
+
+**Herramientas posibles:**
+
+| Opción | Qué da | Coste |
+|---|---|---|
+| **Inno Setup** | `TiendaPOS-setup.exe` con asistente, acceso directo, entrada en "Agregar o quitar programas" y desinstalador. Un archivo `.iss` de unas 40 líneas | Gratis |
+| **NSIS** | Lo mismo, más flexible y más áspero de escribir | Gratis |
+| **WiX / MSI** | Paquete `.msi`, que es lo que exige una empresa para instalar por directiva de grupo | Gratis, pero más trabajo |
+
+Para un local con uno o dos PC, **Inno Setup** es la opción sensata; el `.msi` solo tiene
+sentido si algún día hay un departamento de sistemas.
+
+**Lo que habría que decidir además del instalador en sí:**
+
+- **Firma de código.** Sin un certificado, Windows SmartScreen avisa de "editor desconocido"
+  en la primera ejecución. El cliente puede pasar el aviso, pero da mala impresión en una
+  entrega. Un certificado tiene coste anual y es una decisión de Santiago.
+- **Actualizaciones.** Un instalador que reemplaza la versión anterior es fácil; uno que
+  busque actualizaciones solo, no, y requeriría un servidor.
+- **Qué hacer con los datos al desinstalar.** Lo correcto es **no borrarlos** y avisar dónde
+  quedaron.
+
+**Esfuerzo estimado:** alrededor de un día para el instalador funcionando y probado en un
+Windows limpio, sin contar la firma de código.
+

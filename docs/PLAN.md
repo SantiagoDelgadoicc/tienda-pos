@@ -116,6 +116,18 @@ solo por la documentación.
 
 ---
 
+## Pendiente para una instalación real
+
+Las seis fases del prototipo están terminadas. Esto no es una decisión del cliente, es un
+hueco conocido del sistema, y se anota aquí para que no se descubra el día de la instalación:
+
+- [ ] **Pantalla de gestión de usuarios**: crear, cambiar el PIN y dar de baja. Hoy los dos
+      usuarios se crean en `db/seed.py` y sus PIN están publicados en el manual. La lógica
+      existe y está probada (`services/auth.py::cambiar_pin`), pero no está conectada a
+      ninguna vista. Para la demostración no estorba; para una tienda de verdad, sí.
+
+---
+
 ## Decisiones pendientes
 
 - [ ] **Arranque automático al encender el PC.** Recomendación: **no** por defecto. Secuestra

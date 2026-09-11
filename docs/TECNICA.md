@@ -188,6 +188,10 @@ Deuda técnica y límites conocidos, para que nadie los descubra por sorpresa:
   El cambio está aislado en `repositories/`, pero implica un servidor.
 - **Sin medios de pago ni documentos tributarios.** Deliberado: ver D-006.
 - **Sin venta por peso.** El modelo asume unidades enteras.
-- **Los PIN de ejemplo están publicados** en el manual. En una instalación real, lo primero es
-  cambiarlos.
+- **No hay gestión de usuarios.** Los dos usuarios de ejemplo se crean en `db/seed.py` la
+  primera vez que arranca el programa, y sus PIN están publicados en el manual. La lógica para
+  cambiar un PIN existe y está probada (`services/auth.py::cambiar_pin`), pero **no está
+  conectada a ninguna pantalla**: hoy, cambiar un PIN obliga a editar `seed.py` y borrar la
+  base. Es la primera pieza que falta para una instalación real, y lo único del sistema que se
+  documenta como "hágalo" sin que se pueda hacer.
 - **Sin actualización automática.** Actualizar significa reemplazar la carpeta a mano.

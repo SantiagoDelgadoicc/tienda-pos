@@ -88,15 +88,19 @@ Aplicación de escritorio monopuesto, sin red.
 Las dependencias van en una sola dirección: `ui → services → repositories → db`.
 
 ```
+main.py                   punto de entrada del ejecutable (y de --verificar)
 src/tienda_pos/
-  __main__.py             arranque de la aplicación
+  app.py                  arranque: registro, errores, respaldo, base, sesión, ventana
+  __main__.py             permite `python -m tienda_pos`
   config.py               rutas de datos, constantes
-  db/                     conexión, esquema, migraciones, datos demo
+  db/                     conexión, esquema, migraciones, datos demo, respaldos
   domain/                 modelos y errores del negocio
   repositories/           acceso a datos, un módulo por entidad
   services/               lógica de negocio (NO importa Qt)
   ui/                     todo lo que sabe de Qt
-  utils/                  dinero, escáner, logging
+  utils/                  dinero, códigos de barras, lector, sonido, registro
+tools/                    construir, icono, capturas, acceso directo
+tests/                    185 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -127,11 +131,17 @@ Nunca dentro de `Archivos de Programa`: Windows bloquea la escritura ahí.
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # requirements.txt son solo las de ejecución
 
-python -m tienda_pos      # ejecutar
-pytest                    # pruebas
-pytest -q --cov=tienda_pos  # pruebas con cobertura
+python main.py                        # ejecutar
+python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
+pytest                                # pruebas (185, unos 20 s)
+pytest --cov=tienda_pos               # con cobertura
+
+python tools/construir.py             # empaquetar el .exe
+python tools/crear_acceso_directo.py  # acceso directo en el escritorio
+python tools/capturas.py              # regenerar docs/img/*.png
+python tools/icono.py                 # regenerar el icono
 ```
 
 ## 8. Documentos vivos

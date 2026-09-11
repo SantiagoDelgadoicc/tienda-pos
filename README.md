@@ -70,5 +70,6 @@ Para comprobar la instalación en otro equipo: `TiendaPOS.exe --verificar`.
 ## Aviso
 
 Este es un **prototipo de demostración**. No emite boletas ni facturas, no está conectado al
-SII, no registra medios de pago, no funciona en varias cajas simultáneas y no maneja productos
-por peso. Los productos y precios que trae son un catálogo de ejemplo inventado.
+SII, no registra medios de pago, no funciona en varias cajas simultáneas, no maneja productos
+por peso y no permite crear usuarios ni cambiar sus PIN desde el programa. Los productos y
+precios que trae son un catálogo de ejemplo inventado.

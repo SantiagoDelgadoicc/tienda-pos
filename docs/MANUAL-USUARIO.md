@@ -20,8 +20,12 @@ En la versión de demostración vienen dos usuarios creados:
 | Cajero | `1111` | Vender y consultar precios |
 | Administrador | `1234` | Todo lo anterior, más cambiar precios y ver las ventas del día |
 
-> **Antes de usarlo de verdad, cambie estos PIN.** Están publicados en este manual, así que
-> cualquiera que lo lea puede entrar.
+> **Estos PIN son de demostración y están publicados en este manual**, así que cualquiera que
+> lo lea puede entrar. Sirven para probar el prototipo, no para usarlo con dinero real.
+>
+> **El prototipo todavía no tiene pantalla para cambiarlos ni para crear otros usuarios.**
+> Es la primera pieza que hay que añadir antes de instalarlo en una tienda de verdad. Está
+> anotado en [TECNICA.md](TECNICA.md) entre lo que falta.
 
 ---
 
@@ -210,3 +214,5 @@ Se dice aquí para que nadie cuente con ello:
 - No maneja productos que se venden por peso o a granel.
 - No lleva un historial de movimientos de inventario: el stock es un número que baja al
   vender, sin registro de entradas ni ajustes.
+- **No permite crear usuarios ni cambiar los PIN** desde el programa. Vienen dos usuarios
+  fijos, los de la tabla del punto 1.

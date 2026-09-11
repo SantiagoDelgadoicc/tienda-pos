@@ -24,7 +24,8 @@ class _DialogoFalso:
     """Sustituto de un diálogo modal que siempre acepta con datos prefijados."""
 
     def __init__(self, **atributos):
-        self._atributos = atributos
+        # El ámbito por defecto es la venta entera, que es como llega el diálogo real.
+        self._atributos = {"ambito": dialogos.AMBITO_VENTA, **atributos}
 
     def __call__(self, *args, **kwargs):
         for clave, valor in self._atributos.items():
@@ -36,11 +37,25 @@ class _DialogoFalso:
 
 
 class TestDescuento:
-    def _aplicar(self, ventana, monkeypatch, *, porcentaje=False, valor=0, quitar=False):
+    def _aplicar(
+        self,
+        ventana,
+        monkeypatch,
+        *,
+        porcentaje=False,
+        valor=0,
+        quitar=False,
+        ambito=None,
+    ):
         monkeypatch.setattr(
             dialogos,
             "DialogoDescuento",
-            _DialogoFalso(quitar=quitar, es_porcentaje=porcentaje, valor=valor),
+            _DialogoFalso(
+                quitar=quitar,
+                es_porcentaje=porcentaje,
+                valor=valor,
+                ambito=ambito or dialogos.AMBITO_VENTA,
+            ),
         )
         ventana.vista_venta.aplicar_descuento()
 
@@ -76,6 +91,71 @@ class TestDescuento:
         venta = repo_ventas.del_dia(conexion)[0]
         assert venta.descuento_clp == 290
         assert venta.total_clp == 2000
+
+    def test_descuento_sobre_un_solo_producto(self, ventana, monkeypatch) -> None:
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)  # 2.290, queda seleccionada
+        vista.agregar_por_codigo(LECHE)
+        vista._seleccionar(COLA)
+        self._aplicar(
+            ventana, monkeypatch, valor=290, ambito=dialogos.AMBITO_PRODUCTO
+        )
+
+        linea = vista.carrito.linea_de(COLA)
+        assert linea.descuento_clp == 290
+        assert vista.carrito.linea_de(LECHE).descuento_clp == 0
+        assert vista.valor_descuento.text() == "-$290"
+
+    def test_el_descuento_del_producto_aparece_en_su_fila(self, ventana, monkeypatch) -> None:
+        from tienda_pos.ui import venta_view
+
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        self._aplicar(
+            ventana, monkeypatch, porcentaje=True, valor=10, ambito=dialogos.AMBITO_PRODUCTO
+        )
+
+        assert not vista.tabla.isColumnHidden(venta_view.COL_DESCUENTO)
+        assert vista.tabla.item(0, venta_view.COL_DESCUENTO).text() == "-$229"
+        assert vista.tabla.item(0, venta_view.COL_SUBTOTAL).text() == "$2.061"
+
+    def test_quitar_el_descuento_de_un_producto(self, ventana, monkeypatch) -> None:
+        from tienda_pos.ui import venta_view
+
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        self._aplicar(ventana, monkeypatch, valor=290, ambito=dialogos.AMBITO_PRODUCTO)
+        self._aplicar(ventana, monkeypatch, quitar=True, ambito=dialogos.AMBITO_PRODUCTO)
+
+        assert vista.valor_total.text() == "$2.290"
+        assert vista.tabla.isColumnHidden(venta_view.COL_DESCUENTO)
+
+    def test_el_descuento_del_producto_queda_registrado_en_la_venta(
+        self, ventana, monkeypatch, conexion
+    ) -> None:
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        self._aplicar(ventana, monkeypatch, valor=290, ambito=dialogos.AMBITO_PRODUCTO)
+        vista.cobrar()
+
+        venta = repo_ventas.obtener(conexion, repo_ventas.del_dia(conexion)[0].id)
+        assert venta.lineas[0].descuento_clp == 290
+        assert venta.descuento_clp == 290
+        assert venta.total_clp == 2000
+
+    def test_sin_linea_seleccionada_el_descuento_va_a_la_venta(
+        self, ventana, monkeypatch
+    ) -> None:
+        # El diálogo no deja elegir "producto" sin selección; si aun así llegara, el
+        # descuento debe recaer sobre la venta y nunca perderse en silencio.
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        vista.tabla.clearSelection()
+        vista.tabla.setCurrentCell(-1, -1)
+        self._aplicar(ventana, monkeypatch, valor=290, ambito=dialogos.AMBITO_PRODUCTO)
+
+        assert vista.valor_total.text() == "$2.000"
+        assert vista.carrito.descuento_venta_clp == 290
 
     def test_no_se_descuenta_sobre_un_carrito_vacio(self, ventana, monkeypatch) -> None:
         self._aplicar(ventana, monkeypatch, valor=500)

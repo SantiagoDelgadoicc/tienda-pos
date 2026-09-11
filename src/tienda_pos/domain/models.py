@@ -52,6 +52,11 @@ class LineaCarrito:
     Guarda una copia del nombre y del precio en lugar de una referencia al producto, por el
     mismo motivo que la línea de venta: si alguien cambia el precio mientras hay un carrito
     abierto, el cliente debe pagar lo que se le mostró.
+
+    El descuento de la línea se guarda como monto o como porcentaje, nunca los dos a la vez.
+    Se conserva el porcentaje en lugar de convertirlo a pesos porque si después cambia la
+    cantidad, el trato con el cliente sigue siendo "el 10% de este producto" y no un importe
+    que quedó obsoleto.
     """
 
     producto_id: int
@@ -59,10 +64,31 @@ class LineaCarrito:
     nombre: str
     precio_unit_clp: int
     cantidad: int = 1
+    descuento_monto_clp: int = 0
+    descuento_porcentaje: float | None = None
 
     @property
     def subtotal_clp(self) -> int:
+        """Importe bruto de la línea, antes de su descuento."""
         return self.precio_unit_clp * self.cantidad
+
+    @property
+    def descuento_clp(self) -> int:
+        """Descuento efectivo de la línea, nunca mayor que su propio subtotal."""
+        from ..utils.money import porcentaje_de
+
+        if self.descuento_porcentaje is not None:
+            return porcentaje_de(self.subtotal_clp, self.descuento_porcentaje)
+        return min(self.descuento_monto_clp, self.subtotal_clp)
+
+    @property
+    def total_clp(self) -> int:
+        """Lo que aporta la línea al subtotal de la venta, ya con su descuento aplicado."""
+        return self.subtotal_clp - self.descuento_clp
+
+    @property
+    def tiene_descuento(self) -> bool:
+        return self.descuento_clp > 0
 
 
 @dataclass(slots=True)
@@ -72,6 +98,7 @@ class LineaVenta:
     precio_unit_clp: int
     cantidad: int
     subtotal_clp: int
+    descuento_clp: int = 0
     producto_id: int | None = None
     id: int | None = None
     venta_id: int | None = None

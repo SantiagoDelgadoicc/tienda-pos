@@ -77,17 +77,14 @@ class DialogoCodigoNoEncontrado(QDialog):
         disposicion.setSpacing(14)
 
         titulo = QLabel("Este producto no está en el catálogo")
-        titulo.setStyleSheet("font-size: 18px; font-weight: 600;")
+        titulo.setObjectName("tituloPantalla")
         disposicion.addWidget(titulo)
 
         etiqueta_codigo = QLabel(codigo)
-        etiqueta_codigo.setObjectName("mensajeError")
+        # El color sale de la hoja de estilos y no de aquí: si se escribiera a mano, el
+        # tema oscuro seguiría pintando este recuadro con los colores del claro.
+        etiqueta_codigo.setObjectName("codigoNoEncontrado")
         etiqueta_codigo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        etiqueta_codigo.setStyleSheet(
-            "font-size: 26px; font-weight: 700; letter-spacing: 2px;"
-            " background-color: #FEE2E2; color: #B91C1C;"
-            " border-radius: 8px; padding: 14px;"
-        )
         etiqueta_codigo.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         disposicion.addWidget(etiqueta_codigo)
 
@@ -170,21 +167,38 @@ class DialogoTexto(QDialog):
         return self.campo.text().strip()
 
 
-class DialogoDescuento(QDialog):
-    """Pide un descuento para la venta, por monto fijo o por porcentaje.
+#: Ámbitos posibles de un descuento.
+AMBITO_VENTA = "venta"
+AMBITO_PRODUCTO = "producto"
 
-    Se ofrecen las dos formas porque en una tienda pequena conviven: "te dejo en cinco mil"
-    (monto) y "te hago el diez por ciento" (porcentaje). Obligar a convertir mentalmente una
-    en la otra delante del cliente es pedir errores.
+
+class DialogoDescuento(QDialog):
+    """Pide un descuento por monto fijo o por porcentaje, y sobre qué se aplica.
+
+    Se ofrecen las dos formas de calcularlo porque en una tienda pequena conviven: "te dejo
+    en cinco mil" (monto) y "te hago el diez por ciento" (porcentaje). Obligar a convertir
+    mentalmente una en la otra delante del cliente es pedir errores.
+
+    Y se ofrecen los dos ámbitos por el mismo motivo: el descuento del pan del día anterior
+    es del pan, no de la compra entera, y aplicarlo al total daría el importe correcto hoy
+    pero una venta imposible de explicar mañana.
+
+    Tras cerrar se consultan `ambito`, `quitar`, `es_porcentaje` y `valor`.
     """
 
-    def __init__(self, subtotal_clp: int, padre: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        subtotal_clp: int,
+        padre: QWidget | None = None,
+        linea=None,
+    ) -> None:
         from PySide6.QtWidgets import QLineEdit, QRadioButton
 
         super().__init__(padre)
         self.setWindowTitle("Descuento")
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(430)
         self._subtotal = subtotal_clp
+        self._linea = linea
         self.quitar = False
 
         columna = QVBoxLayout(self)
@@ -195,12 +209,25 @@ class DialogoDescuento(QDialog):
         titulo.setObjectName("tituloPantalla")
         columna.addWidget(titulo)
 
-        from ..utils.money import formatear_clp
+        # ------------------------------------------------------------ ámbito
+        self.opcion_venta = QRadioButton("A toda la venta")
+        self.opcion_venta.setChecked(True)
+        columna.addWidget(self.opcion_venta)
 
-        actual = QLabel(f"Subtotal de la venta: {formatear_clp(subtotal_clp)}")
-        actual.setObjectName("subtitulo")
-        columna.addWidget(actual)
+        self.opcion_producto = QRadioButton(self._texto_opcion_producto())
+        # Sin línea seleccionada no hay producto al que aplicar nada. Se deja visible y
+        # deshabilitada, y no oculta, para que se vea que la opción existe.
+        self.opcion_producto.setEnabled(linea is not None)
+        columna.addWidget(self.opcion_producto)
 
+        self.opcion_venta.toggled.connect(self._actualizar_base)
+        columna.addSpacing(4)
+
+        self.etiqueta_base = QLabel()
+        self.etiqueta_base.setObjectName("subtitulo")
+        columna.addWidget(self.etiqueta_base)
+
+        # ------------------------------------------------------------ forma de cálculo
         self.opcion_monto = QRadioButton("Descontar un monto en pesos")
         self.opcion_monto.setChecked(True)
         self.opcion_porcentaje = QRadioButton("Descontar un porcentaje")
@@ -224,12 +251,36 @@ class DialogoDescuento(QDialog):
         botones.button(QDialogButtonBox.StandardButton.Ok).setText("Aplicar")
         botones.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
         quitar = botones.addButton("Quitar descuento", QDialogButtonBox.ButtonRole.ResetRole)
+        quitar.setToolTip("Quita el descuento del ámbito seleccionado arriba.")
         quitar.clicked.connect(self._quitar)
         botones.accepted.connect(self._validar)
         botones.rejected.connect(self.reject)
         columna.addWidget(botones)
 
+        self._actualizar_base()
         self.campo.setFocus()
+
+    # ------------------------------------------------------------------ ayuda interna
+
+    def _texto_opcion_producto(self) -> str:
+        if self._linea is None:
+            return "Solo a un producto  (seleccione antes una línea del carrito)"
+        unidades = "unidad" if self._linea.cantidad == 1 else "unidades"
+        return f"Solo a {self._linea.nombre}  ({self._linea.cantidad} {unidades})"
+
+    def _actualizar_base(self) -> None:
+        """Mantiene a la vista el importe sobre el que se calculará el descuento."""
+        from ..utils.money import formatear_clp
+
+        if self.ambito == AMBITO_PRODUCTO:
+            self.etiqueta_base.setText(
+                f"Importe de la línea: {formatear_clp(self.base_clp)}"
+            )
+        else:
+            self.etiqueta_base.setText(
+                f"Subtotal de la venta: {formatear_clp(self.base_clp)}"
+            )
+        self.error.hide()
 
     def _quitar(self) -> None:
         self.quitar = True
@@ -266,13 +317,30 @@ class DialogoDescuento(QDialog):
                 self.error.setText("El descuento no puede ser negativo.")
                 self.error.show()
                 return
-            if valor > self._subtotal:
-                self.error.setText("El descuento no puede superar el total de la venta.")
+            if valor > self.base_clp:
+                self.error.setText(
+                    "El descuento no puede superar el importe de esa línea."
+                    if self.ambito == AMBITO_PRODUCTO
+                    else "El descuento no puede superar el total de la venta."
+                )
                 self.error.show()
                 return
 
         self._valor = valor
         self.accept()
+
+    # ------------------------------------------------------------------ resultado
+
+    @property
+    def ambito(self) -> str:
+        return AMBITO_PRODUCTO if self.opcion_producto.isChecked() else AMBITO_VENTA
+
+    @property
+    def base_clp(self) -> int:
+        """Importe contra el que se valida el monto, según el ámbito elegido."""
+        if self.ambito == AMBITO_PRODUCTO and self._linea is not None:
+            return self._linea.subtotal_clp
+        return self._subtotal
 
     @property
     def es_porcentaje(self) -> bool:

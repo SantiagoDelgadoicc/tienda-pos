@@ -30,11 +30,23 @@ _CANCELADO = object()
 
 
 def _crear_aplicacion() -> QApplication:
+    """Crea la QApplication ya vestida con las preferencias guardadas.
+
+    El tema se aplica aquí y no en la ventana principal porque el diálogo de acceso aparece
+    antes que ella: si no, el PIN se pediría siempre sobre fondo claro y la aplicación
+    cambiaría de color a mitad del arranque.
+    """
+    from .services import preferencias as servicio_preferencias
+    from .utils import sonido
+
     app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName(config.NOMBRE_COMERCIAL)
     app.setApplicationVersion(config.VERSION)
     app.setOrganizationName(config.NOMBRE_APP)
-    estilos.aplicar(app)
+
+    preferidas = servicio_preferencias.cargar()
+    estilos.aplicar(app, preferidas.tema)
+    sonido.habilitado = preferidas.sonido
     return app
 
 

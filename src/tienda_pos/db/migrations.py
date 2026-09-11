@@ -15,7 +15,7 @@ import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 
-VERSION_ESQUEMA = 1
+VERSION_ESQUEMA = 2
 
 _RUTA_ESQUEMA = Path(__file__).with_name("schema.sql")
 
@@ -58,9 +58,23 @@ def _crear_esquema_inicial(conexion: sqlite3.Connection) -> None:
         conexion.execute(sentencia)
 
 
+def _descuento_por_linea(conexion: sqlite3.Connection) -> None:
+    """Añade el descuento aplicado a cada línea de venta.
+
+    Hasta ahora el descuento solo existía a nivel de venta. Al permitir descontar un
+    producto concreto hace falta guardar cuánto se descontó en cada línea, o el detalle de
+    una venta antigua no se podría explicar. Las ventas ya registradas quedan con 0, que es
+    exactamente lo que ocurrió en ellas.
+    """
+    conexion.execute(
+        "ALTER TABLE venta_linea ADD COLUMN descuento_clp INTEGER NOT NULL DEFAULT 0"
+    )
+
+
 # Versión de destino -> función que lleva la base desde la versión anterior hasta ella.
 _MIGRACIONES: dict[int, Callable[[sqlite3.Connection], None]] = {
     1: _crear_esquema_inicial,
+    2: _descuento_por_linea,
 }
 
 

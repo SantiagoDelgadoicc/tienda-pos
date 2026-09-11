@@ -22,7 +22,7 @@ pytest.importorskip("PySide6", reason="La interfaz requiere PySide6")
 from tienda_pos.db.seed import codigo_demo  # noqa: E402
 from tienda_pos.repositories import codigos as repo_codigos  # noqa: E402
 from tienda_pos.repositories import ventas as repo_ventas  # noqa: E402
-from tienda_pos.ui import dialogos  # noqa: E402
+from tienda_pos.ui import dialogos, venta_view  # noqa: E402
 from tienda_pos.ui.main_window import VentanaPrincipal  # noqa: E402
 
 # Códigos del catálogo de ejemplo usados en las pruebas.
@@ -43,7 +43,7 @@ class TestPantallaDeVenta:
         vista.agregar_por_codigo(COLA)
 
         assert vista.tabla.rowCount() == 1
-        assert vista.tabla.item(0, 0).text() == COLA
+        assert vista.tabla.item(0, venta_view.COL_CODIGO).text() == COLA
         assert vista.valor_total.text() == "$2.290"
         assert vista.etiqueta_articulos.text() == "1 artículos"
 
@@ -53,7 +53,7 @@ class TestPantallaDeVenta:
         vista.agregar_por_codigo(COLA)
 
         assert vista.tabla.rowCount() == 1
-        assert vista.tabla.item(0, 3).text() == "2"
+        assert vista.tabla.item(0, venta_view.COL_CANTIDAD).text() == "2"
         assert vista.valor_total.text() == "$4.580"
 
     def test_el_foco_vuelve_al_campo_tras_escanear(self, ventana) -> None:
@@ -106,7 +106,7 @@ class TestQuitarYCancelar:
         vista.agregar_por_codigo(COLA)
 
         vista.quitar_linea_seleccionada()
-        assert vista.tabla.item(0, 3).text() == "1"
+        assert vista.tabla.item(0, venta_view.COL_CANTIDAD).text() == "1"
 
         vista.quitar_linea_seleccionada()
         assert vista.tabla.rowCount() == 0
@@ -119,6 +119,174 @@ class TestQuitarYCancelar:
         vista.cancelar_venta()  # el diálogo de confirmación responde que sí
         assert vista.tabla.rowCount() == 0
         assert vista.valor_total.text() == "$0"
+
+
+class TestCantidadesYTeclado:
+    """Las acciones sobre el carrito que no exigen soltar el lector."""
+
+    def _pulsar(self, vista, tecla, modificador=None) -> None:
+        from PySide6.QtCore import QEvent, Qt
+        from PySide6.QtGui import QKeyEvent
+
+        modificador = modificador or Qt.KeyboardModifier.NoModifier
+        evento = QKeyEvent(QEvent.Type.KeyPress, tecla, modificador)
+        vista.eventFilter(vista.campo_codigo, evento)
+
+    def test_el_boton_mas_suma_una_unidad(self, ventana) -> None:
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        vista.aumentar_cantidad()
+
+        assert vista.tabla.item(0, venta_view.COL_CANTIDAD).text() == "2"
+        assert vista.valor_total.text() == "$4.580"
+
+    def test_el_boton_menos_resta_y_despues_borra(self, ventana) -> None:
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        vista.aumentar_cantidad()
+
+        vista.disminuir_cantidad()
+        assert vista.tabla.item(0, venta_view.COL_CANTIDAD).text() == "1"
+        vista.disminuir_cantidad()
+        assert vista.tabla.rowCount() == 0
+
+    def test_la_flecha_derecha_suma_una_unidad(self, ventana) -> None:
+        from PySide6.QtCore import Qt
+
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        self._pulsar(vista, Qt.Key.Key_Right)
+
+        assert vista.tabla.item(0, venta_view.COL_CANTIDAD).text() == "2"
+
+    def test_la_flecha_izquierda_resta_una_unidad(self, ventana) -> None:
+        from PySide6.QtCore import Qt
+
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        vista.aumentar_cantidad()
+        self._pulsar(vista, Qt.Key.Key_Left)
+
+        assert vista.tabla.item(0, venta_view.COL_CANTIDAD).text() == "1"
+
+    def test_las_flechas_no_tocan_el_carrito_si_hay_un_codigo_a_medio_escribir(
+        self, ventana
+    ) -> None:
+        # Con texto en el campo, las flechas son del campo: sirven para corregir el código.
+        from PySide6.QtCore import Qt
+
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        vista.campo_codigo.setText("78012")
+        self._pulsar(vista, Qt.Key.Key_Right)
+
+        assert vista.tabla.item(0, venta_view.COL_CANTIDAD).text() == "1"
+
+    def test_arriba_y_abajo_mueven_la_seleccion(self, ventana) -> None:
+        from PySide6.QtCore import Qt
+
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        vista.agregar_por_codigo(LECHE)  # queda seleccionada la segunda fila
+
+        self._pulsar(vista, Qt.Key.Key_Up)
+        assert vista.tabla.currentRow() == 0
+        self._pulsar(vista, Qt.Key.Key_Down)
+        assert vista.tabla.currentRow() == 1
+
+    def test_la_seleccion_no_se_sale_de_la_tabla(self, ventana) -> None:
+        from PySide6.QtCore import Qt
+
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        for _ in range(3):
+            self._pulsar(vista, Qt.Key.Key_Up)
+        assert vista.tabla.currentRow() == 0
+
+    def test_el_teclado_con_el_carrito_vacio_no_rompe_nada(self, ventana) -> None:
+        # Y tampoco regaña: pulsar una flecha sin carrito no es un error del cajero.
+        from PySide6.QtCore import Qt
+
+        vista = ventana.vista_venta
+        for tecla in (Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_Left, Qt.Key.Key_Right):
+            self._pulsar(vista, tecla)
+
+        assert vista.tabla.rowCount() == 0
+        assert not vista.mensaje.isVisible()
+
+    def test_no_se_pasa_del_tope_por_linea(self, ventana) -> None:
+        from tienda_pos.services import venta as servicio_venta
+
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        vista.carrito.cambiar_cantidad(COLA, servicio_venta.CANTIDAD_MAX_POR_LINEA)
+        vista._refrescar()
+        vista.aumentar_cantidad()
+
+        assert vista.carrito.lineas[0].cantidad == servicio_venta.CANTIDAD_MAX_POR_LINEA
+
+    def test_copiar_deja_el_codigo_en_el_portapapeles(self, ventana) -> None:
+        from PySide6.QtGui import QGuiApplication
+
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        vista.copiar_codigo_seleccionado()
+
+        assert QGuiApplication.clipboard().text() == COLA
+
+    def test_copiar_sin_seleccion_avisa_y_no_falla(self, ventana) -> None:
+        vista = ventana.vista_venta
+        vista.copiar_codigo_seleccionado()
+        assert vista.mensaje.isVisible()
+
+    def test_cada_fila_trae_sus_celdas_de_accion(self, ventana) -> None:
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+
+        assert vista.tabla.item(0, venta_view.COL_COPIAR).text() == venta_view._COPIAR
+        assert vista.tabla.item(0, venta_view.COL_MENOS).text() == venta_view._MENOS
+        assert vista.tabla.item(0, venta_view.COL_MAS).text() == venta_view._MAS
+
+    def test_pulsar_la_celda_de_mas_suma_una_unidad(self, ventana) -> None:
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        vista.tabla.cellClicked.emit(0, venta_view.COL_MAS)
+
+        assert vista.tabla.item(0, venta_view.COL_CANTIDAD).text() == "2"
+
+    def test_pulsar_la_celda_de_menos_resta_una_unidad(self, ventana) -> None:
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        vista.aumentar_cantidad()
+        vista.tabla.cellClicked.emit(0, venta_view.COL_MENOS)
+
+        assert vista.tabla.item(0, venta_view.COL_CANTIDAD).text() == "1"
+
+    def test_pulsar_la_celda_de_copiar_copia_el_codigo(self, ventana) -> None:
+        from PySide6.QtGui import QGuiApplication
+
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(LECHE)
+        vista.tabla.cellClicked.emit(0, venta_view.COL_COPIAR)
+
+        assert QGuiApplication.clipboard().text() == LECHE
+
+    def test_pulsar_una_celda_normal_no_cambia_el_carrito(self, ventana) -> None:
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        vista.tabla.cellClicked.emit(0, venta_view.COL_NOMBRE)
+
+        assert vista.tabla.item(0, venta_view.COL_CANTIDAD).text() == "1"
+
+    def test_al_llegar_al_tope_la_celda_de_mas_se_apaga(self, ventana) -> None:
+        from tienda_pos.services import venta as servicio_venta
+
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        vista.carrito.cambiar_cantidad(COLA, servicio_venta.CANTIDAD_MAX_POR_LINEA)
+        vista._refrescar()
+
+        assert vista.tabla.item(0, venta_view.COL_MAS).text() == ""
 
 
 class TestCobrar:

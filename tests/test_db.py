@@ -35,6 +35,39 @@ class TestEsquema:
         with pytest.raises(RuntimeError, match="más nueva"):
             aplicar_migraciones(conexion)
 
+    def test_una_base_de_la_version_1_se_actualiza_sin_perder_datos(self, tmp_path) -> None:
+        """El caso real: el cliente ya tiene ventas cobradas cuando llega la versión nueva."""
+        import sqlite3 as sqlite
+
+        from tienda_pos.db import migrations
+
+        ruta = tmp_path / "vieja.db"
+        antigua = sqlite.connect(ruta)
+        antigua.row_factory = sqlite.Row
+        # Se construye tal como quedaba una base de la versión 1: el esquema inicial y nada
+        # más. No se reutiliza el esquema actual, que ya trae la migración aplicada.
+        migrations._crear_esquema_inicial(antigua)
+        antigua.execute("PRAGMA user_version = 1")
+        antigua.execute(
+            "INSERT INTO venta (folio, fecha_hora, subtotal_clp, descuento_clp, total_clp) "
+            "VALUES (1, '2026-01-01 10:00:00', 1000, 0, 1000)"
+        )
+        antigua.execute(
+            "INSERT INTO venta_linea (venta_id, codigo_barras, nombre, precio_unit_clp, "
+            "cantidad, subtotal_clp) VALUES (1, '123', 'Antiguo', 1000, 1, 1000)"
+        )
+        antigua.commit()
+
+        assert aplicar_migraciones(antigua) == VERSION_ESQUEMA
+
+        fila = antigua.execute("SELECT * FROM venta_linea").fetchone()
+        assert fila["nombre"] == "Antiguo"
+        assert fila["subtotal_clp"] == 1000
+        # Las ventas ya registradas no llevaban descuento por línea, y 0 es exactamente lo
+        # que ocurrió en ellas.
+        assert fila["descuento_clp"] == 0
+        antigua.close()
+
     def test_las_claves_foraneas_estan_activas(self, conexion) -> None:
         assert conexion.execute("PRAGMA foreign_keys").fetchone()[0] == 1
 

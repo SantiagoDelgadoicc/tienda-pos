@@ -34,6 +34,7 @@ def _a_linea(fila: sqlite3.Row) -> LineaVenta:
         precio_unit_clp=fila["precio_unit_clp"],
         cantidad=fila["cantidad"],
         subtotal_clp=fila["subtotal_clp"],
+        descuento_clp=fila["descuento_clp"],
     )
 
 
@@ -70,7 +71,8 @@ def insertar(conexion: sqlite3.Connection, venta: Venta) -> Venta:
         linea.venta_id = venta.id
         cursor = conexion.execute(
             "INSERT INTO venta_linea (venta_id, producto_id, codigo_barras, nombre, "
-            "precio_unit_clp, cantidad, subtotal_clp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "precio_unit_clp, cantidad, subtotal_clp, descuento_clp) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 venta.id,
                 linea.producto_id,
@@ -79,6 +81,7 @@ def insertar(conexion: sqlite3.Connection, venta: Venta) -> Venta:
                 linea.precio_unit_clp,
                 linea.cantidad,
                 linea.subtotal_clp,
+                linea.descuento_clp,
             ),
         )
         linea.id = int(cursor.lastrowid)

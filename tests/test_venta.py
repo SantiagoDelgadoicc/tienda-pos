@@ -140,6 +140,129 @@ class TestDescuentos:
         assert carrito.descuento_clp == 1290
 
 
+class TestDescuentosPorProducto:
+    """El descuento que se aplica a una línea y no a la venta entera."""
+
+    LECHE = "7801234000019"
+    PAN = "7801234000026"
+
+    def test_descuento_por_monto_en_una_linea(self, productos) -> None:
+        carrito = Carrito()
+        carrito.agregar(productos["leche"], 2)  # 2580
+        carrito.agregar(productos["pan"])  # 2190
+        carrito.aplicar_descuento_linea_monto(self.LECHE, 580)
+
+        assert carrito.subtotal_clp == 4770
+        assert carrito.descuento_clp == 580
+        assert carrito.total_clp == 4190
+
+    def test_descuento_por_porcentaje_en_una_linea(self, productos) -> None:
+        carrito = Carrito()
+        carrito.agregar(productos["leche"], 2)  # 2580
+        carrito.aplicar_descuento_linea_porcentaje(self.LECHE, 10)
+
+        assert carrito.lineas[0].descuento_clp == 258
+        assert carrito.lineas[0].total_clp == 2322
+        assert carrito.total_clp == 2322
+
+    def test_el_porcentaje_de_la_linea_sigue_a_la_cantidad(self, productos) -> None:
+        carrito = Carrito()
+        carrito.agregar(productos["leche"])  # 1290
+        carrito.aplicar_descuento_linea_porcentaje(self.LECHE, 50)
+        assert carrito.descuento_clp == 645
+
+        carrito.agregar(productos["leche"])  # 2580
+        assert carrito.descuento_clp == 1290
+
+    def test_los_dos_descuentos_conviven(self, productos) -> None:
+        # 10% del pan (219) y luego 1.000 sobre el resto de la venta.
+        carrito = Carrito()
+        carrito.agregar(productos["leche"])  # 1290
+        carrito.agregar(productos["pan"])  # 2190
+        carrito.aplicar_descuento_linea_porcentaje(self.PAN, 10)
+        carrito.aplicar_descuento_monto(1000)
+
+        assert carrito.descuento_lineas_clp == 219
+        assert carrito.descuento_venta_clp == 1000
+        assert carrito.descuento_clp == 1219
+        assert carrito.total_clp == 3480 - 1219
+
+    def test_el_descuento_de_venta_no_puede_pasarse_de_la_base_ya_rebajada(
+        self, productos
+    ) -> None:
+        # Regalado el producto entero, no queda nada sobre lo que seguir descontando.
+        carrito = Carrito()
+        carrito.agregar(productos["leche"])  # 1290
+        carrito.aplicar_descuento_linea_porcentaje(self.LECHE, 100)
+        with pytest.raises(DescuentoInvalido):
+            carrito.aplicar_descuento_monto(100)
+        assert carrito.total_clp == 0
+
+    def test_el_descuento_de_linea_no_puede_superar_la_linea(self, productos) -> None:
+        carrito = Carrito()
+        carrito.agregar(productos["leche"])  # 1290
+        with pytest.raises(DescuentoInvalido):
+            carrito.aplicar_descuento_linea_monto(self.LECHE, 1500)
+
+    @pytest.mark.parametrize("porcentaje", [-1, 101])
+    def test_porcentaje_de_linea_fuera_de_rango(self, productos, porcentaje) -> None:
+        carrito = Carrito()
+        carrito.agregar(productos["leche"])
+        with pytest.raises(DescuentoInvalido):
+            carrito.aplicar_descuento_linea_porcentaje(self.LECHE, porcentaje)
+
+    def test_no_se_descuenta_un_producto_que_no_esta_en_el_carrito(self, productos) -> None:
+        carrito = Carrito()
+        carrito.agregar(productos["leche"])
+        with pytest.raises(DatosInvalidos):
+            carrito.aplicar_descuento_linea_monto(self.PAN, 100)
+
+    def test_quitar_la_linea_se_lleva_su_descuento(self, productos) -> None:
+        carrito = Carrito()
+        carrito.agregar(productos["leche"])
+        carrito.agregar(productos["pan"])
+        carrito.aplicar_descuento_linea_monto(self.LECHE, 500)
+        carrito.quitar(self.LECHE)
+
+        assert carrito.descuento_clp == 0
+        assert carrito.total_clp == 2190
+
+    def test_quitar_el_descuento_de_una_linea(self, productos) -> None:
+        carrito = Carrito()
+        carrito.agregar(productos["leche"])
+        carrito.aplicar_descuento_linea_monto(self.LECHE, 500)
+        carrito.quitar_descuento_linea(self.LECHE)
+        assert carrito.total_clp == 1290
+
+    def test_el_descuento_de_linea_baja_con_la_cantidad(self, productos) -> None:
+        # Descuento fijo de 1.000 sobre dos leches; al quedar una, no puede superar su
+        # propio importe.
+        carrito = Carrito()
+        carrito.agregar(productos["leche"], 2)  # 2580
+        carrito.aplicar_descuento_linea_monto(self.LECHE, 1000)
+        carrito.cambiar_cantidad(self.LECHE, 1)  # 1290
+        assert carrito.descuento_clp == 1000
+        assert carrito.total_clp == 290
+
+    def test_la_venta_guarda_el_descuento_de_cada_linea(
+        self, conexion, productos, cajero
+    ) -> None:
+        carrito = Carrito()
+        carrito.agregar(productos["leche"], 2)  # 2580
+        carrito.agregar(productos["pan"])  # 2190
+        carrito.aplicar_descuento_linea_monto(self.LECHE, 580)
+
+        venta = servicio_venta.cerrar_venta(conexion, carrito, cajero)
+        guardada = repo_ventas.obtener(conexion, venta.id)
+
+        por_codigo = {linea.codigo_barras: linea for linea in guardada.lineas}
+        assert por_codigo[self.LECHE].descuento_clp == 580
+        assert por_codigo[self.LECHE].subtotal_clp == 2580  # el bruto no se toca
+        assert por_codigo[self.PAN].descuento_clp == 0
+        assert guardada.descuento_clp == 580
+        assert guardada.total_clp == 4190
+
+
 class TestCierreDeVenta:
     def test_registra_la_venta_con_sus_lineas(self, conexion, productos, cajero) -> None:
         carrito = Carrito()

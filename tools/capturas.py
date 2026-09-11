@@ -32,6 +32,7 @@ from tienda_pos.db.inicio import abrir_base_datos  # noqa: E402
 from tienda_pos.db.seed import codigo_demo  # noqa: E402
 from tienda_pos.domain.models import Rol, Usuario  # noqa: E402
 from tienda_pos.services import auth  # noqa: E402
+from tienda_pos.services import preferencias as servicio_preferencias  # noqa: E402
 from tienda_pos.ui import estilos  # noqa: E402
 from tienda_pos.ui.login_dialog import DialogoLogin  # noqa: E402
 from tienda_pos.ui.main_window import VentanaPrincipal  # noqa: E402
@@ -67,10 +68,12 @@ def generar(destino: Path) -> list[Path]:
     _silenciar_dialogos()
 
     app = QApplication.instance() or QApplication(sys.argv)
-    estilos.aplicar(app)
+    estilos.aplicar(app, servicio_preferencias.TEMA_CLARO)
 
     conexion = abrir_base_datos(":memory:", con_datos_demo=True)
     ventana = VentanaPrincipal(conexion)
+    # Las capturas no deben depender de los ajustes que tenga guardados quien las genera.
+    ventana.aplicar_preferencias(servicio_preferencias.Preferencias())
     ventana.resize(ANCHO, ALTO)
     ventana.establecer_usuario(CAJERA)
     ventana.show()
@@ -118,6 +121,28 @@ def generar(destino: Path) -> list[Path]:
         ventana.vista_venta.cobrar()
     ventana.mostrar_reportes()
     generadas.append(_guardar(ventana, destino, "07-ventas-del-dia"))
+
+    # 8. Descuento aplicado a un solo producto: la columna "Desc." solo aparece aquí.
+    ventana.mostrar_venta()
+    ventana.vista_venta.carrito.vaciar()
+    for indice in (0, 10, 19, 35):
+        ventana.vista_venta.agregar_por_codigo(codigo_demo(indice))
+    ventana.vista_venta.carrito.aplicar_descuento_linea_porcentaje(codigo_demo(10), 20)
+    ventana.vista_venta._refrescar()
+    generadas.append(_guardar(ventana, destino, "08-descuento-por-producto"))
+
+    # 9. La misma pantalla en tema oscuro, para poder compararlas de un vistazo.
+    ventana.aplicar_tema(servicio_preferencias.TEMA_OSCURO)
+    generadas.append(_guardar(ventana, destino, "09-tema-oscuro"))
+    ventana.aplicar_tema(servicio_preferencias.TEMA_CLARO)
+
+    # 10. La rueda de configuración.
+    from tienda_pos.ui.configuracion_dialog import DialogoConfiguracion
+
+    configuracion = DialogoConfiguracion(servicio_preferencias.Preferencias(), ventana)
+    configuracion.show()
+    generadas.append(_guardar(configuracion, destino, "10-configuracion"))
+    configuracion.close()
 
     conexion.close()
     return generadas

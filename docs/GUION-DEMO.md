@@ -89,20 +89,39 @@ Escanea seguido: `7801234000001`, `7801234000001` (el mismo dos veces), `7801234
 - Que el total se actualiza solo, en grande, a la derecha.
 - Que no se ha tocado el ratón ni una vez.
 
-Pulsa **F5** para quitar una unidad de la última línea (se arrepintió el cliente).
+Pulsa la **flecha derecha** para sumar otra unidad a la línea seleccionada, y la **izquierda**
+para volver a bajarla (se arrepintió el cliente). Las mismas acciones están como **+** y **−**
+en cada línea, para quien prefiera el ratón.
 
 Pulsa **F12** para cobrar, confirma, y muestra el mensaje **Venta N° 1 registrada**.
 
-## Paso 4 — Un descuento (1 minuto)
+## Paso 4 — Un descuento (2 minutos)
 
 Escanea `7801234000308` y `7801234000193`.
 
-Pulsa **F4**, elige *porcentaje*, escribe `10` y aplica.
+Pulsa **F4**, deja marcado *a toda la venta*, elige *porcentaje*, escribe `10` y aplica.
 
 **Qué decir:** que el descuento se puede hacer por monto ("te lo dejo en cinco mil") o por
 porcentaje ("te hago el diez"), porque en una tienda se usan las dos formas.
 
+Ahora selecciona una de las dos líneas, pulsa **F4** otra vez y marca *solo a este producto*.
+Descuenta `500`.
+
+**Qué mostrar:** que la rebaja aparece en la columna **Desc.** de esa línea, y que el panel de
+la derecha dice que el descuento viene de la venta y de los productos.
+
+**Qué decir:** que así queda registrado **de qué producto** era la rebaja, y que mañana, al
+mirar esa venta, se puede explicar. Es el caso del pan del día anterior o del envase abollado.
+
 Cobra con **F12**.
+
+## Paso 4b — El aspecto del programa (30 segundos, opcional)
+
+Pulsa **F9** y cambia el tema a *oscuro*. La pantalla entera cambia al instante.
+
+**Qué decir:** que es para locales con poca luz o turnos de noche, y que desde ahí también se
+apaga el pitido o la confirmación al cobrar. **No es un requisito del cliente**: se muestra
+solo si pregunta por la apariencia. Vuelve al tema claro antes de seguir.
 
 ## Paso 5 — Su negocio, no solo la caja (2 minutos)
 

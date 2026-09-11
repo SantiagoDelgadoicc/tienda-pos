@@ -95,17 +95,61 @@ class Carrito:
         self._lineas.clear()
         self.quitar_descuento()
 
-    # ------------------------------------------------------------------ descuento
+    # ------------------------------------------------------------------ descuento de línea
+
+    def _linea(self, codigo_barras: str) -> LineaCarrito:
+        linea = self._lineas.get(codigo_barras)
+        if linea is None:
+            raise DatosInvalidos("Ese producto no está en el carrito.")
+        return linea
+
+    def aplicar_descuento_linea_monto(self, codigo_barras: str, monto_clp: int) -> None:
+        """Descuenta un importe fijo sobre una sola línea.
+
+        Raises:
+            DatosInvalidos: si el producto no está en el carrito.
+            DescuentoInvalido: si es negativo o supera el subtotal de esa línea.
+        """
+        linea = self._linea(codigo_barras)
+        if monto_clp < 0:
+            raise DescuentoInvalido("El descuento no puede ser negativo.")
+        if monto_clp > linea.subtotal_clp:
+            raise DescuentoInvalido(
+                "El descuento no puede superar el importe de esa línea."
+            )
+        linea.descuento_monto_clp = monto_clp
+        linea.descuento_porcentaje = None
+
+    def aplicar_descuento_linea_porcentaje(self, codigo_barras: str, porcentaje: float) -> None:
+        """Descuenta un porcentaje sobre una sola línea."""
+        linea = self._linea(codigo_barras)
+        if not 0 <= porcentaje <= 100:
+            raise DescuentoInvalido("El porcentaje debe estar entre 0 y 100.")
+        linea.descuento_porcentaje = porcentaje
+        linea.descuento_monto_clp = 0
+
+    def quitar_descuento_linea(self, codigo_barras: str) -> None:
+        linea = self._linea(codigo_barras)
+        linea.descuento_monto_clp = 0
+        linea.descuento_porcentaje = None
+
+    def linea_de(self, codigo_barras: str) -> LineaCarrito | None:
+        return self._lineas.get(codigo_barras)
+
+    # ------------------------------------------------------------------ descuento de la venta
 
     def aplicar_descuento_monto(self, monto_clp: int) -> None:
-        """Descuento por un importe fijo sobre el total.
+        """Descuento por un importe fijo sobre el total de la venta.
+
+        Se calcula sobre lo que queda después de los descuentos de línea: de otro modo,
+        dos descuentos del 100% (uno de línea y otro de venta) dejarían un total negativo.
 
         Raises:
             DescuentoInvalido: si es negativo o supera el subtotal actual.
         """
         if monto_clp < 0:
             raise DescuentoInvalido("El descuento no puede ser negativo.")
-        if monto_clp > self.subtotal_clp:
+        if monto_clp > self.base_descontable_clp:
             raise DescuentoInvalido("El descuento no puede superar el total de la venta.")
         self._descuento_monto = monto_clp
         self._descuento_porcentaje = None
@@ -143,18 +187,35 @@ class Carrito:
 
     @property
     def subtotal_clp(self) -> int:
+        """Importe bruto de la venta, antes de cualquier descuento."""
         return sum(linea.subtotal_clp for linea in self._lineas.values())
 
     @property
-    def descuento_clp(self) -> int:
-        """Descuento efectivo, nunca mayor que el subtotal.
+    def descuento_lineas_clp(self) -> int:
+        """Suma de los descuentos aplicados producto a producto."""
+        return sum(linea.descuento_clp for linea in self._lineas.values())
+
+    @property
+    def base_descontable_clp(self) -> int:
+        """Lo que queda por descontar tras los descuentos de línea."""
+        return self.subtotal_clp - self.descuento_lineas_clp
+
+    @property
+    def descuento_venta_clp(self) -> int:
+        """Descuento aplicado al total, sin contar los de línea.
 
         El tope importa: si se aplica un descuento de 2.000 y luego se quitan productos
         hasta dejar 1.500, el total debe ser 0 y jamás un número negativo.
         """
+        base = self.base_descontable_clp
         if self._descuento_porcentaje is not None:
-            return porcentaje_de(self.subtotal_clp, self._descuento_porcentaje)
-        return min(self._descuento_monto, self.subtotal_clp)
+            return porcentaje_de(base, self._descuento_porcentaje)
+        return min(self._descuento_monto, base)
+
+    @property
+    def descuento_clp(self) -> int:
+        """Descuento total de la venta: el de las líneas más el del total."""
+        return self.descuento_lineas_clp + self.descuento_venta_clp
 
     @property
     def descuento_porcentaje(self) -> float | None:
@@ -214,6 +275,7 @@ def cerrar_venta(
                     precio_unit_clp=linea.precio_unit_clp,
                     cantidad=linea.cantidad,
                     subtotal_clp=linea.subtotal_clp,
+                    descuento_clp=linea.descuento_clp,
                 )
                 for linea in carrito.lineas
             ],

@@ -39,7 +39,10 @@ categoría en silencio:
 - Venta solo por unidad (nada a granel ni por peso).
 - Rubro asumido para el catálogo demo: almacén / minimarket.
 - Reportes mínimos: ventas del día.
-- Descuento manual aplicable a la venta.
+- Descuento manual aplicable a la venta entera o a un producto concreto.
+- Tema claro y tema oscuro, elegibles desde una pantalla de configuración (F9), junto con el
+  sonido, la confirmación de cobro y la barra de atajos. Se guardan en `preferencias.json`,
+  dentro de la carpeta de datos.
 
 ### 3.3 Supuestos (a validar, no confirmados por nadie)
 - Moneda: peso chileno (CLP), sin decimales.
@@ -97,10 +100,10 @@ src/tienda_pos/
   domain/                 modelos y errores del negocio
   repositories/           acceso a datos, un módulo por entidad
   services/               lógica de negocio (NO importa Qt)
-  ui/                     todo lo que sabe de Qt
+  ui/                     todo lo que sabe de Qt (estilos.py define las dos paletas)
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    185 pruebas
+tests/                    239 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -135,7 +138,7 @@ pip install -r requirements-dev.txt   # requirements.txt son solo las de ejecuci
 
 python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
-pytest                                # pruebas (185, unos 20 s)
+pytest                                # pruebas (239, unos 35 s)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar el .exe

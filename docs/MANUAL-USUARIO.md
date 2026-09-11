@@ -54,6 +54,27 @@ Esta es la pantalla principal:
   antes de pasar el siguiente producto.
 - El lector de códigos funciona como un teclado. No hay que configurar nada.
 
+### Cambiar la cantidad de un producto
+
+Hay tres formas, y todas hacen lo mismo:
+
+- Pulse el **+** o el **−** de esa línea en la lista.
+- Seleccione la línea y use las **flechas del teclado**: **→** agrega una unidad y **←** quita
+  una. Para moverse entre líneas, **↑** y **↓**.
+- Pulse **F5**, que quita una unidad de la línea seleccionada.
+
+Al bajar de una unidad, la línea desaparece del carrito.
+
+> Las flechas actúan sobre el carrito **solo cuando el campo de escaneo está vacío**, que es
+> como está casi siempre. Si tiene un código a medio escribir, las flechas sirven para
+> corregirlo, como en cualquier otro programa.
+
+### Copiar el código de un producto
+
+Pulse el símbolo **⧉** que hay junto al código en la lista, o **Ctrl+C** con la línea
+seleccionada. El código queda en el portapapeles, listo para pegarlo en un correo, en una
+planilla o en la página del proveedor.
+
 ### Quitar un producto
 
 Seleccione la línea en la lista y pulse **F5**. Si esa línea tenía varias unidades, se quita
@@ -65,11 +86,26 @@ Pulse **F6**. El sistema pide confirmación antes de vaciar el carrito.
 
 ### Aplicar un descuento
 
-Pulse **F4**. Puede descontar un monto en pesos ("le dejo en cinco mil") o un porcentaje
-("le hago el diez por ciento").
+Pulse **F4**. El diálogo pregunta dos cosas:
 
-Si aplica un porcentaje y después agrega más productos, el descuento se recalcula solo para
-seguir siendo ese porcentaje.
+1. **A qué se aplica:** a *toda la venta* o *solo al producto seleccionado*. Para descontar un
+   producto, selecciónelo antes en la lista.
+2. **Cómo se calcula:** un monto en pesos ("le dejo en cinco mil") o un porcentaje ("le hago
+   el diez por ciento").
+
+![Descuento aplicado a un producto](img/08-descuento-por-producto.png)
+
+El descuento de un producto aparece en su propia línea, en la columna **Desc.**, y el panel de
+la derecha indica de dónde viene el descuento total.
+
+Cosas que conviene saber:
+
+- Los dos descuentos se pueden combinar: primero se descuenta cada producto y después el
+  descuento de la venta se calcula sobre lo que queda.
+- Si aplica un porcentaje y después cambia las cantidades, el descuento se recalcula solo para
+  seguir siendo ese porcentaje.
+- El botón **Quitar descuento** retira el del ámbito que esté marcado arriba.
+- Un descuento nunca puede dejar el total por debajo de cero.
 
 ---
 
@@ -146,7 +182,27 @@ el carrito lleno es la forma más fácil de cobrarle a alguien lo que llevaba ot
 
 ---
 
-## 8. Todos los atajos de teclado
+## 8. Configuración
+
+Pulse **F9**, o la rueda dentada ⚙ de la esquina superior derecha.
+
+![Configuración](img/10-configuracion.png)
+
+| Ajuste | Para qué sirve |
+|---|---|
+| **Tema** | *Claro* (el de fábrica) u *oscuro*, para locales con poca luz o turnos de noche. El cambio se ve al instante, sin reiniciar. |
+| **Avisar con un sonido al escanear** | El pitido que confirma que el producto entró sin mirar la pantalla. Se puede apagar si molesta. |
+| **Pedir confirmación antes de cobrar** | Si se apaga, **F12** cierra la venta de inmediato. Más rápido, pero sin red de seguridad. |
+| **Mostrar la barra de atajos abajo** | La franja con las teclas al pie de la ventana. |
+
+El botón **Abrir carpeta de datos** lleva directo a donde están la base de datos, las copias
+de seguridad y los registros. Es lo primero que le van a pedir si llama a soporte.
+
+Los ajustes se guardan en este computador y siguen puestos la próxima vez que abra.
+
+---
+
+## 9. Todos los atajos de teclado
 
 Pulse **F1** en cualquier momento para ver esta lista dentro del programa.
 
@@ -158,16 +214,21 @@ Pulse **F1** en cualquier momento para ver esta lista dentro del programa.
 | **F3** | Buscar un producto por su nombre |
 | **F4** | Aplicar un descuento |
 | **F5** | Quitar una unidad de la línea seleccionada |
+| **↑ ↓** | Moverse entre las líneas del carrito |
+| **→** o **+** | Agregar una unidad a la línea seleccionada |
+| **←** o **−** | Quitar una unidad de la línea seleccionada |
+| **Ctrl+C** | Copiar el código de la línea seleccionada |
 | **F6** | Cancelar la venta en curso |
 | **F7** | Administrar productos *(administrador)* |
 | **F8** | Ventas del día *(administrador)* |
+| **F9** | Configuración |
 | **F10** | Cambiar de usuario |
 | **F12** | Cobrar |
 | **Esc** | Volver a la pantalla de venta |
 
 ---
 
-## 9. Sus datos
+## 10. Sus datos
 
 Toda la información vive en un único archivo en este computador:
 
@@ -188,7 +249,7 @@ Toda la información vive en un único archivo en este computador:
 
 ---
 
-## 10. Si algo va mal
+## 11. Si algo va mal
 
 **Aparece un aviso de error.** El programa no se cierra: puede seguir trabajando. Revise el
 carrito antes de cobrar, por si acaso, y avise a quien le dé soporte enviando el archivo de
@@ -204,7 +265,7 @@ Pulse **Esc** para volver a la pantalla de venta y vuelva a intentarlo.
 
 ---
 
-## 11. Lo que este sistema todavía NO hace
+## 12. Lo que este sistema todavía NO hace
 
 Se dice aquí para que nadie cuente con ello:
 

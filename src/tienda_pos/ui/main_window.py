@@ -7,10 +7,12 @@ import sqlite3
 from PySide6.QtCore import QDateTime, Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QPushButton,
     QStackedWidget,
     QStatusBar,
     QVBoxLayout,
@@ -19,7 +21,11 @@ from PySide6.QtWidgets import (
 
 from ..config import NOMBRE_COMERCIAL, VERSION
 from ..domain.models import Usuario
-from . import dialogos
+from ..services import preferencias as servicio_preferencias
+from ..services.preferencias import Preferencias
+from ..utils import sonido
+from . import dialogos, estilos
+from .configuracion_dialog import DialogoConfiguracion
 from .consulta_view import ConsultaView
 from .login_dialog import DialogoLogin
 from .productos_view import ProductosView
@@ -33,14 +39,21 @@ _AYUDA = """<b>Atajos de teclado</b><br><br>
 <tr><td><b>F3</b></td><td>Buscar un producto por su nombre</td></tr>
 <tr><td><b>F4</b></td><td>Aplicar un descuento a la venta</td></tr>
 <tr><td><b>F5</b></td><td>Quitar una unidad de la línea seleccionada</td></tr>
+<tr><td><b>↑ ↓</b></td><td>Moverse entre las líneas del carrito</td></tr>
+<tr><td><b>→</b> o <b>+</b></td><td>Agregar una unidad a la línea seleccionada</td></tr>
+<tr><td><b>←</b> o <b>−</b></td><td>Quitar una unidad de la línea seleccionada</td></tr>
+<tr><td><b>Ctrl+C</b></td><td>Copiar el código de la línea seleccionada</td></tr>
 <tr><td><b>F6</b></td><td>Cancelar la venta en curso</td></tr>
 <tr><td><b>F12</b></td><td>Cobrar y registrar la venta</td></tr>
 <tr><td><b>F7</b></td><td>Administrar productos <i>(administrador)</i></td></tr>
 <tr><td><b>F8</b></td><td>Ventas del día <i>(administrador)</i></td></tr>
+<tr><td><b>F9</b></td><td>Configuración</td></tr>
 <tr><td><b>F10</b></td><td>Cambiar de usuario</td></tr>
 <tr><td><b>Esc</b></td><td>Volver a la pantalla de venta</td></tr>
 </table>
-<br>El lector de códigos de barras funciona como un teclado: no hace falta configurarlo.
+<br>Las flechas y las teclas + y − actúan sobre el carrito cuando el campo de escaneo
+está vacío; si hay un código a medio escribir, sirven para corregirlo.
+<br><br>El lector de códigos de barras funciona como un teclado: no hace falta configurarlo.
 """
 
 
@@ -51,6 +64,9 @@ class VentanaPrincipal(QMainWindow):
         super().__init__()
         self._conexion = conexion
         self.usuario: Usuario | None = None
+        # Las preferencias se leen antes de construir nada: el tema y la barra de atajos
+        # cambian cómo se monta la ventana.
+        self.preferencias = servicio_preferencias.cargar()
 
         self.setWindowTitle(f"{NOMBRE_COMERCIAL} {VERSION}")
         self.resize(1180, 760)
@@ -58,6 +74,7 @@ class VentanaPrincipal(QMainWindow):
 
         self._construir()
         self._registrar_atajos()
+        self.aplicar_preferencias(self.preferencias)
         self.mostrar_venta()
 
     # ------------------------------------------------------------------ construcción
@@ -93,8 +110,8 @@ class VentanaPrincipal(QMainWindow):
         barra = QStatusBar()
         barra.showMessage(
             "F2 consulta  ·  F3 buscar  ·  F4 descuento  ·  F5 quitar  ·  F6 cancelar  ·  "
-            "F7 productos  ·  F8 ventas del día  ·  F10 cambiar usuario  ·  F12 cobrar  ·  "
-            "F1 ayuda"
+            "F7 productos  ·  F8 ventas del día  ·  F9 configuración  ·  F10 cambiar usuario"
+            "  ·  F12 cobrar  ·  F1 ayuda"
         )
         self.setStatusBar(barra)
 
@@ -116,6 +133,15 @@ class VentanaPrincipal(QMainWindow):
         self.etiqueta_sesion.setAlignment(Qt.AlignmentFlag.AlignRight)
         fila.addWidget(self.etiqueta_sesion)
 
+        self.boton_configuracion = QPushButton("⚙")
+        self.boton_configuracion.setObjectName("botonConfiguracion")
+        self.boton_configuracion.setToolTip("Configuración   (F9)")
+        self.boton_configuracion.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.boton_configuracion.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.boton_configuracion.clicked.connect(self.abrir_configuracion)
+        fila.addSpacing(14)
+        fila.addWidget(self.boton_configuracion)
+
         # El reloj no es decorativo: en una caja se necesita saber la hora sin soltar nada.
         self._reloj = QTimer(self)
         self._reloj.timeout.connect(self._actualizar_sesion)
@@ -133,6 +159,7 @@ class VentanaPrincipal(QMainWindow):
         self._atajo(QKeySequence(Qt.Key.Key_F6), self._cancelar_venta)
         self._atajo(QKeySequence(Qt.Key.Key_F7), self.mostrar_productos)
         self._atajo(QKeySequence(Qt.Key.Key_F8), self.mostrar_reportes)
+        self._atajo(QKeySequence(Qt.Key.Key_F9), self.abrir_configuracion)
         self._atajo(QKeySequence(Qt.Key.Key_F10), self.cambiar_usuario)
         self._atajo(QKeySequence(Qt.Key.Key_F12), self._cobrar)
         self._atajo(QKeySequence(Qt.Key.Key_Escape), self.mostrar_venta)
@@ -253,6 +280,38 @@ class VentanaPrincipal(QMainWindow):
         pantalla = self.pantallas.currentWidget()
         if hasattr(pantalla, "enfocar_escaneo"):
             pantalla.enfocar_escaneo()
+
+    # ------------------------------------------------------------------ configuración
+
+    def abrir_configuracion(self) -> None:
+        """Abre la rueda de configuración y aplica lo que se elija."""
+        elegidas = DialogoConfiguracion.abrir(
+            self.preferencias, self, al_previsualizar_tema=self.aplicar_tema
+        )
+        if elegidas is not None:
+            self.aplicar_preferencias(elegidas)
+        self._devolver_foco()
+
+    def aplicar_preferencias(self, preferencias: Preferencias) -> None:
+        """Deja la aplicación en el estado que describen las preferencias."""
+        self.preferencias = preferencias
+        self.aplicar_tema(preferencias.tema)
+        sonido.habilitado = preferencias.sonido
+        self.vista_venta.preferencias = preferencias
+        if self.statusBar() is not None:
+            self.statusBar().setVisible(preferencias.mostrar_atajos)
+
+    def aplicar_tema(self, tema: str) -> None:
+        """Repinta toda la aplicación con el tema indicado, sin reiniciar.
+
+        Se aplica sobre la QApplication y no sobre esta ventana porque los diálogos son
+        ventanas aparte: si el estilo viviera aquí, seguirían saliendo con el tema anterior.
+        """
+        app = QApplication.instance()
+        if app is not None:
+            estilos.aplicar(app, tema)
+        # La hoja de estilos no alcanza a los colores que las pantallas fijan celda a celda.
+        self.vista_venta.repintar()
 
     # ------------------------------------------------------------------ sesión
 

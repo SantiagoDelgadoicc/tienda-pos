@@ -24,8 +24,11 @@ from tienda_pos.repositories import productos as repo_productos  # noqa: E402
 from tienda_pos.services import auth  # noqa: E402
 from tienda_pos.utils import sonido  # noqa: E402
 
-# Las pruebas no deben hacer sonar el equipo cada vez que simulan un escaneo.
+# Las pruebas no deben hacer sonar el equipo cada vez que simulan un escaneo. Se anula la
+# emisión y no solo la bandera `habilitado`, porque aplicar unas preferencias con el sonido
+# activado volvería a encenderla.
 sonido.silenciar()
+sonido._emitir = lambda *args, **kwargs: None
 
 
 # --------------------------------------------------------------------------- datos
@@ -85,7 +88,7 @@ def app():
 
 
 @pytest.fixture
-def ventana(app, conexion, monkeypatch):
+def ventana(app, conexion, monkeypatch, tmp_path):
     """Ventana principal con el catálogo de ejemplo cargado y sin diálogos bloqueantes.
 
     Los diálogos modales se sustituyen por respuestas automáticas: sin esto, cualquier
@@ -99,6 +102,11 @@ def ventana(app, conexion, monkeypatch):
 
     with transaccion(conexion):
         cargar_datos_demo(conexion)
+
+    # Las preferencias se leen y se escriben en la carpeta de datos. Se redirige a una
+    # temporal para que las pruebas no dependan del tema que tenga puesto quien las ejecuta,
+    # ni se lo cambien.
+    monkeypatch.setenv("TIENDA_POS_HOME", str(tmp_path / "datos"))
 
     monkeypatch.setattr(dialogos, "confirmar", lambda *a, **k: True)
     monkeypatch.setattr(dialogos, "mostrar_error", lambda *a, **k: None)

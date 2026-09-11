@@ -222,9 +222,9 @@ class ProductosView(QWidget):
             if producto.stock <= _STOCK_BAJO:
                 from PySide6.QtGui import QBrush, QColor
 
-                from .estilos import ERROR
+                from . import estilos
 
-                stock.setForeground(QBrush(QColor(ERROR)))
+                stock.setForeground(QBrush(QColor(estilos.actual.error)))
             self.tabla.setItem(fila, 3, stock)
 
         total = len(self._productos)

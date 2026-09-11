@@ -198,3 +198,70 @@ tiempo y escribe un informe en la carpeta de datos, devolviendo 0 si todo fue bi
 **Consecuencias.** Se puede validar la instalación en segundos, y ante un problema el informe
 dice qué falló en lugar de dejar una ventana que no aparece. La misma función se ejecuta como
 prueba automatizada, así que no es código muerto que solo se usa a mano.
+
+---
+
+## D-012 — El descuento puede aplicarse a un producto o a la venta entera
+
+**Fecha:** 2026-09-11 · **Estado:** aceptada
+
+**Contexto.** Hasta ahora el descuento era siempre de la venta completa. En una tienda pequeña
+eso no alcanza: el pan del día anterior, el envase abollado o el producto próximo a vencer se
+rebajan uno a uno. Aplicarlo al total daría el importe correcto hoy, pero dejaría una venta
+imposible de explicar mañana, cuando nadie recuerde de qué producto era la rebaja.
+
+**Decisión.** Cada línea del carrito puede llevar su propio descuento, por monto o por
+porcentaje, además del descuento de la venta. Ambos conviven:
+
+- `venta.subtotal_clp` sigue siendo el importe **bruto**, sin descuentos.
+- El descuento de la venta se calcula sobre lo que queda **después** de los de línea. Si no,
+  dos descuentos del 100% dejarían un total negativo.
+- `venta.descuento_clp` es la suma de ambos, así que el significado del campo no cambia para
+  nada de lo ya construido (informes incluidos).
+
+**Consecuencias.** Obliga a un cambio en el modelo de datos: la tabla `venta_linea` gana una
+columna `descuento_clp` (migración de esquema 2, aditiva, con valor 0 para las ventas ya
+registradas, que es exactamente lo que ocurrió en ellas). El subtotal de la línea se sigue
+guardando en bruto, de modo que el detalle de una venta antigua explica precio, cantidad y
+rebaja por separado. **Este cambio de modelo de datos se hizo para atender una petición
+explícita, y se anota aquí en lugar de pasar en silencio.**
+
+---
+
+## D-013 — Preferencias del equipo en un archivo JSON, no en la base de datos
+
+**Fecha:** 2026-09-11 · **Estado:** aceptada
+
+**Contexto.** El tema, el sonido y la confirmación de cobro son ajustes de la instalación, no
+datos del negocio. Guardarlos en la base de datos habría obligado a una tabla, una migración y
+un repositorio, y a depender de que la base abra para saber de qué color pintar la ventana de
+acceso, que aparece antes.
+
+**Decisión.** Un `preferencias.json` junto a la base de datos, leído por
+`services/preferencias.py`. Un archivo ausente, ilegible o escrito por otra versión nunca
+impide arrancar: se vuelve a los valores de fábrica y se registra el aviso.
+
+**Consecuencias.** Se leen antes de crear la primera ventana, de modo que el tema ya está
+puesto cuando se pide el PIN. No se sincronizan entre equipos, cosa que hoy no hace falta
+porque el sistema es monopuesto. Si algún día hay varias cajas, estos ajustes deberían seguir
+siendo locales: el tema lo elige quien mira esa pantalla.
+
+---
+
+## D-014 — Las acciones de cada línea son celdas, no botones
+
+**Fecha:** 2026-09-11 · **Estado:** aceptada
+
+**Contexto.** Copiar el código y subir o bajar la cantidad se pedían como botones dentro de
+cada fila del carrito. La primera versión los puso como widgets incrustados en la tabla
+(`setCellWidget`).
+
+**Decisión.** Se usan celdas normales con un símbolo (⧉, −, +) y un `cellClicked` que despacha
+la acción.
+
+**Consecuencias.** Qt no destruye los widgets incrustados cuando la tabla pierde filas: al
+cobrar una venta y empezar la siguiente quedaban botones flotando sobre filas que ya no
+existían, y un clic en ellos actuaba sobre un carrito inexistente. Se comprobó en las capturas
+generadas por `tools/capturas.py`. Con celdas no hay widgets que se queden atrás, la tabla se
+redibuja entera en cada escaneo sin coste y el teclado sigue siendo la vía principal: las
+flechas hacen lo mismo que los símbolos.

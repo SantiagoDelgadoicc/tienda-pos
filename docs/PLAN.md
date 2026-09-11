@@ -116,6 +116,23 @@ solo por la documentación.
 
 ---
 
+## Fase 7 — Mejoras pedidas por Santiago (2026-09-11)
+
+- [x] Descuento aplicable a un producto además de a la venta entera (D-012, migración 2)
+- [x] Botón de copiar el código de barras en cada línea del carrito
+- [x] Subir y bajar la cantidad de una línea, con el ratón y con el teclado (↑ ↓ ← → + −)
+- [x] Rueda de configuración (F9): tema, sonido, confirmación de cobro, barra de atajos
+- [x] Tema oscuro, aplicable sin reiniciar (D-013)
+- [x] Manual, documentación técnica y capturas al día
+
+**Criterio de aceptación:** un cajero arma una venta, cambia cantidades, descuenta un producto
+y cobra sin tocar el ratón; y el tema elegido sigue puesto al volver a abrir el programa.
+
+No confirmado por el cliente: **todo lo de esta fase**. Son decisiones de Santiago, como el
+resto del punto 3.2 de `CLAUDE.md`.
+
+---
+
 ## Pendiente para una instalación real
 
 Las seis fases del prototipo están terminadas. Esto no es una decisión del cliente, es un
@@ -133,6 +150,9 @@ hueco conocido del sistema, y se anota aquí para que no se descubra el día de 
 - [ ] **Arranque automático al encender el PC.** Recomendación: **no** por defecto. Secuestra
       el equipo, complica las actualizaciones y estorba si el PC se usa para otra cosa.
       Se deja acceso directo en el escritorio; si el cliente insiste, se activa en un minuto.
+- [ ] **Instalador de Windows (.msi o .exe con asistente).** Se puede hacer, y con el
+      empaquetado actual es trabajo acotado. Hoy se instala copiando una carpeta. Ver la
+      nota al final de `docs/TECNICA.md`.
 - [ ] **Impresora de tickets.** Fuera del prototipo hasta saber si el cliente tiene una.
 - [ ] **Respaldo en dispositivo externo.** Depende de cuán críticos considere sus datos.
 - [ ] **Segunda caja / multipuesto.** Obligaría a pasar de SQLite local a un servidor. Es la

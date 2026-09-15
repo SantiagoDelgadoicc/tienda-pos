@@ -6,7 +6,6 @@ calculadora: cuánto se vendió hoy, en cuántas ventas, y qué llevaba cada una
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import date
 
 from PySide6.QtCore import Qt, Signal
@@ -24,7 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..domain.models import Venta
-from ..repositories import ventas as repo_ventas
+from ..red.sesion import Sesion
 from ..utils.money import formatear_clp
 from . import tablas
 
@@ -37,9 +36,9 @@ class ReportesView(QWidget):
 
     salir_solicitado = Signal()
 
-    def __init__(self, conexion: sqlite3.Connection, padre: QWidget | None = None) -> None:
+    def __init__(self, sesion: Sesion, padre: QWidget | None = None) -> None:
         super().__init__(padre)
-        self._conexion = conexion
+        self._sesion = sesion
         self._ventas: list[Venta] = []
         self._construir()
 
@@ -156,18 +155,17 @@ class ReportesView(QWidget):
 
     def recargar(self) -> None:
         hoy = date.today()
-        resumen = repo_ventas.resumen_del_dia(self._conexion, hoy)
+        resumen = self._sesion.resumen_del_dia(hoy)
         self.valor_total.setText(formatear_clp(resumen["total_clp"]))
         self.valor_ventas.setText(str(resumen["cantidad_ventas"]))
         self.valor_articulos.setText(str(resumen["articulos"]))
 
-        self._ventas = repo_ventas.del_dia(self._conexion, hoy)
+        # Vienen con las líneas ya cargadas: pedirlas venta por venta dentro de este bucle
+        # era una ida y vuelta por venta, que contra el servidor de D-015 se nota.
+        self._ventas = self._sesion.ventas_del_dia(hoy)
         self.tabla_ventas.setRowCount(len(self._ventas))
 
         for fila, venta in enumerate(self._ventas):
-            lineas = repo_ventas.lineas_de(self._conexion, venta.id)
-            venta.lineas = lineas
-
             self._celda(self.tabla_ventas, fila, 0, str(venta.folio), centrada=True)
             self._celda(self.tabla_ventas, fila, 1, venta.fecha_hora.strftime("%H:%M"), centrada=True)
             self._celda(self.tabla_ventas, fila, 2, str(venta.cantidad_articulos), centrada=True)

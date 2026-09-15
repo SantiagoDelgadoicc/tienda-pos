@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sqlite3
 
 from PySide6.QtCore import QDateTime, Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
@@ -21,6 +20,7 @@ from PySide6.QtWidgets import (
 
 from ..config import NOMBRE_COMERCIAL, VERSION
 from ..domain.models import Usuario
+from ..red.sesion import Sesion
 from ..services import preferencias as servicio_preferencias
 from ..services.preferencias import Preferencias
 from ..utils import sonido
@@ -60,9 +60,9 @@ está vacío; si hay un código a medio escribir, sirven para corregirlo.
 class VentanaPrincipal(QMainWindow):
     """Contenedor de las pantallas del sistema."""
 
-    def __init__(self, conexion: sqlite3.Connection) -> None:
+    def __init__(self, sesion: Sesion) -> None:
         super().__init__()
-        self._conexion = conexion
+        self._sesion = sesion
         self.usuario: Usuario | None = None
         # Las preferencias se leen antes de construir nada: el tema y la barra de atajos
         # cambian cómo se monta la ventana.
@@ -87,10 +87,10 @@ class VentanaPrincipal(QMainWindow):
         columna.addWidget(self._barra_superior())
 
         self.pantallas = QStackedWidget()
-        self.vista_venta = VentaView(self._conexion)
-        self.vista_consulta = ConsultaView(self._conexion)
-        self.vista_productos = ProductosView(self._conexion)
-        self.vista_reportes = ReportesView(self._conexion)
+        self.vista_venta = VentaView(self._sesion)
+        self.vista_consulta = ConsultaView(self._sesion)
+        self.vista_productos = ProductosView(self._sesion)
+        self.vista_reportes = ReportesView(self._sesion)
         for vista in (
             self.vista_venta,
             self.vista_consulta,
@@ -213,7 +213,7 @@ class VentanaPrincipal(QMainWindow):
             return self.usuario
 
         administrador = DialogoLogin.pedir(
-            self._conexion,
+            self._sesion,
             self,
             solo_admin=True,
             mensaje=f"Se necesita autorización de un administrador para {accion}.",
@@ -237,7 +237,7 @@ class VentanaPrincipal(QMainWindow):
             self._devolver_foco()
             return
 
-        usuario = DialogoLogin.pedir(self._conexion, self)
+        usuario = DialogoLogin.pedir(self._sesion, self)
         if usuario is None:
             self._devolver_foco()
             return

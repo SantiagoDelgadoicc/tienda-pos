@@ -19,18 +19,28 @@ _TIMEOUT_BLOQUEO_MS = 5000
 _EN_MEMORIA = ":memory:"
 
 
-def conectar(ruta: Path | str) -> sqlite3.Connection:
+def conectar(ruta: Path | str, compartida_entre_hilos: bool = False) -> sqlite3.Connection:
     """Abre la base de datos y la deja configurada para uso transaccional.
 
     isolation_level=None desactiva el manejo automático de transacciones de Python, que abre
     transacciones implícitas donde uno no las espera. Aquí se controlan explícitamente con
     el gestor de contexto `transaccion`.
+
+    Args:
+        compartida_entre_hilos: desactiva la comprobación de hilo de `sqlite3`. **Solo debe
+            activarse si algo garantiza que los accesos están serializados.** Lo usa el modo
+            servidor (`D-015`), donde la interfaz de la caja principal y el hilo que atiende a
+            la caja secundaria comparten una única conexión, y `SesionLocal` los serializa con
+            un cerrojo. Sin esa garantía, la comprobación de `sqlite3` es una red de seguridad
+            que conviene no quitar.
     """
     es_memoria = str(ruta) == _EN_MEMORIA
     if not es_memoria:
         Path(ruta).parent.mkdir(parents=True, exist_ok=True)
 
-    conexion = sqlite3.connect(str(ruta), isolation_level=None)
+    conexion = sqlite3.connect(
+        str(ruta), isolation_level=None, check_same_thread=not compartida_entre_hilos
+    )
     conexion.row_factory = sqlite3.Row
 
     if not es_memoria:

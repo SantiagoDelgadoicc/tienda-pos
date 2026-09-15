@@ -115,6 +115,10 @@ class Venta:
     usuario_nombre: str | None = None
     estado: EstadoVenta = EstadoVenta.COMPLETADA
     id: int | None = None
+    #: Identificador del intento de cobro, generado por la caja. Permite reintentar un
+    #: cobro cuyo resultado se perdió por la red sin duplicar la venta (D-024). Las ventas
+    #: registradas antes de la migración 3 lo tienen a None.
+    intento_id: str | None = None
     lineas: list[LineaVenta] = field(default_factory=list)
 
     @property

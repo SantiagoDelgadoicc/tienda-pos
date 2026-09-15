@@ -20,6 +20,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from tienda_pos.db.connection import transaccion  # noqa: E402
 from tienda_pos.db.inicio import abrir_base_datos  # noqa: E402
 from tienda_pos.domain.models import Producto, Rol, Usuario  # noqa: E402
+from tienda_pos.red.sesion import SesionLocal  # noqa: E402
 from tienda_pos.repositories import productos as repo_productos  # noqa: E402
 from tienda_pos.services import auth  # noqa: E402
 from tienda_pos.utils import sonido  # noqa: E402
@@ -112,7 +113,10 @@ def ventana(app, conexion, monkeypatch, tmp_path):
     monkeypatch.setattr(dialogos, "mostrar_error", lambda *a, **k: None)
     monkeypatch.setattr(dialogos, "mostrar_info", lambda *a, **k: None)
 
-    ventana = VentanaPrincipal(conexion)
+    # La ventana ya no recibe una conexión sino una Sesion (D-015): así la misma interfaz
+    # sirve para la caja principal, que tiene la base al lado, y para la secundaria, que la
+    # tiene al otro lado de la red. Aquí se usa la local, que es lo que hacía antes.
+    ventana = VentanaPrincipal(SesionLocal(conexion))
     ventana.establecer_usuario(Usuario(id=1, nombre="Ana Pérez", rol=Rol.CAJERO))
     # Sin mostrar la ventana, Qt considera que ningún widget está visible ni tiene el foco,
     # y las comprobaciones de foco (que aquí son parte de lo que se prueba) darían siempre

@@ -217,10 +217,33 @@ Deuda técnica y límites conocidos, para que nadie los descubra por sorpresa:
   documenta como "hágalo" sin que se pueda hacer.
 - **Sin actualización automática.** Actualizar significa reemplazar la carpeta a mano.
 
-## 11. ¿Se puede hacer un instalador? (valoración, no compromiso)
+**Estado al 2026-09-13.** Todo lo anterior sigue siendo cierto **hoy**, pero ya no es una lista de
+límites aceptados: tras la primera reunión con el cliente, cuatro de estos puntos pasaron a estar
+decididos y planificados. Ninguno está hecho todavía.
 
-Sí, y con el empaquetado actual es trabajo acotado. Nada de lo que sigue está hecho ni
-decidido: es la respuesta a una pregunta de viabilidad.
+| Límite | Deja de serlo en |
+|---|---|
+| Sin trazabilidad de inventario | Fase 9 (D-018) |
+| Monopuesto | Fase 13 (D-015): un proceso servidor dueño de la base, no la base en una carpeta compartida |
+| No hay gestión de usuarios | Fase 12 |
+| Instalación copiando una carpeta | Fase 14 (D-020) |
+
+Se añaden dos límites nuevos, que la reunión sacó a la luz:
+
+- **Sin precio de compra ni familias.** El cliente los tenía en su sistema anterior, pero el
+  2026-09-14 dijo que no le interesan. D-016 y D-017 quedan retiradas y no se implementan. Sin
+  costo no hay informe de margen ni de ganancia.
+- **Sin importación de datos.** No hay forma de cargar un catálogo que no sea a mano, producto por
+  producto. Fase 10 (D-019), y `docs/RESCATE-DATOS.md` para el catálogo concreto de este cliente.
+
+Siguen sin planificar: la venta por peso, los medios de pago y los documentos tributarios, y la
+actualización automática.
+
+## 11. El instalador
+
+Sí se puede, y con el empaquetado actual es trabajo acotado. Lo que sigue se escribió como
+valoración de viabilidad; la actualización del final de esta sección recoge lo que ya está
+decidido. Nada de ello está construido todavía.
 
 **Por qué es viable hoy.** El punto que suele arruinar un instalador ya está resuelto: el
 programa **nunca escribe en su propia carpeta**. La base de datos, los respaldos, los logs y
@@ -253,3 +276,32 @@ sentido si algún día hay un departamento de sistemas.
 **Esfuerzo estimado:** alrededor de un día para el instalador funcionando y probado en un
 Windows limpio, sin contar la firma de código.
 
+
+---
+
+### Actualización del 2026-09-13: ya no es solo una valoración
+
+El cliente pidió expresamente mejorar la instalación, así que esto pasó de "valoración" a decisión
+tomada (**D-020**) y a la fase 14 de `docs/PLAN.md`. Se mantiene **Inno Setup**.
+
+Lo que cambia respecto a lo escrito arriba es que ahora hay **dos instalaciones distintas**, porque
+el sistema va a funcionar en dos cajas (D-015). El instalador tiene que preguntar de cuál se trata:
+
+| Modo | Qué instala | Qué pregunta |
+|---|---|---|
+| **Servidor y caja** | El programa y el proceso servidor, en el PC que guarda la base de datos | Nada más; abre el puerto en el cortafuegos |
+| **Caja secundaria** | Solo el programa | La dirección del PC servidor |
+
+Tres detalles que conviene no olvidar cuando se escriba el `.iss`:
+
+- **El modo tiene que poder cambiarse después sin reinstalar.** El día que el cliente cambie el PC
+  servidor no va a querer reinstalar las dos cajas.
+- **La regla de cortafuegos** hay que crearla en el modo servidor. Si no, la segunda caja no
+  conecta y el síntoma es un tiempo de espera agotado sin explicación, que es exactamente el tipo
+  de fallo que hace desconfiar de un sistema.
+- **Al desinstalar no se borran los datos** de `%LOCALAPPDATA%\TiendaPOS\`, y se avisa dónde
+  quedaron.
+
+**Esfuerzo revisado:** el día estimado arriba cubre el instalador sencillo. Los dos modos, la
+configuración del servidor y la regla de cortafuegos añaden aproximadamente otro medio día, y hay
+que probarlo en dos equipos, no en uno.

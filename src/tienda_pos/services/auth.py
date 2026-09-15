@@ -51,6 +51,15 @@ def validar_formato_pin(pin: str) -> None:
         )
 
 
+def listar_usuarios(conexion: sqlite3.Connection) -> list[Usuario]:
+    """Usuarios activos, para poblar el desplegable del inicio de sesión.
+
+    No devuelve ni el hash ni la sal: `repo_usuarios.listar` ya construye `Usuario` sin las
+    credenciales. Importa porque esta lista viaja por la red hasta la caja secundaria (D-015).
+    """
+    return repo_usuarios.listar(conexion)
+
+
 def crear_usuario(conexion: sqlite3.Connection, nombre: str, rol: Rol, pin: str) -> Usuario:
     """Da de alta un usuario con su PIN. Debe llamarse dentro de una transacción."""
     nombre = nombre.strip()

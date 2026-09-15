@@ -22,8 +22,11 @@ Alrededor de eso, el prototipo demuestra una venta completa e inventario mínimo
 
 ## Estado
 
-Prototipo funcional, listo para presentar. Ver [docs/PLAN.md](docs/PLAN.md) para el avance por
-fases y las decisiones pendientes.
+Prototipo funcional, ya presentado al cliente. **Hoy funciona en un solo PC.** Tras la primera
+reunión se abrió una segunda etapa con lo que él sí pidió: rendimiento medido, importación de su
+catálogo antiguo, dos cajas e instalador. Nada de eso está construido todavía: ver
+[docs/PLAN.md](docs/PLAN.md), fases 8 a 14. *(Las familias y el precio de compra estuvieron en esa
+lista hasta el 2026-09-14, cuando el cliente dijo que no le interesan.)*
 
 ## Requisitos
 
@@ -61,6 +64,7 @@ Para comprobar la instalación en otro equipo: `TiendaPOS.exe --verificar`.
 |---|---|
 | [docs/GUION-DEMO.md](docs/GUION-DEMO.md) | Guion paso a paso de la demostración al cliente |
 | [docs/PREGUNTAS-CLIENTE.md](docs/PREGUNTAS-CLIENTE.md) | Preguntas de negocio pendientes para la reunión |
+| [docs/RESCATE-DATOS.md](docs/RESCATE-DATOS.md) | Cómo recuperar el catálogo del sistema anterior del cliente |
 | [docs/MANUAL-USUARIO.md](docs/MANUAL-USUARIO.md) | Manual para quien opera la caja |
 | [docs/TECNICA.md](docs/TECNICA.md) | Arquitectura, pruebas, empaquetado y deuda técnica |
 | [docs/DECISIONES.md](docs/DECISIONES.md) | Decisiones técnicas importantes y su justificación |
@@ -70,6 +74,7 @@ Para comprobar la instalación en otro equipo: `TiendaPOS.exe --verificar`.
 ## Aviso
 
 Este es un **prototipo de demostración**. No emite boletas ni facturas, no está conectado al
-SII, no registra medios de pago, no funciona en varias cajas simultáneas, no maneja productos
+SII, no registra medios de pago, **todavía** no funciona en varias cajas simultáneas, no maneja
+familias ni precio de compra, no importa datos de otros sistemas, no maneja productos
 por peso y no permite crear usuarios ni cambiar sus PIN desde el programa. Los productos y
 precios que trae son un catálogo de ejemplo inventado.

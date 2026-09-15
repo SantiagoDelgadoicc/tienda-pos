@@ -7,7 +7,6 @@ cambiar quién está operando la caja, que es como funcionan los puntos de venta
 
 from __future__ import annotations
 
-import sqlite3
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIntValidator
@@ -24,8 +23,7 @@ from PySide6.QtWidgets import (
 from ..config import NOMBRE_COMERCIAL, PIN_LONGITUD_MAX
 from ..domain.errors import ErrorDominio
 from ..domain.models import Rol, Usuario
-from ..repositories import usuarios as repo_usuarios
-from ..services import auth
+from ..red.sesion import Sesion
 
 
 class DialogoLogin(QDialog):
@@ -33,13 +31,13 @@ class DialogoLogin(QDialog):
 
     def __init__(
         self,
-        conexion: sqlite3.Connection,
+        sesion: Sesion,
         padre: QWidget | None = None,
         solo_admin: bool = False,
         mensaje: str = "",
     ) -> None:
         super().__init__(padre)
-        self._conexion = conexion
+        self._sesion = sesion
         self._solo_admin = solo_admin
         self._usuario: Usuario | None = None
 
@@ -101,7 +99,7 @@ class DialogoLogin(QDialog):
         self.campo_pin.setFocus()
 
     def _cargar_usuarios(self) -> None:
-        usuarios = repo_usuarios.listar(self._conexion)
+        usuarios = self._sesion.listar_usuarios()
         if self._solo_admin:
             usuarios = [u for u in usuarios if u.rol is Rol.ADMIN]
 
@@ -120,7 +118,7 @@ class DialogoLogin(QDialog):
             return
 
         try:
-            usuario = auth.autenticar(self._conexion, nombre, self.campo_pin.text())
+            usuario = self._sesion.autenticar(nombre, self.campo_pin.text())
         except ErrorDominio as error:
             self._mostrar_error(str(error))
             self.campo_pin.clear()
@@ -147,12 +145,12 @@ class DialogoLogin(QDialog):
 
     @staticmethod
     def pedir(
-        conexion: sqlite3.Connection,
+        sesion: Sesion,
         padre: QWidget | None = None,
         solo_admin: bool = False,
         mensaje: str = "",
     ) -> Usuario | None:
         """Atajo: muestra el diálogo y devuelve el usuario, o None si se canceló."""
-        dialogo = DialogoLogin(conexion, padre, solo_admin=solo_admin, mensaje=mensaje)
+        dialogo = DialogoLogin(sesion, padre, solo_admin=solo_admin, mensaje=mensaje)
         dialogo.exec()
         return dialogo.usuario

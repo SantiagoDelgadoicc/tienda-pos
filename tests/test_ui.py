@@ -99,6 +99,77 @@ class TestPantallaDeVenta:
         assert [p.codigo for p in pendientes] == [INEXISTENTE]
 
 
+class TestPanelDeTotales:
+    """La tarjeta del detalle solo tiene sentido cuando hay algo que detallar."""
+
+    def test_con_el_carrito_vacio_no_se_muestra_el_detalle(self, ventana) -> None:
+        vista = ventana.vista_venta
+        assert not vista.tarjeta_detalle.isVisible()
+
+    def test_aparece_con_el_primer_producto_y_se_va_al_cancelar(self, ventana) -> None:
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        assert vista.tarjeta_detalle.isVisible()
+        assert vista.valor_subtotal.text() == "$2.290"
+
+        vista.cancelar_venta()  # el diálogo de confirmación responde que sí
+        assert not vista.tarjeta_detalle.isVisible()
+
+    def test_el_total_y_el_cobro_siguen_a_la_vista_con_el_carrito_vacio(self, ventana) -> None:
+        # Lo que se oculta es el detalle, no el botón de cobrar: su sitio no puede moverse.
+        vista = ventana.vista_venta
+        assert vista.valor_total.isVisible()
+        assert vista.boton_cobrar.isVisible()
+        assert not vista.boton_cobrar.isEnabled()
+
+
+class TestPanelDeTotales:
+    """La tarjeta del detalle solo tiene sentido cuando hay algo que detallar."""
+
+    def test_con_el_carrito_vacio_no_se_muestra_el_detalle(self, ventana) -> None:
+        assert not ventana.vista_venta.tarjeta_detalle.isVisible()
+
+    def test_aparece_con_el_primer_producto_y_se_va_al_cancelar(self, ventana) -> None:
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        assert vista.tarjeta_detalle.isVisible()
+        assert vista.valor_subtotal.text() == "$2.290"
+
+        vista.cancelar_venta()  # el diálogo de confirmación responde que sí
+        assert not vista.tarjeta_detalle.isVisible()
+
+    def test_el_cobro_sigue_a_la_vista_con_el_carrito_vacio(self, ventana) -> None:
+        # Lo que se oculta es el detalle, no el botón de cobrar: su sitio no puede moverse,
+        # porque el cajero lo busca sin mirar.
+        vista = ventana.vista_venta
+        assert vista.valor_total.isVisible()
+        assert vista.boton_cobrar.isVisible()
+        assert not vista.boton_cobrar.isEnabled()
+
+
+class TestAvisoEnLinea:
+    """El mensaje que confirma cada escaneo."""
+
+    def test_un_aviso_nuevo_reinicia_la_cuenta_atras(self, ventana) -> None:
+        # Antes se programaba un temporizador por aviso sin cancelar el anterior, así que el
+        # del primer producto escondía el mensaje del segundo a los pocos milisegundos.
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        vista.agregar_por_codigo(LECHE)
+
+        assert vista.mensaje.isVisible()
+        restante = vista._temporizador_mensaje.remainingTime()
+        assert restante > venta_view._MENSAJE_MS * 0.9
+
+    def test_el_aviso_de_error_sustituye_al_de_exito(self, ventana) -> None:
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        vista.agregar_por_codigo("codigo/invalido")
+
+        assert vista.mensaje.isVisible()
+        assert vista.mensaje.objectName() == "mensajeError"
+
+
 class TestQuitarYCancelar:
     def test_quitar_baja_una_unidad_antes_de_borrar_la_linea(self, ventana) -> None:
         vista = ventana.vista_venta
@@ -362,6 +433,7 @@ class TestNavegacion:
 
         assert repo_ventas.resumen_del_dia(conexion)["cantidad_ventas"] == 0
 
-    def test_la_barra_superior_muestra_al_usuario(self, ventana) -> None:
-        assert "Ana Pérez" in ventana.etiqueta_sesion.text()
-        assert "Cajero" in ventana.etiqueta_sesion.text()
+    def test_la_barra_lateral_muestra_al_usuario(self, ventana) -> None:
+        # La sesión dejó la barra superior y vive al pie de la barra lateral.
+        assert "Ana Pérez" in ventana.barra_lateral.etiqueta_usuario.text()
+        assert "Cajero" in ventana.barra_lateral.etiqueta_rol.text()

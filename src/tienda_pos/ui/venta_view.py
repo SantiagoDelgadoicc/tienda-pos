@@ -113,18 +113,6 @@ class VentaView(QWidget):
         columna.setSpacing(14)
 
         columna.addWidget(self._campo_de_escaneo())
-
-        self.mensaje = QLabel()
-        # El id se fija ya en la construcción, y no solo al mostrar un aviso: Qt calcula el
-        # relleno y el radio la primera vez que poliza el widget, y si entonces no hay
-        # ninguna regla por id, el mensaje se queda para siempre pegado al borde. Las dos
-        # variantes comparten geometría, así que alternarlas después solo cambia colores.
-        self.mensaje.setObjectName("mensajeExito")
-        self.mensaje.setWordWrap(True)
-        self.mensaje.hide()
-        self._temporizador_mensaje.timeout.connect(self.mensaje.hide)
-        columna.addWidget(self.mensaje)
-
         columna.addWidget(self._tarjeta_carrito(), stretch=1)
         return contenedor
 
@@ -274,8 +262,33 @@ class VentaView(QWidget):
         self.tarjeta_detalle = self._tarjeta_detalle()
         columna.addWidget(self.tarjeta_detalle)
         columna.addStretch()
+        columna.addWidget(self._aviso())
         columna.addWidget(self._tarjeta_cobro())
         return panel
+
+    def _aviso(self) -> QWidget:
+        """El mensaje que confirma o rechaza cada escaneo.
+
+        Vive en el hueco de esta columna y no bajo el campo de escaneo, que sería su sitio
+        natural, por una razón práctica: ahí abajo empujaba el carrito hacia abajo al
+        aparecer y lo subía al desvanecerse, de modo que la tabla daba un salto en cada
+        producto. Aquí crece hacia arriba contra un espacio que ya estaba vacío, así que ni
+        el carrito ni el botón de cobrar se mueven nunca. De paso queda al lado del total,
+        que es lo otro que el cajero mira al terminar de pasar un producto.
+
+        Se usa un mensaje en línea y no un diálogo porque interrumpir el flujo con una
+        ventana modal por cada producto escaneado haría el sistema inusable.
+        """
+        self.mensaje = QLabel()
+        # El id se fija ya en la construcción, y no solo al mostrar un aviso: Qt calcula el
+        # relleno y el radio la primera vez que poliza el widget, y si entonces no hay
+        # ninguna regla por id, el mensaje se queda para siempre pegado al borde. Las dos
+        # variantes comparten geometría, así que alternarlas después solo cambia colores.
+        self.mensaje.setObjectName("mensajeExito")
+        self.mensaje.setWordWrap(True)
+        self.mensaje.hide()
+        self._temporizador_mensaje.timeout.connect(self.mensaje.hide)
+        return self.mensaje
 
     def _tarjeta_detalle(self) -> QWidget:
         """Lo que se lleva sumado: subtotal y, si lo hay, el descuento.
@@ -922,11 +935,7 @@ class VentaView(QWidget):
                 return
 
     def _avisar(self, texto: str, exito: bool) -> None:
-        """Muestra un mensaje breve bajo el campo de escaneo.
-
-        Se usa un mensaje en línea y no un diálogo porque interrumpir el flujo con una
-        ventana modal por cada producto escaneado haría el sistema inusable.
-        """
+        """Muestra un mensaje breve en la columna de totales. Ver `_aviso`."""
         sonido.exito() if exito else sonido.error()
         self.mensaje.setText(texto)
         self.mensaje.setObjectName("mensajeExito" if exito else "mensajeError")

@@ -825,6 +825,13 @@ tipo de cosa que hace desconfiar de un sistema en una demostración.
 Ahora hay **un solo temporizador**, propiedad de la vista, que se reinicia en cada aviso. Cinco
 segundos desde el último mensaje, siempre.
 
+**Y el aviso cambia de sitio.** Estaba bajo el campo de escaneo, que es su sitio natural, pero ahí
+empujaba el carrito hacia abajo al aparecer y lo subía al desvanecerse: la tabla daba un salto en
+cada producto. Pasa al hueco de la columna de totales, justo encima del botón de cobrar, donde crece
+hacia arriba contra un espacio que ya estaba vacío. Así **no se mueve nada** —ni el carrito ni el
+botón de cobrar— y de paso el aviso queda al lado del total, que es lo otro que el cajero mira al
+terminar de pasar un producto. Lo que se pierde es ancho: un nombre largo ocupa dos líneas.
+
 **Consecuencias.** Cinco pruebas nuevas: que el detalle aparece con el primer producto y se va al
 cancelar, que el cobro no se mueve con el carrito vacío, que un aviso nuevo reinicia la cuenta atrás
 en lugar de heredarla, y que un error sustituye al aviso de éxito. La suite pasa de 250 a 255.

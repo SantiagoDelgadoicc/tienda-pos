@@ -201,6 +201,9 @@ fuentes del sistema y todo el texto sale como cajas vacías.
 - **Un aviso que se oculta solo usa un temporizador propio y reiniciable**, nunca
   `QTimer.singleShot`. Con `singleShot`, cada aviso deja vivo el temporizador del anterior y
   el mensaje nuevo se esconde cuando le toca al viejo. Ver `venta_view._avisar`.
+- **Nada que aparezca y desaparezca solo puede vivir encima de la tabla del carrito.** Al
+  mostrarse empuja la tabla y al ocultarse la sube, y eso es un salto en cada escaneo. El
+  aviso vive en el hueco de la columna de totales por eso; ver `venta_view._aviso`.
 - **Las sombras son un efecto gráfico**, no una regla de la hoja de estilos: Qt no entiende
   `box-shadow`. `estilos.aplicar_sombra()` las pone, y solo en tarjetas de contenido — sobre
   una tabla que se repinta en cada escaneo cuesta caro.

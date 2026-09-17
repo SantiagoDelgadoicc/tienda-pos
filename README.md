@@ -55,8 +55,8 @@ python tools/construir.py
 python tools/crear_acceso_directo.py
 ```
 
-Genera `dist/TiendaPOS/TiendaPOS.exe` y deja un acceso directo en el escritorio.
-Para comprobar la instalación en otro equipo: `TiendaPOS.exe --verificar`.
+Genera `dist/PuntoYFamaCaja/PuntoYFamaCaja.exe` y deja un acceso directo en el escritorio.
+Para comprobar la instalación en otro equipo: `PuntoYFamaCaja.exe --verificar`.
 
 ## Documentación
 

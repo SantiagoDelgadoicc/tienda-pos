@@ -12,7 +12,7 @@ cuando lo vea.
 
 ## Antes de empezar
 
-- [ ] Ejecutar `TiendaPOS.exe --verificar` en el equipo donde harás la demo y comprobar que
+- [ ] Ejecutar `PuntoYFamaCaja.exe --verificar` en el equipo donde harás la demo y comprobar que
       el informe dice `RESULTADO: CORRECTO`. Se hace en dos segundos y evita el escenario de
       descubrir un problema con el cliente delante.
 - [ ] Abrir el programa una vez y hacer una venta de prueba, para que el catálogo demo esté
@@ -164,5 +164,5 @@ Si aparece ese aviso, no lo escondas. Di que el sistema registró el problema en
 sucesos y sigue funcionando, y continúa. Un sistema que aguanta un error delante del cliente
 demuestra más que uno que no falla porque no se le exigió nada.
 
-Si el programa no abriera, la salida es ejecutar `TiendaPOS.exe --verificar` y leer el
+Si el programa no abriera, la salida es ejecutar `PuntoYFamaCaja.exe --verificar` y leer el
 informe: dice exactamente qué falló.

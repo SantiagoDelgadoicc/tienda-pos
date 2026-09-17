@@ -34,7 +34,7 @@ python main.py
 pytest
 ```
 
-239 pruebas, unos 35 segundos. No necesitan pantalla: las de interfaz usan la plataforma
+255 pruebas, unos 40 segundos. No necesitan pantalla: las de interfaz usan la plataforma
 `offscreen` de Qt, que `tests/conftest.py` activa automáticamente.
 
 ```bash
@@ -125,9 +125,9 @@ Versiones publicadas:
 ## 6. Construir el ejecutable
 
 ```bash
-python tools/icono.py                    # genera assets/tienda_pos.ico
-python tools/construir.py                # dist/TiendaPOS/TiendaPOS.exe (recomendado)
-python tools/construir.py --unico        # un solo dist/TiendaPOS.exe
+python tools/icono.py                    # genera assets/punto_y_fama.ico
+python tools/construir.py                # dist/PuntoYFamaCaja/PuntoYFamaCaja.exe
+python tools/construir.py --unico        # un solo dist/PuntoYFamaCaja.exe
 python tools/crear_acceso_directo.py     # acceso directo en el escritorio
 ```
 
@@ -139,7 +139,7 @@ descomprime en una carpeta temporal en cada arranque y añade dos o tres segundo
 **Comprobar el paquete en un equipo ajeno:**
 
 ```bash
-TiendaPOS.exe --verificar
+PuntoYFamaCaja.exe --verificar
 ```
 
 Arranca el sistema completo sin mostrar nada, mide el tiempo y escribe
@@ -173,6 +173,48 @@ fuentes del sistema y todo el texto sale como cajas vacías.
   un símbolo más `cellClicked` (D-014).
 - **Ningún color se escribe a mano en una pantalla.** Todos salen de `ui/estilos.py`, sea por
   la hoja de estilos o leyendo `estilos.actual`; si no, el tema oscuro no los alcanza.
+- **La apariencia sigue el sistema de `docs/DESIGN.md`** (D-026): lienzo de piedra cálida,
+  tarjetas blancas, filete de 1 px como recurso estructural y cinco radios —16 tarjeta, 12
+  anidado y campo grande, 8 detalle, cápsula para botones y fichas—. Un tamaño o un radio
+  fuera de esa escala rompe el sistema: si hace falta uno nuevo, se añade a `estilos.py` y se
+  justifica, no se escribe suelto en una pantalla.
+- **Dos colores y ninguno más**, cada uno con su significado y con su forma de aplicarse
+  (D-027). **Rojo**: dónde estoy, dónde está el foco y lo que cancela o borra; siempre en
+  lavado, filete o texto, **nunca relleno**. **Verde**: salió bien y adelante; es el único
+  que va relleno. Un color nuevo, o uno de los dos usado para otra cosa, deja al cajero sin
+  poder leer la pantalla de reojo.
+- **El nombre del ejecutable y el de la carpeta de datos son cosas distintas.**
+  `NOMBRE_EJECUTABLE` se puede cambiar; `NOMBRE_APP` no, porque es el nombre de
+  `%LOCALAPPDATA%\TiendaPOS` y cambiarlo deja al programa sin su base de datos.
+- **Los recursos que viajan con el programa** (el logotipo) se buscan con
+  `config.directorio_recursos()`, que resuelve tanto en desarrollo como dentro del
+  ejecutable empaquetado. `tools/construir.py` mete `assets/` en el paquete.
+- **Las pantallas no pintan su propio título.** Lo pone la cabecera de `main_window`, a partir
+  de `_CABECERAS`. Una pantalla nueva añade ahí su entrada y su clave en la barra lateral.
+- **Los iconos se dibujan, no se cargan** (`ui/iconos.py`). Son mapas de píxeles ya pintados,
+  así que un cambio de tema no los alcanza: quien los use tiene que repintarlos en su
+  `repintar()`. Es la misma regla que ya regía para los colores fijados celda a celda.
+- **No existe el `border-radius: 999px`.** Qt no recorta un radio enorme: si pasa de la
+  mitad del alto del control, dibuja las esquinas **rectas**. Las cápsulas usan los tres
+  radios de `estilos.py` (`RADIO_PILDORA`, `_ALTA`, `_BAJA`), todos por debajo de la mitad
+  del alto del control al que se aplican. Ver D-028.
+- **Un aviso que se oculta solo usa un temporizador propio y reiniciable**, nunca
+  `QTimer.singleShot`. Con `singleShot`, cada aviso deja vivo el temporizador del anterior y
+  el mensaje nuevo se esconde cuando le toca al viejo. Ver `venta_view._avisar`.
+- **Las sombras son un efecto gráfico**, no una regla de la hoja de estilos: Qt no entiende
+  `box-shadow`. `estilos.aplicar_sombra()` las pone, y solo en tarjetas de contenido — sobre
+  una tabla que se repinta en cada escaneo cuesta caro.
+- **Un widget que lleva fondo o radio necesita su `objectName` desde que se construye.** Qt
+  calcula el relleno y el radio la primera vez que poliza el widget; si entonces no hay regla
+  por id, cambiar el `objectName` después recolorea pero deja la geometría de un widget pelado.
+  Le pasaba al mensaje de la pantalla de venta, que salía pegado al borde y sin esquinas.
+- **Un `QWidget` suelto dentro de una tarjeta pinta el color del lienzo,** porque lo hereda de
+  la regla `QWidget`. Los que solo agrupan otros widgets se declaran transparentes; ver
+  `QWidget#filaDescuento`.
+- **El desplegable de un `QComboBox` es o cuadrado o invisible.** Cualquier regla sobre
+  `::drop-down` quita el marco cuadrado que rompe el radio de cápsula, pero se lleva la flecha
+  por delante. Por eso existe `ui/widgets/desplegable.py`, que la pinta a mano con el color
+  del tema.
 - **Un cambio de tema repinta la hoja de estilos completa,** pero no los colores que una
   pantalla haya fijado celda a celda: por eso `VentanaPrincipal.aplicar_tema()` llama a
   `vista_venta.repintar()`.

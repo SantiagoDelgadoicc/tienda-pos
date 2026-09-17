@@ -83,6 +83,14 @@ De la reunión del 2026-09-13:
 - Tema claro y tema oscuro, elegibles desde una pantalla de configuración (F9), junto con el
   sonido, la confirmación de cobro y la barra de atajos. Se guardan en `preferencias.json`,
   dentro de la carpeta de datos.
+- **La apariencia sigue el sistema visual de `docs/DESIGN.md`** desde el 2026-09-17 (D-026 y
+  D-027): navegación en barra lateral plegable, lienzo de piedra cálida y tarjetas blancas.
+  **Dos colores y ninguno más**: **rojo** (el del logotipo) para dónde estoy, dónde está el
+  foco y lo que cancela o borra, siempre en lavado o filete; **verde** para lo que salió bien
+  y lo que confirma, que es el único que va relleno.
+- El programa se rotula con el nombre del negocio, **Punto y Fama · Botillería y market**, y
+  el ejecutable es `PuntoYFamaCaja.exe`. El nombre de la carpeta de datos (`TiendaPOS`) no
+  cambia con ellos: ahí está la base de datos de la tienda.
 
 Añadido tras la reunión del 2026-09-13:
 
@@ -179,10 +187,13 @@ src/tienda_pos/
   domain/                 modelos y errores del negocio
   repositories/           acceso a datos, un módulo por entidad
   services/               lógica de negocio (NO importa Qt)
-  ui/                     todo lo que sabe de Qt (estilos.py define las dos paletas)
+  ui/                     todo lo que sabe de Qt
+    estilos.py            paletas, radios, sombras y la hoja de estilos entera
+    barra_lateral.py      la navegación
+    iconos.py             los iconos, dibujados con QPainter
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    239 pruebas
+tests/                    255 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -217,10 +228,10 @@ pip install -r requirements-dev.txt   # requirements.txt son solo las de ejecuci
 
 python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
-pytest                                # pruebas (239, unos 35 s)
+pytest                                # pruebas (255, unos 40 s)
 pytest --cov=tienda_pos               # con cobertura
 
-python tools/construir.py             # empaquetar el .exe
+python tools/construir.py             # empaquetar PuntoYFamaCaja.exe
 python tools/crear_acceso_directo.py  # acceso directo en el escritorio
 python tools/capturas.py              # regenerar docs/img/*.png
 python tools/icono.py                 # regenerar el icono
@@ -235,6 +246,7 @@ python tools/icono.py                 # regenerar el icono
 | `docs/RESCATE-DATOS.md` | Cómo recuperar el catálogo del sistema anterior del cliente. |
 | `docs/PREGUNTAS-CLIENTE.md` | Preguntas de negocio para la reunión con el cliente. |
 | `docs/DECISIONES.md` | Decisiones técnicas importantes con su justificación. |
+| `docs/DESIGN.md` | Sistema visual: colores, tipografía, espaciado, radios y componentes. |
 | `docs/GUION-DEMO.md` | Guion paso a paso de la demostración. |
 | `docs/MANUAL-USUARIO.md` | Manual para quien opera la caja. |
 | `docs/TECNICA.md` | Documentación técnica e instrucciones de compilación. |

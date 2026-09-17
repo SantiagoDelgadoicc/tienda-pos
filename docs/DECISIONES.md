@@ -601,3 +601,235 @@ si la venta se registró. Reintentar la duplicaría; no reintentar la perdería.
 `cerrar_venta` idempotente —identificador único del intento, generado en la caja y guardado por el
 servidor, de modo que un reintento devuelva la venta original en lugar de crear otra— y eso exige
 una columna nueva en `venta`. Ver la fase 13 de `docs/PLAN.md`.
+
+---
+
+## D-025 — La interfaz adopta un sistema visual acromático
+
+**Fecha:** 2026-09-17 · **Estado:** ~~aceptada~~ **superada el mismo día por D-026** · **Decide:** Santiago
+
+> Duró unas horas. Santiago la revisó y no le convenció: el acromatismo dejaba el aviso de
+> producto agregado sin su verde —que es el del logotipo— y el resultado se parecía
+> demasiado a lo anterior repintado. Se conserva la entrada porque el razonamiento de abajo
+> sigue explicando de dónde salen varias cosas que D-026 mantiene.
+
+**Contexto.** Hasta ahora la apariencia era una decisión tomada sobre la marcha: azul para lo
+interactivo, verde para el total y para el éxito, rojo para el error, naranja para el descuento, y
+los tamaños elegidos uno a uno. Funcionaba, pero no había ningún criterio escrito al que remitirse
+cuando apareciera una pantalla nueva, y eso significa que cada pantalla nueva volvía a inventar.
+
+Santiago aportó `docs/DESIGN.md`: el sistema visual de shadcn/ui, descrito token a token —pila de
+tres grises, filete de 1 px, escala tipográfica con interletrado, cuatro radios y nada más.
+
+**Decisión.** Adoptarlo como el sistema visual del programa, con tres desviaciones declaradas:
+
+1. **El precio de la pantalla de consulta conserva sus 110 px.** El sistema topa el tamaño de
+   display en 48 px, que es un tope de página web. Ese precio es lo único que el cliente pidió y
+   tiene que leerse desde el otro lado del mostrador. Lo que sí adopta es el tratamiento: peso 600 y
+   -0,05 em de interletrado.
+2. **Los campos llevan filete en reposo y anillo de tinta al recibir el foco.** El sistema los deja
+   sin borde y con un anillo gris claro, porque en una web viven dentro de una tarjeta blanca; aquí
+   varios se apoyan sobre el lienzo, que es del mismo gris que su relleno, y sin filete
+   desaparecen. El anillo de tinta, además, hace visible dónde va a caer el disparo de la pistola.
+3. **Hay tema oscuro,** que el documento no cubre. Se deriva invirtiendo la pila de grises.
+
+**Consecuencias.** La más visible es que **el sistema es acromático**: desaparecen el azul, el verde
+y el naranja, y el rojo queda reservado a lo destructivo y al error.
+
+- El total pasa de verde a negro sobre blanco. Se gana contraste —de 4,9:1 a 19:1— y se pierde el
+  color como señal.
+- El botón de cobrar pasa de verde a negro. Sigue siendo el único elemento de la pantalla con
+  inversión de tono, así que sigue siendo inconfundible.
+- **Lo que sí se pierde: el aviso de "producto agregado" ya no es verde.** Queda como una tarjeta de
+  papel con texto en tinta, y se distingue del error porque el error es lo único con color. Un
+  cajero que hoy reconoce "verde = bien, rojo = mal" por el rabillo del ojo va a tener que leer.
+  Está anotado para preguntarlo en la próxima reunión: es de las cosas que solo se saben usando la
+  caja de verdad. Si molesta, la salida es un icono, no recuperar el verde.
+
+Todo esto vive en `ui/estilos.py`, que sigue siendo el único archivo con colores. Cambiar de sistema
+otra vez es reescribir ese archivo y las medidas de dos o tres pantallas, no tocar la lógica.
+
+
+---
+
+## D-026 — Barra lateral, marca del negocio y tres colores con significado
+
+**Fecha:** 2026-09-17 · **Estado:** aceptada · **Decide:** Santiago
+
+**Contexto.** D-025 cambió los colores y poco más: la estructura siguió siendo la misma barra
+superior con cuatro pantallas detrás de teclas de función. Santiago lo vio y el diagnóstico fue
+exacto: *"solo le cambiaste los colores"*. Aportó dos cosas nuevas —una referencia de interfaz con
+barra lateral y `docs/DESIGN.md` reescrito sobre el sistema de Seline Analytics— y una corrección:
+**el aviso de producto agregado tiene que ser verde, porque el verde es el del negocio.**
+
+**Decisión.** Tres cambios, y el primero es estructural, no de pintura.
+
+**1. Barra lateral en lugar de barra superior.** Una columna de 236 px con la marca arriba, las
+secciones agrupadas en *Caja* y *Administración*, la ficha del usuario abajo, y configuración y
+cambio de usuario al pie. La ventana pasa a ser un armazón: barra lateral, cabecera que dice en qué
+pantalla se está, y la pantalla. **Las pantallas dejan de pintar su propio título**, que ahora lo
+pone la cabecera; por eso todas empiezan a la misma altura.
+
+Con la barra, *Volver* sobra en catálogo e informes —era el tercer camino a la misma pantalla,
+junto a Esc y la entrada *Venta*— y se retira. La consulta de precio conserva el suyo: es la
+pantalla que se usa de cara al cliente.
+
+**2. La marca del negocio entra en el programa.** `NOMBRE_COMERCIAL` pasa de "Tienda POS" a
+**Punto y Fama**, con "Botillería y market" debajo. `NOMBRE_APP` **no cambia**: es el nombre de la
+carpeta de datos, y tocarlo dejaría al programa sin encontrar la base ya instalada en la tienda.
+
+**3. Tres colores, tres significados.** En vez del acento único que pide el documento:
+
+| Color | Qué dice | Dónde |
+|---|---|---|
+| **Verde** | salió bien | producto agregado, total, botón de cobrar, precio en consulta |
+| **Azul** | dónde estoy y qué puedo tocar | entrada activa del menú, foco, botón que confirma un diálogo |
+| **Rojo** | se pierde o falló | cancelar venta, dar de baja, código no encontrado |
+
+**Consecuencias.**
+
+- `DESIGN.md` dice literalmente que añadir verde rompe el sistema. Se desoye a conciencia: un
+  cajero necesita distinguir "lo agregué" de "no existe" sin leer, y el verde es el del logotipo.
+  Lo que sí se respeta es la disciplina: **tres colores y ninguno más**, cada uno con un
+  significado, y nada de color decorativo.
+- Aparecen dos módulos nuevos. `ui/iconos.py` dibuja los iconos con QPainter en vez de traer una
+  biblioteca o archivos de imagen: pesan nada, se colorean con la paleta —cosa que un PNG no hace—
+  y no hay nada que empaquetar. `ui/barra_lateral.py` es la columna.
+- El logotipo de la barra es **un sustituto dibujado**, no el logotipo real. Cuando haya un archivo,
+  se carga en su lugar sin tocar nada más: quien lo pide solo pide un mapa de píxeles cuadrado.
+- Una prueba cambió de sitio, no de intención: la sesión ya no está en una barra superior, así que
+  `test_la_barra_superior_muestra_al_usuario` pasa a mirar la ficha de la barra lateral.
+- Las sombras se pintan con `QGraphicsDropShadowEffect` y solo en las tarjetas de contenido. Qt no
+  entiende `box-shadow`, y un efecto gráfico sobre una tabla que se repinta en cada escaneo sale
+  caro justo donde el rendimiento es un requisito (D-022).
+
+**Lo que sigue sin resolver.** Ni Inter ni Roobert están instaladas, así que la tipografía cae en
+Segoe UI. Aguanta la escala, pero la voz del documento es de otra fuente. Empaquetar Inter con el
+ejecutable es media hora de trabajo y una decisión de licencia que no está tomada.
+
+
+---
+
+## D-027 — El rojo de la marca, la barra plegable y el nombre del ejecutable
+
+**Fecha:** 2026-09-17 · **Estado:** aceptada · **Decide:** Santiago
+
+**Contexto.** D-026 gustó, y de esa revisión salieron cinco peticiones concretas. Van juntas
+porque tocan lo mismo —la identidad del programa— y porque separarlas en cinco entradas no
+aportaría nada.
+
+**Decisiones.**
+
+**1. El rojo del logotipo sustituye al azul como color de realce.** Con esto el sistema baja de
+tres colores a **dos**, y cada uno pasa a tener también una regla de *cómo* se aplica, que es lo
+que evita confundir el menú con un botón de borrar:
+
+| Color | Qué dice | Cómo se aplica |
+|---|---|---|
+| **Rojo** `#BE1E2D` | dónde estoy, dónde está el foco, y lo que cancela o borra | lavado, filete o texto. **Nunca relleno** |
+| **Verde** `#15803D` | salió bien, y adelante | es el único que va relleno: cobrar, guardar, entrar |
+
+*El riesgo, anotado:* un anillo rojo alrededor de un campo de texto es, en casi todo el software,
+la señal de "este dato está mal". Aquí significa "aquí va a caer el disparo de la pistola". Se
+acepta porque el campo de escaneo está enfocado el 99% del tiempo y nunca muestra un error a la
+vez, pero es lo primero que hay que mirar cuando alguien use la caja de verdad.
+
+**2. La barra lateral se pliega a una tira de iconos** con Ctrl+B o con su botón. El estado se
+guarda en `preferencias.json` —plegarla una vez tiene que bastar— pero **no aparece en la rueda de
+configuración**: es un gesto, no un ajuste que nadie vaya a buscar en un formulario. Por eso el
+diálogo de configuración tiene que arrastrar el valor al guardar, o desplegaría la barra por su
+cuenta cada vez que alguien cambiara el tema.
+
+**3. La tipografía sube un escalón.** El cuerpo pasa de 14 a 15 px y los pesos suben de 500 a
+600–700 donde hay jerarquía. El gris del texto secundario se oscurece de `#78716C` a `#57534E`: el
+del documento se lee bien en una web y se pierde en un mostrador con luz de tubo.
+
+Efecto colateral que hubo que corregir: con la letra más grande, a 1280 px de ancho la columna del
+producto se quedaba sin sitio y los nombres salían cortados. Se recortó de la barra lateral (244 →
+232), de la tarjeta de totales (320 → 300) y del relleno de las celdas.
+
+**4. El ejecutable pasa a llamarse `PuntoYFamaCaja.exe`** y lleva el icono de la marca.
+`NOMBRE_APP` **sigue siendo `TiendaPOS`**: es el nombre de la carpeta de datos, y cambiarlo dejaría
+al programa instalado en la tienda sin encontrar su base de datos.
+
+*Cuidado con esto:* en la tienda hay accesos directos que apuntan a `TiendaPOS.exe`. Actualizar esa
+instalación no es copiar la carpeta nueva encima: hay que rehacer los accesos directos, y si algún
+día el servicio arranca solo, también esa entrada. Ver `docs/DESPLIEGUE-TIENDA.md`.
+
+**5. El stock se ajusta desde una ventana propia.** Antes, corregir una cantidad obligaba a abrir el
+formulario completo del producto y pasar por el código de barras, el nombre y el precio. Ahora hay
+un botón **Stock** que abre solo el número, con saltos de ±1 y ±10 y un resumen de cuántas unidades
+entran o salen.
+
+No es una capacidad nueva —editar el stock a mano ya se podía— sino un camino más corto para lo que
+más se repite en una tienda: contar mercadería y cuadrar el sistema. Por dentro llama al mismo
+`actualizar_producto` de siempre, pasándole el código, el nombre y el precio que el producto ya
+tenía, así que **no hace falta tocar el protocolo de red** (D-023).
+
+*Lo que sigue sin existir* es el rastro de por qué cambió una cantidad. Eso es D-018 y la fase 9, y
+este atajo lo hace más urgente: cuanto más fácil sea corregir el stock a mano, más ajustes habrá sin
+explicación. Cuando llegue la fase 9, este diálogo es el primer sitio que tiene que generar un
+movimiento.
+
+**Consecuencias.** Diez pruebas nuevas cubren el plegado —incluido que guardar el tema no lo
+deshaga— y el ajuste de stock, con sus bordes: sin selección no abre, el campo vacío vale la
+cantidad actual, los saltos no bajan de cero y guardar la misma cantidad no llama al servicio. La
+suite pasa de 239 a 250.
+
+**Lo que sigue pendiente.** El logotipo de la barra lateral y del icono es **la marca dibujada**, no
+el archivo del cliente: el círculo rojo con su tallo, que es la parte que sobrevive a 16 píxeles.
+En cuanto exista `assets/logo.png`, tanto la interfaz como `tools/icono.py` lo usan sin tocar
+código.
+
+
+---
+
+## D-028 — Ajustes del panel de venta, y dos fallos que salieron al mirarlo de cerca
+
+**Fecha:** 2026-09-17 · **Estado:** aceptada · **Decide:** Santiago
+
+**Contexto.** Revisando la pantalla de venta, Santiago señaló tres cosas: el fondo no se distinguía
+de las tarjetas, el panel de totales "se veía muy cuadrado", y el aviso de producto agregado a veces
+duraba un instante y parecía un fallo de pintado. Las tres tenían causa, y dos de ellas eran errores
+de verdad, no cuestión de gusto.
+
+**1. El lienzo pasa de `#FAFAF9` a `#F1EFEC`.** Con el tono del documento, el papel blanco de las
+tarjetas y el fondo quedaban a un punto de distancia y los recuadros solo se veían por su filete de
+1 px. Sigue leyéndose como papel cálido, que es lo que el sistema pide, pero ahora hay un escalón.
+
+**2. Las cápsulas estaban cuadradas, y era un fallo.** Todos los controles redondos usaban
+`border-radius: 999px`, el truco habitual de "ponlo enorme y que lo recorte el motor". **Qt no hace
+eso: en cuanto el radio pasa de la mitad del alto del control, se rinde y dibuja las esquinas
+rectas.** Afectaba a todos los botones, al buscador del catálogo y a las fichas.
+
+Se sustituye por tres radios reales, uno por altura, siempre por debajo de la mitad del alto para
+que Qt no vuelva a rendirse si el control crece: `RADIO_PILDORA` 20, `RADIO_PILDORA_ALTA` 26 para el
+botón de cobrar y `RADIO_PILDORA_BAJA` 14 para las fichas.
+
+**3. El panel de totales se parte en dos tarjetas.** Una sola, estirada a todo el alto, dejaba un
+hueco blanco enorme entre el título y las cifras. Arriba queda lo que se va sumando —subtotal y
+descuento, en renglones de recibo con el rótulo a la izquierda y la cifra a la derecha— y abajo lo
+que se cobra: el total y las cuatro acciones. El hueco deja de ser un vacío y pasa a ser la
+separación entre dos cosas distintas.
+
+**Con el carrito vacío, la tarjeta de arriba no se muestra.** Una tarjeta que solo dice
+"SUBTOTAL $0" no informa de nada. El botón de cobrar, en cambio, **no se mueve nunca**: el cajero lo
+busca sin mirar, y una acción que cambia de sitio según el estado es una acción que se falla.
+
+**4. El aviso de producto agregado se acortaba solo, y también era un fallo.** Cada aviso programaba
+un `QTimer.singleShot` nuevo **sin cancelar el anterior**. Escanear un producto a los 4,8 segundos
+del anterior dejaba vivo el temporizador del primero, que escondía el mensaje del segundo 200 ms
+después de aparecer. Parecía un problema de pintado y era un temporizador de más — exactamente el
+tipo de cosa que hace desconfiar de un sistema en una demostración.
+
+Ahora hay **un solo temporizador**, propiedad de la vista, que se reinicia en cada aviso. Cinco
+segundos desde el último mensaje, siempre.
+
+**Consecuencias.** Cinco pruebas nuevas: que el detalle aparece con el primer producto y se va al
+cancelar, que el cobro no se mueve con el carrito vacío, que un aviso nuevo reinicia la cuenta atrás
+en lugar de heredarla, y que un error sustituye al aviso de éxito. La suite pasa de 250 a 255.
+
+El fallo del radio estaba desde D-026 y el del temporizador desde la fase 2, o sea desde la primera
+versión de la pantalla de venta. Ninguno lo habría detectado una prueba: el primero es estética y el
+segundo depende de la cadencia con la que se escanee. Los dos aparecieron mirando la pantalla con
+calma, que es el argumento para seguir generando capturas con `tools/capturas.py`.

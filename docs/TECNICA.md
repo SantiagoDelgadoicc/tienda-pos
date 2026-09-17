@@ -233,6 +233,10 @@ Se añaden dos límites nuevos, que la reunión sacó a la luz:
 - **Sin precio de compra ni familias.** El cliente los tenía en su sistema anterior, pero el
   2026-09-14 dijo que no le interesan. D-016 y D-017 quedan retiradas y no se implementan. Sin
   costo no hay informe de margen ni de ganancia.
+- **Los datos demo se cargan en el primer arranque con la base vacía**, y en la instalación real
+  de la tienda eso mezcló 65 productos inventados con el catálogo del cliente. Se separaron con
+  `tools/limpiar_demo.py`. Para una instalación real conviene arrancar con
+  `abrir_base_datos(con_datos_demo=False)`. Ver `docs/DESPLIEGUE-TIENDA.md`.
 - **Sin importación de datos.** No hay forma de cargar un catálogo que no sea a mano, producto por
   producto. Fase 10 (D-019), y `docs/RESCATE-DATOS.md` para el catálogo concreto de este cliente.
 

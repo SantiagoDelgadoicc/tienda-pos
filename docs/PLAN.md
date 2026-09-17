@@ -334,7 +334,12 @@ la documentación sirva para entrar.
       condición 2 de D-015 que falta: el tiempo límite ya está, pero el cajero todavía no ve el
       estado hasta que una operación falla.
 - [ ] **Llevar las pruebas manuales a `tests/`** como pruebas de pytest, y añadirlas a la suite.
-- [ ] Probar en los dos PC reales, que es lo único que no se puede simular aquí.
+- [x] **Probar en los dos PC reales.** Instalado y funcionando en la tienda desde el 2026-09-15:
+      dos equipos unidos por cable directo, catálogo único, verificado incluido el reinicio de
+      ambos. Ver `docs/DESPLIEGUE-TIENDA.md`.
+- [ ] Desactivar la carga de datos demo en instalaciones reales
+      (`abrir_base_datos(con_datos_demo=False)`). En la tienda los 65 productos de ejemplo se
+      mezclaron con el catálogo real y hubo que separarlos a mano.
 
 **Criterio de aceptación:** dos cajas cobrando el mismo producto a la vez no descuadran el stock ni
 repiten folio; desenchufar el cable de red durante una venta muestra un aviso claro en menos de 3

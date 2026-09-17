@@ -64,6 +64,7 @@ Para comprobar la instalación en otro equipo: `TiendaPOS.exe --verificar`.
 |---|---|
 | [docs/GUION-DEMO.md](docs/GUION-DEMO.md) | Guion paso a paso de la demostración al cliente |
 | [docs/PREGUNTAS-CLIENTE.md](docs/PREGUNTAS-CLIENTE.md) | Preguntas de negocio pendientes para la reunión |
+| [docs/DESPLIEGUE-TIENDA.md](docs/DESPLIEGUE-TIENDA.md) | Cómo está instalado el sistema en la tienda y cómo se mantiene |
 | [docs/RESCATE-DATOS.md](docs/RESCATE-DATOS.md) | Cómo recuperar el catálogo del sistema anterior del cliente |
 | [docs/MANUAL-USUARIO.md](docs/MANUAL-USUARIO.md) | Manual para quien opera la caja |
 | [docs/TECNICA.md](docs/TECNICA.md) | Arquitectura, pruebas, empaquetado y deuda técnica |

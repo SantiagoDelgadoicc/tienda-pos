@@ -231,6 +231,7 @@ python tools/icono.py                 # regenerar el icono
 | Archivo | Contenido |
 |---|---|
 | `docs/PLAN.md` | Fases, tareas, criterios de aceptación. Se actualiza al avanzar. |
+| `docs/DESPLIEGUE-TIENDA.md` | **Cómo está instalado el sistema en la tienda y cómo se mantiene.** |
 | `docs/RESCATE-DATOS.md` | Cómo recuperar el catálogo del sistema anterior del cliente. |
 | `docs/PREGUNTAS-CLIENTE.md` | Preguntas de negocio para la reunión con el cliente. |
 | `docs/DECISIONES.md` | Decisiones técnicas importantes con su justificación. |

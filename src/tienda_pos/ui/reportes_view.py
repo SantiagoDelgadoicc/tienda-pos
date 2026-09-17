@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 from ..domain.models import Venta
 from ..red.sesion import Sesion
 from ..utils.money import formatear_clp
-from . import tablas
+from . import estilos, tablas
 
 _COLUMNAS_VENTAS = ("N°", "Hora", "Artículos", "Total", "Atendió")
 _COLUMNAS_DETALLE = ("Producto", "Precio", "Cant.", "Subtotal")
@@ -44,22 +44,17 @@ class ReportesView(QWidget):
 
     def _construir(self) -> None:
         columna = QVBoxLayout(self)
-        columna.setContentsMargins(20, 20, 20, 20)
-        columna.setSpacing(14)
+        columna.setContentsMargins(28, 22, 28, 24)
+        columna.setSpacing(16)
 
         encabezado = QHBoxLayout()
-        titulo = QLabel("Ventas del día")
-        titulo.setObjectName("tituloPantalla")
-        encabezado.addWidget(titulo)
+        encabezado.setSpacing(10)
         encabezado.addStretch()
 
         boton_actualizar = QPushButton("Actualizar")
         boton_actualizar.clicked.connect(self.recargar)
         encabezado.addWidget(boton_actualizar)
 
-        boton_volver = QPushButton("Volver   (Esc)")
-        boton_volver.clicked.connect(self.salir_solicitado.emit)
-        encabezado.addWidget(boton_volver)
         columna.addLayout(encabezado)
 
         columna.addWidget(self._tarjetas_resumen())
@@ -74,7 +69,7 @@ class ReportesView(QWidget):
         contenedor = QWidget()
         fila = QHBoxLayout(contenedor)
         fila.setContentsMargins(0, 0, 0, 0)
-        fila.setSpacing(14)
+        fila.setSpacing(16)
 
         self.valor_total, tarjeta_total = self._tarjeta("Total vendido hoy", "valorTotal")
         self.valor_ventas, tarjeta_ventas = self._tarjeta("Ventas realizadas", "valorSubtotal")
@@ -88,11 +83,14 @@ class ReportesView(QWidget):
     def _tarjeta(titulo: str, estilo_valor: str) -> tuple[QLabel, QFrame]:
         tarjeta = QFrame()
         tarjeta.setObjectName("tarjeta")
+        estilos.aplicar_sombra(tarjeta)
         columna = QVBoxLayout(tarjeta)
         columna.setContentsMargins(20, 16, 20, 16)
         columna.setSpacing(2)
 
-        etiqueta = QLabel(titulo)
+        # En mayúsculas, como todas las etiquetas de un bloque de métrica. Qt no entiende
+        # `text-transform`, así que se hace aquí y no en la hoja de estilos.
+        etiqueta = QLabel(titulo.upper())
         etiqueta.setObjectName("etiquetaTotal")
         columna.addWidget(etiqueta)
 

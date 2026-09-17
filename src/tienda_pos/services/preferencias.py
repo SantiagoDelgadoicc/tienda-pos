@@ -33,6 +33,9 @@ class Preferencias:
     sonido: bool = True
     confirmar_cobro: bool = True
     mostrar_atajos: bool = True
+    #: Barra lateral plegada a tira de iconos. No está en la rueda de configuración: se
+    #: cambia con Ctrl+B o con su botón, y se guarda para que no haya que repetirlo.
+    barra_lateral_plegada: bool = False
 
     def normalizar(self) -> "Preferencias":
         """Corrige valores imposibles en lugar de fallar.
@@ -45,6 +48,7 @@ class Preferencias:
         self.sonido = bool(self.sonido)
         self.confirmar_cobro = bool(self.confirmar_cobro)
         self.mostrar_atajos = bool(self.mostrar_atajos)
+        self.barra_lateral_plegada = bool(self.barra_lateral_plegada)
         return self
 
 

@@ -1,7 +1,7 @@
 """Construye el ejecutable de Windows con PyInstaller.
 
-    python tools/construir.py            genera dist/TiendaPOS/TiendaPOS.exe
-    python tools/construir.py --unico    genera un único dist/TiendaPOS.exe
+    python tools/construir.py            genera dist/PuntoYFamaCaja/PuntoYFamaCaja.exe
+    python tools/construir.py --unico    genera un único dist/PuntoYFamaCaja.exe
 
 Por qué una carpeta y no un solo archivo por defecto: el formato de archivo único se
 descomprime en una carpeta temporal en cada arranque, lo que añade dos o tres segundos.
@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
-NOMBRE = "TiendaPOS"
+NOMBRE = "PuntoYFamaCaja"
 
 # Módulos de Qt que este programa no usa. Excluirlos baja el tamaño del paquete de forma
 # apreciable y reduce la superficie de lo que puede fallar al arrancar.
@@ -42,7 +42,7 @@ _EXCLUIDOS = (
 
 
 def construir(unico: bool = False, limpiar: bool = True) -> Path:
-    icono = RAIZ / "assets" / "tienda_pos.ico"
+    icono = RAIZ / "assets" / "punto_y_fama.ico"
     if not icono.exists():
         print("El icono no existe todavía; generándolo...")
         subprocess.run([sys.executable, str(RAIZ / "tools" / "icono.py")], check=True)
@@ -64,6 +64,9 @@ def construir(unico: bool = False, limpiar: bool = True) -> Path:
         # El esquema SQL es un archivo de datos: sin esto, el ejecutable no sabría crear la
         # base de datos en el primer arranque.
         f"--add-data={RAIZ / 'src' / 'tienda_pos' / 'db' / 'schema.sql'}{';' if sys.platform == 'win32' else ':'}tienda_pos/db",
+        # El logotipo del negocio, si lo hay. La interfaz lo busca en esta carpeta y se
+        # arregla sin el, pero si esta tiene que viajar dentro del ejecutable.
+        f"--add-data={RAIZ / 'assets'}{';' if sys.platform == 'win32' else ':'}assets",
         "--onefile" if unico else "--onedir",
     ]
     for modulo in _EXCLUIDOS:

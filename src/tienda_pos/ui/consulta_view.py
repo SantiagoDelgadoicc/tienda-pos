@@ -25,6 +25,7 @@ from ..domain.errors import ErrorDominio, ProductoNoEncontrado
 from ..red.sesion import Sesion
 from ..utils import sonido
 from ..utils.money import formatear_clp
+from . import estilos
 
 #: Tiempo que un precio permanece en pantalla antes de volver al estado de espera.
 _LIMPIEZA_MS = 15000
@@ -48,13 +49,8 @@ class ConsultaView(QWidget):
 
     def _construir(self) -> None:
         columna = QVBoxLayout(self)
-        columna.setContentsMargins(40, 28, 40, 32)
-        columna.setSpacing(18)
-
-        titulo = QLabel("Consulta de precio")
-        titulo.setObjectName("tituloPantalla")
-        titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        columna.addWidget(titulo)
+        columna.setContentsMargins(40, 28, 40, 28)
+        columna.setSpacing(16)
 
         # La instrucción va en una etiqueta propia y no en el texto de ayuda del campo por
         # dos motivos. Uno práctico: Qt oculta el texto de ayuda cuando el campo está
@@ -164,8 +160,11 @@ class ConsultaView(QWidget):
         self.etiqueta_nombre.show()
         self.etiqueta_precio.setText(codigo)
         # El código pasa a rojo y a un tamaño menor: sigue siendo legible para dictarlo,
-        # pero no se confunde con un precio.
-        self.etiqueta_precio.setStyleSheet("font-size: 54px; color: #B91C1C;")
+        # pero no se confunde con un precio. El rojo se lee de la paleta y no se escribe a
+        # mano, que es lo que hacía que el tema oscuro no lo alcanzara.
+        self.etiqueta_precio.setStyleSheet(
+            f"font-size: 48px; letter-spacing: -2.4px; color: {estilos.actual.error};"
+        )
         self.etiqueta_precio.show()
         self.etiqueta_detalle.setText("Este código no está en el catálogo.")
         self.etiqueta_detalle.show()

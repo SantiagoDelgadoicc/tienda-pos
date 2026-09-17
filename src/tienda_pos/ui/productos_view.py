@@ -79,6 +79,7 @@ class DialogoProducto(QDialog):
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
         botones.button(QDialogButtonBox.StandardButton.Save).setText("Guardar")
+        botones.button(QDialogButtonBox.StandardButton.Save).setObjectName("botonAccion")
         botones.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
         botones.accepted.connect(self._validar)
         botones.rejected.connect(self.reject)
@@ -116,10 +117,119 @@ class DialogoProducto(QDialog):
         )
 
 
+class DialogoStock(QDialog):
+    """Ajuste rápido del stock de un producto.
+
+    Existe porque contar mercadería y corregir el sistema es lo que más se repite en una
+    tienda, y hacerlo por el formulario completo obligaba a pasar por el código de barras, el
+    nombre y el precio para tocar un número. Aquí solo está el número, con los saltos que se
+    usan de verdad al recibir un pedido.
+
+    No cambia nada más del producto: la vista le pasa al servicio el código, el nombre y el
+    precio que ya tenía.
+    """
+
+    #: Saltos de los botones rápidos. Van de menor a mayor y en los dos sentidos.
+    _SALTOS = (-10, -1, 1, 10)
+
+    def __init__(self, producto: Producto, padre: QWidget | None = None) -> None:
+        super().__init__(padre)
+        self._producto = producto
+        self.setWindowTitle("Ajustar stock")
+        self.setMinimumWidth(420)
+
+        columna = QVBoxLayout(self)
+        columna.setContentsMargins(26, 24, 26, 20)
+        columna.setSpacing(6)
+
+        titulo = QLabel("Ajustar stock")
+        titulo.setObjectName("tituloPantalla")
+        columna.addWidget(titulo)
+
+        nombre = QLabel(producto.nombre)
+        nombre.setObjectName("subtitulo")
+        nombre.setWordWrap(True)
+        columna.addWidget(nombre)
+        columna.addSpacing(14)
+
+        actual = QLabel(f"AHORA HAY {producto.stock}")
+        actual.setObjectName("etiquetaTotal")
+        columna.addWidget(actual)
+        columna.addSpacing(6)
+
+        fila = QHBoxLayout()
+        fila.setSpacing(8)
+        for salto in self._SALTOS[:2]:
+            fila.addWidget(self._boton_salto(salto))
+
+        self.campo = QLineEdit(str(producto.stock))
+        self.campo.setValidator(QIntValidator(0, 999999, self))
+        self.campo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.campo.setMinimumWidth(110)
+        self.campo.textChanged.connect(self._actualizar_resumen)
+        self.campo.returnPressed.connect(self.accept)
+        fila.addWidget(self.campo, stretch=1)
+
+        for salto in self._SALTOS[2:]:
+            fila.addWidget(self._boton_salto(salto))
+        columna.addLayout(fila)
+        columna.addSpacing(10)
+
+        self.resumen = QLabel()
+        self.resumen.setObjectName("subtitulo")
+        self.resumen.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        columna.addWidget(self.resumen)
+        columna.addSpacing(6)
+
+        botones = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
+        )
+        botones.button(QDialogButtonBox.StandardButton.Save).setText("Guardar")
+        botones.button(QDialogButtonBox.StandardButton.Save).setObjectName("botonAccion")
+        botones.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
+        botones.accepted.connect(self.accept)
+        botones.rejected.connect(self.reject)
+        columna.addWidget(botones)
+
+        self._actualizar_resumen()
+        self.campo.setFocus()
+        self.campo.selectAll()
+
+    def _boton_salto(self, salto: int) -> QPushButton:
+        boton = QPushButton(f"+{salto}" if salto > 0 else str(salto))
+        boton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        boton.setFixedWidth(64)
+        boton.clicked.connect(lambda _=False, s=salto: self._sumar(s))
+        return boton
+
+    def _sumar(self, salto: int) -> None:
+        # El tope de abajo es cero: un stock negativo no existe, y dejar que la resta lo
+        # cruce solo serviría para que el validador rechace el texto después.
+        self.campo.setText(str(max(0, self.stock + salto)))
+
+    def _actualizar_resumen(self) -> None:
+        diferencia = self.stock - self._producto.stock
+        if diferencia == 0:
+            self.resumen.setText("Sin cambios")
+        elif diferencia > 0:
+            self.resumen.setText(f"Entran {diferencia} unidades")
+        else:
+            self.resumen.setText(f"Salen {abs(diferencia)} unidades")
+
+    @property
+    def stock(self) -> int:
+        """Lo escrito, o el stock actual si el campo quedó vacío."""
+        texto = self.campo.text().strip()
+        return int(texto) if texto else self._producto.stock
+
+
 class ProductosView(QWidget):
     """Listado y mantenimiento del catálogo."""
 
     salir_solicitado = Signal()
+    #: Cuántos productos hay y cuántos se están mostrando. Lo pinta la cabecera de la
+    #: ventana: en la fila de acciones no cabía junto al buscador y a cinco botones.
+    resumen_cambiado = Signal(str)
 
     def __init__(self, sesion: Sesion, padre: QWidget | None = None) -> None:
         super().__init__(padre)
@@ -131,20 +241,18 @@ class ProductosView(QWidget):
 
     def _construir(self) -> None:
         columna = QVBoxLayout(self)
-        columna.setContentsMargins(20, 20, 20, 20)
-        columna.setSpacing(12)
-
-        titulo = QLabel("Productos")
-        titulo.setObjectName("tituloPantalla")
-        columna.addWidget(titulo)
-
-        self.resumen = QLabel()
-        self.resumen.setObjectName("subtitulo")
-        columna.addWidget(self.resumen)
+        columna.setContentsMargins(28, 22, 28, 24)
+        columna.setSpacing(16)
 
         fila = QHBoxLayout()
+        fila.setSpacing(10)
+
         self.campo_filtro = QLineEdit()
+        self.campo_filtro.setObjectName("campoBusqueda")
         self.campo_filtro.setPlaceholderText("Filtrar por nombre o código")
+        # Sin mínimo, los cinco botones de la fila le dejaban un hueco donde no cabía ni el
+        # texto de ayuda.
+        self.campo_filtro.setMinimumWidth(280)
         self.campo_filtro.setClearButtonEnabled(True)
         self.campo_filtro.textChanged.connect(self._pintar)
         fila.addWidget(self.campo_filtro, stretch=1)
@@ -152,9 +260,14 @@ class ProductosView(QWidget):
         for texto, destino in (
             ("Nuevo producto", self.crear),
             ("Editar", self.editar),
-            ("Códigos pendientes", self.ver_pendientes),
+            ("Stock", self.ajustar_stock),
+            ("Pendientes", self.ver_pendientes),
         ):
             boton = QPushButton(texto)
+            # Dar de alta es la acción de la pantalla: va rellena y las demás de
+            # contorno, que es lo que le da ritmo a una fila de botones iguales.
+            if texto == "Nuevo producto":
+                boton.setObjectName("botonAccion")
             boton.clicked.connect(destino)
             fila.addWidget(boton)
 
@@ -163,9 +276,6 @@ class ProductosView(QWidget):
         self.boton_eliminar.clicked.connect(self.dar_de_baja)
         fila.addWidget(self.boton_eliminar)
 
-        boton_volver = QPushButton("Volver   (Esc)")
-        boton_volver.clicked.connect(self.salir_solicitado.emit)
-        fila.addWidget(boton_volver)
         columna.addLayout(fila)
 
         self.tabla = QTableWidget(0, len(_COLUMNAS))
@@ -193,6 +303,14 @@ class ProductosView(QWidget):
         self._productos = self._sesion.listar_productos()
         self._pintar()
         self.campo_filtro.setFocus()
+
+    def repintar(self) -> None:
+        """Vuelve a pintar la tabla tras un cambio de tema.
+
+        El rojo del stock bajo se fija celda a celda, así que la hoja de estilos no lo
+        alcanza y quedaría con el tono del tema anterior.
+        """
+        self._pintar()
 
     def _visibles(self) -> list[Producto]:
         texto = self.campo_filtro.text().strip().lower()
@@ -228,10 +346,10 @@ class ProductosView(QWidget):
 
         total = len(self._productos)
         mostrados = len(visibles)
-        self.resumen.setText(
+        self.resumen_cambiado.emit(
             f"{total} productos en el catálogo"
             if total == mostrados
-            else f"{mostrados} de {total} productos"
+            else f"{mostrados} de {total} productos, filtrados"
         )
 
     def _seleccionado(self) -> Producto | None:
@@ -273,6 +391,43 @@ class ProductosView(QWidget):
             dialogos.mostrar_error(self, str(error))
             return
         self.recargar()
+
+    def ajustar_stock(self) -> None:
+        """Cambia solo la cantidad del producto seleccionado."""
+        producto = self._seleccionado()
+        if producto is None:
+            dialogos.mostrar_error(self, "Seleccione primero un producto de la lista.")
+            return
+
+        dialogo = DialogoStock(producto, self)
+        if not dialogo.exec() or dialogo.stock == producto.stock:
+            return
+
+        try:
+            self._sesion.actualizar_producto(
+                self.usuario,
+                producto.id,
+                producto.codigo_barras,
+                producto.nombre,
+                producto.precio_clp,
+                dialogo.stock,
+            )
+        except ErrorDominio as error:
+            dialogos.mostrar_error(self, str(error))
+            return
+
+        self.recargar()
+        # Recargar deshace la selección, y lo normal al contar mercadería es ajustar varios
+        # productos seguidos: devolver la fila donde estaba ahorra buscarla otra vez.
+        self.seleccionar_codigo(producto.codigo_barras)
+
+    def seleccionar_codigo(self, codigo: str) -> None:
+        """Deja seleccionada la fila de ese código, si sigue a la vista."""
+        for fila, producto in enumerate(self._visibles()):
+            if producto.codigo_barras == codigo:
+                self.tabla.selectRow(fila)
+                self.tabla.scrollToItem(self.tabla.item(fila, 0))
+                return
 
     def dar_de_baja(self) -> None:
         producto = self._seleccionado()

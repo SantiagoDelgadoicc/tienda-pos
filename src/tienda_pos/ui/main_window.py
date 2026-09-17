@@ -1,4 +1,10 @@
-"""Ventana principal: barra superior, pantallas y atajos de teclado."""
+"""Ventana principal: barra lateral, cabecera, pantallas y atajos de teclado.
+
+La ventana es solo el armazón. A la izquierda la navegación, arriba una cabecera que dice en
+qué pantalla se está, y en medio la pantalla propiamente dicha. Las pantallas no pintan su
+propio título: se lo pone la cabecera, y por eso todas empiezan a la misma altura y el
+programa se ve como un sistema y no como cuatro ventanas distintas pegadas.
+"""
 
 from __future__ import annotations
 
@@ -11,7 +17,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
-    QPushButton,
     QStackedWidget,
     QStatusBar,
     QVBoxLayout,
@@ -24,13 +29,22 @@ from ..red.sesion import Sesion
 from ..services import preferencias as servicio_preferencias
 from ..services.preferencias import Preferencias
 from ..utils import sonido
-from . import dialogos, estilos
+from . import dialogos, estilos, iconos
+from .barra_lateral import BarraLateral
 from .configuracion_dialog import DialogoConfiguracion
 from .consulta_view import ConsultaView
 from .login_dialog import DialogoLogin
 from .productos_view import ProductosView
 from .reportes_view import ReportesView
 from .venta_view import VentaView
+
+#: Qué dice la cabecera en cada pantalla. La clave es la misma que usa la barra lateral.
+_CABECERAS = {
+    "venta": ("Venta", "Escanee los productos y cobre cuando termine."),
+    "consulta": ("Consulta de precio", "Para mirar un precio sin abrir una venta."),
+    "productos": ("Productos", "El catálogo completo de la tienda."),
+    "reportes": ("Ventas del día", "Lo que se vendió hoy, venta por venta."),
+}
 
 _AYUDA = """<b>Atajos de teclado</b><br><br>
 <table cellpadding="4">
@@ -50,6 +64,7 @@ _AYUDA = """<b>Atajos de teclado</b><br><br>
 <tr><td><b>F9</b></td><td>Configuración</td></tr>
 <tr><td><b>F10</b></td><td>Cambiar de usuario</td></tr>
 <tr><td><b>Esc</b></td><td>Volver a la pantalla de venta</td></tr>
+<tr><td><b>Ctrl+B</b></td><td>Ocultar o mostrar el menú lateral</td></tr>
 </table>
 <br>Las flechas y las teclas + y − actúan sobre el carrito cuando el campo de escaneo
 está vacío; si hay un código a medio escribir, sirven para corregirlo.
@@ -68,9 +83,9 @@ class VentanaPrincipal(QMainWindow):
         # cambian cómo se monta la ventana.
         self.preferencias = servicio_preferencias.cargar()
 
-        self.setWindowTitle(f"{NOMBRE_COMERCIAL} {VERSION}")
-        self.resize(1180, 760)
-        self.setMinimumSize(940, 620)
+        self.setWindowTitle(f"{NOMBRE_COMERCIAL} · Caja {VERSION}")
+        self.resize(1280, 800)
+        self.setMinimumSize(1080, 680)
 
         self._construir()
         self._registrar_atajos()
@@ -81,10 +96,36 @@ class VentanaPrincipal(QMainWindow):
 
     def _construir(self) -> None:
         central = QWidget()
-        columna = QVBoxLayout(central)
+        fila = QHBoxLayout(central)
+        fila.setContentsMargins(0, 0, 0, 0)
+        fila.setSpacing(0)
+
+        self.barra_lateral = BarraLateral()
+        self.barra_lateral.navegacion_solicitada.connect(self._navegar)
+        self.barra_lateral.plegado_cambiado.connect(self._recordar_plegado)
+        fila.addWidget(self.barra_lateral)
+        #: Las pruebas y la configuración llegan a la rueda por aquí.
+        self.boton_configuracion = self.barra_lateral.boton_configuracion
+
+        fila.addWidget(self._zona_de_contenido(), stretch=1)
+        self.setCentralWidget(central)
+
+        barra = QStatusBar()
+        barra.showMessage(
+            "F1 ayuda   ·   F2 consulta   ·   F3 buscar   ·   F4 descuento   ·   F5 quitar"
+            "   ·   F6 cancelar   ·   F7 productos   ·   F8 ventas del día"
+            "   ·   F9 configuración   ·   F10 cambiar usuario   ·   F12 cobrar"
+            "   ·   Ctrl+B menú"
+        )
+        self.setStatusBar(barra)
+
+    def _zona_de_contenido(self) -> QWidget:
+        contenido = QWidget()
+        contenido.setObjectName("transparente")
+        columna = QVBoxLayout(contenido)
         columna.setContentsMargins(0, 0, 0, 0)
         columna.setSpacing(0)
-        columna.addWidget(self._barra_superior())
+        columna.addWidget(self._cabecera())
 
         self.pantallas = QStackedWidget()
         self.vista_venta = VentaView(self._sesion)
@@ -103,51 +144,46 @@ class VentanaPrincipal(QMainWindow):
         self.vista_venta.consulta_solicitada.connect(self.mostrar_consulta)
         self.vista_consulta.salir_solicitado.connect(self.mostrar_venta)
         self.vista_productos.salir_solicitado.connect(self.mostrar_venta)
+        self.vista_productos.resumen_cambiado.connect(self._resumen_de_productos)
         self.vista_reportes.salir_solicitado.connect(self.mostrar_venta)
+        return contenido
 
-        self.setCentralWidget(central)
+    def _cabecera(self) -> QWidget:
+        cabecera = QFrame()
+        cabecera.setObjectName("cabecera")
+        cabecera.setFixedHeight(88)
 
-        barra = QStatusBar()
-        barra.showMessage(
-            "F2 consulta  ·  F3 buscar  ·  F4 descuento  ·  F5 quitar  ·  F6 cancelar  ·  "
-            "F7 productos  ·  F8 ventas del día  ·  F9 configuración  ·  F10 cambiar usuario"
-            "  ·  F12 cobrar  ·  F1 ayuda"
-        )
-        self.setStatusBar(barra)
+        fila = QHBoxLayout(cabecera)
+        fila.setContentsMargins(28, 0, 28, 0)
+        fila.setSpacing(16)
 
-    def _barra_superior(self) -> QWidget:
-        barra = QFrame()
-        barra.setObjectName("barraSuperior")
-        barra.setFixedHeight(62)
-
-        fila = QHBoxLayout(barra)
-        fila.setContentsMargins(22, 0, 22, 0)
-
-        marca = QLabel(NOMBRE_COMERCIAL)
-        marca.setObjectName("marca")
-        fila.addWidget(marca)
-        fila.addStretch()
-
-        self.etiqueta_sesion = QLabel()
-        self.etiqueta_sesion.setObjectName("datosSesion")
-        self.etiqueta_sesion.setAlignment(Qt.AlignmentFlag.AlignRight)
-        fila.addWidget(self.etiqueta_sesion)
-
-        self.boton_configuracion = QPushButton("⚙")
-        self.boton_configuracion.setObjectName("botonConfiguracion")
-        self.boton_configuracion.setToolTip("Configuración   (F9)")
-        self.boton_configuracion.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.boton_configuracion.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.boton_configuracion.clicked.connect(self.abrir_configuracion)
-        fila.addSpacing(14)
-        fila.addWidget(self.boton_configuracion)
+        # El bloque de título va en un widget propio y centrado: dentro de un layout suelto,
+        # Qt le reparte todo el alto de la cabecera y el subtítulo se despega del título.
+        bloque = QWidget()
+        bloque.setObjectName("transparente")
+        textos = QVBoxLayout(bloque)
+        textos.setContentsMargins(0, 0, 0, 0)
+        textos.setSpacing(3)
+        self.titulo_pantalla = QLabel()
+        self.titulo_pantalla.setObjectName("tituloPantalla")
+        textos.addWidget(self.titulo_pantalla)
+        self.subtitulo_pantalla = QLabel()
+        self.subtitulo_pantalla.setObjectName("subtitulo")
+        textos.addWidget(self.subtitulo_pantalla)
+        fila.addWidget(bloque, stretch=1, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         # El reloj no es decorativo: en una caja se necesita saber la hora sin soltar nada.
+        self._icono_reloj = QLabel()
+        fila.addWidget(self._icono_reloj, alignment=Qt.AlignmentFlag.AlignVCenter)
+        self.etiqueta_sesion = QLabel()
+        self.etiqueta_sesion.setObjectName("datosSesion")
+        fila.addWidget(self.etiqueta_sesion, alignment=Qt.AlignmentFlag.AlignVCenter)
+
         self._reloj = QTimer(self)
-        self._reloj.timeout.connect(self._actualizar_sesion)
+        self._reloj.timeout.connect(self._actualizar_reloj)
         self._reloj.start(1000)
-        self._actualizar_sesion()
-        return barra
+        self._actualizar_reloj()
+        return cabecera
 
     def _registrar_atajos(self) -> None:
         """Los atajos viven en la ventana para que funcionen mire donde mire el foco."""
@@ -163,6 +199,7 @@ class VentanaPrincipal(QMainWindow):
         self._atajo(QKeySequence(Qt.Key.Key_F10), self.cambiar_usuario)
         self._atajo(QKeySequence(Qt.Key.Key_F12), self._cobrar)
         self._atajo(QKeySequence(Qt.Key.Key_Escape), self.mostrar_venta)
+        self._atajo(QKeySequence("Ctrl+B"), self.barra_lateral.alternar_plegado)
 
     def _atajo(self, secuencia: QKeySequence, destino) -> None:
         atajo = QShortcut(secuencia, self)
@@ -171,13 +208,39 @@ class VentanaPrincipal(QMainWindow):
 
     # ------------------------------------------------------------------ navegación
 
+    def _navegar(self, clave: str) -> None:
+        """Atiende a la barra lateral. Cada entrada hace lo mismo que su tecla."""
+        destinos = {
+            "venta": self.mostrar_venta,
+            "consulta": self.mostrar_consulta,
+            "productos": self.mostrar_productos,
+            "reportes": self.mostrar_reportes,
+            "configuracion": self.abrir_configuracion,
+            "usuario": self.cambiar_usuario,
+        }
+        destinos[clave]()
+
+    def _resumen_de_productos(self, texto: str) -> None:
+        """Refleja en la cabecera cuántos productos hay, mientras se esté mirando esa
+        pantalla. Filtrar el catálogo cambia el subtítulo en vivo."""
+        if self.pantallas.currentWidget() is self.vista_productos:
+            self.subtitulo_pantalla.setText(texto)
+
+    def _ir_a(self, clave: str, vista: QWidget) -> None:
+        """Deja la ventana entera —pantalla, cabecera y barra— coherente con un solo sitio."""
+        self.pantallas.setCurrentWidget(vista)
+        titulo, subtitulo = _CABECERAS[clave]
+        self.titulo_pantalla.setText(titulo)
+        self.subtitulo_pantalla.setText(subtitulo)
+        self.barra_lateral.seleccionar(clave)
+
     def mostrar_venta(self) -> None:
-        self.pantallas.setCurrentWidget(self.vista_venta)
+        self._ir_a("venta", self.vista_venta)
         self.vista_venta.enfocar_escaneo()
 
     def mostrar_consulta(self) -> None:
         self.vista_consulta.limpiar()
-        self.pantallas.setCurrentWidget(self.vista_consulta)
+        self._ir_a("consulta", self.vista_consulta)
         self.vista_consulta.enfocar_escaneo()
 
     def alternar_consulta(self) -> None:
@@ -193,14 +256,16 @@ class VentanaPrincipal(QMainWindow):
         if administrador is None:
             return
         self.vista_productos.usuario = administrador
+        # Primero se cambia de pantalla y después se recarga: al recargar, la vista anuncia
+        # cuántos productos hay y la cabecera solo lo recoge si ya está mostrándola.
+        self._ir_a("productos", self.vista_productos)
         self.vista_productos.recargar()
-        self.pantallas.setCurrentWidget(self.vista_productos)
 
     def mostrar_reportes(self) -> None:
         if self._asegurar_admin("ver las ventas del día") is None:
             return
+        self._ir_a("reportes", self.vista_reportes)
         self.vista_reportes.recargar()
-        self.pantallas.setCurrentWidget(self.vista_reportes)
 
     def _asegurar_admin(self, accion: str):
         """Devuelve un usuario administrador, pidiendo su PIN si hace falta.
@@ -297,9 +362,21 @@ class VentanaPrincipal(QMainWindow):
         self.preferencias = preferencias
         self.aplicar_tema(preferencias.tema)
         sonido.habilitado = preferencias.sonido
+        self.barra_lateral.plegar(preferencias.barra_lateral_plegada)
         self.vista_venta.preferencias = preferencias
         if self.statusBar() is not None:
             self.statusBar().setVisible(preferencias.mostrar_atajos)
+
+    def _recordar_plegado(self, plegada: bool) -> None:
+        """Guarda el plegado en cuanto cambia.
+
+        No espera a que alguien abra la rueda de configuración y pulse Guardar: se cambia
+        con una tecla, y una tecla que hay que volver a pulsar en cada arranque no sirve de
+        nada. Si el archivo no se puede escribir, la barra queda plegada igual y el fallo se
+        anota en el registro; no es motivo para interrumpir una venta.
+        """
+        self.preferencias.barra_lateral_plegada = plegada
+        servicio_preferencias.guardar(self.preferencias)
 
     def aplicar_tema(self, tema: str) -> None:
         """Repinta toda la aplicación con el tema indicado, sin reiniciar.
@@ -310,23 +387,22 @@ class VentanaPrincipal(QMainWindow):
         app = QApplication.instance()
         if app is not None:
             estilos.aplicar(app, tema)
-        # La hoja de estilos no alcanza a los colores que las pantallas fijan celda a celda.
+        # Lo que la hoja de estilos no alcanza: los iconos, que son mapas de píxeles ya
+        # pintados, y los colores que las pantallas fijan celda a celda.
+        self.barra_lateral.repintar()
+        self._actualizar_reloj()
         self.vista_venta.repintar()
+        self.vista_productos.repintar()
 
     # ------------------------------------------------------------------ sesión
 
     def establecer_usuario(self, usuario: Usuario | None) -> None:
         self.usuario = usuario
         self.vista_venta.usuario = usuario
-        self._actualizar_sesion()
+        self.barra_lateral.establecer_usuario(usuario)
 
-    def _actualizar_sesion(self) -> None:
-        ahora = QDateTime.currentDateTime().toString("dd/MM/yyyy HH:mm:ss")
-        if self.usuario is None:
-            quien = "Sesión no iniciada"
-        else:
-            rol = "Administrador" if self.usuario.es_admin else "Cajero"
-            # Los usuarios de ejemplo se llaman igual que su rol; repetirlo ("Administrador
-            # · Administrador") solo hace ruido.
-            quien = self.usuario.nombre if self.usuario.nombre == rol else f"{self.usuario.nombre} · {rol}"
-        self.etiqueta_sesion.setText(f"{quien}     {ahora}")
+    def _actualizar_reloj(self) -> None:
+        self._icono_reloj.setPixmap(iconos.pixmap("reloj", 16, estilos.actual.texto_apagado))
+        self.etiqueta_sesion.setText(
+            QDateTime.currentDateTime().toString("dd/MM/yyyy   HH:mm:ss")
+        )

@@ -7,7 +7,8 @@ y si el foco se pierde el siguiente escaneo se pierde con él.
 
 from __future__ import annotations
 
-import sqlite3
+import uuid
+
 
 from PySide6.QtCore import QEvent, Qt, QTimer, Signal
 from PySide6.QtGui import QGuiApplication, QKeyEvent
@@ -27,7 +28,7 @@ from PySide6.QtWidgets import (
 
 from ..domain.errors import ErrorDominio, ProductoNoEncontrado
 from ..domain.models import Usuario
-from ..services import catalogo
+from ..red.sesion import Sesion
 from ..services import venta as servicio_venta
 from ..services.preferencias import Preferencias
 from ..services.venta import Carrito
@@ -72,9 +73,11 @@ class VentaView(QWidget):
     #: Se emite tras cerrar una venta, para que la ventana actualice sus indicadores.
     venta_registrada = Signal()
 
-    def __init__(self, conexion: sqlite3.Connection, padre: QWidget | None = None) -> None:
+    def __init__(self, sesion: Sesion, padre: QWidget | None = None) -> None:
         super().__init__(padre)
-        self._conexion = conexion
+        self._sesion = sesion
+        #: Intento de cobro en curso. Ver `cobrar`.
+        self._intento_cobro: str | None = None
         self._carrito = Carrito()
         self.usuario: Usuario | None = None
         self.preferencias = Preferencias()
@@ -292,7 +295,7 @@ class VentaView(QWidget):
     def agregar_por_codigo(self, codigo: str) -> None:
         """Busca el producto y lo añade al carrito, o explica por qué no se pudo."""
         try:
-            producto = catalogo.consultar_por_codigo(self._conexion, codigo)
+            producto = self._sesion.consultar_por_codigo(codigo)
         except ProductoNoEncontrado:
             self._codigo_no_encontrado(codigo)
             return
@@ -332,7 +335,7 @@ class VentaView(QWidget):
             self.enfocar_escaneo()
             return
 
-        resultados = catalogo.buscar_por_nombre(self._conexion, dialogo.texto)
+        resultados = self._sesion.buscar_por_nombre(dialogo.texto)
         if not resultados:
             self._avisar("No se encontró ningún producto con ese nombre.", exito=False)
             self.enfocar_escaneo()
@@ -588,13 +591,23 @@ class VentaView(QWidget):
             self.enfocar_escaneo()
             return
 
+        # Un identificador por intento de cobro, no por pulsación: si el primer intento
+        # falla por la red y el cajero vuelve a pulsar, el servidor reconoce que es el mismo
+        # cobro y devuelve la venta original en lugar de cobrar dos veces (D-024). Solo se
+        # renueva cuando una venta se cierra de verdad.
+        if self._intento_cobro is None:
+            self._intento_cobro = str(uuid.uuid4())
+
         try:
-            venta = servicio_venta.cerrar_venta(self._conexion, self._carrito, self.usuario)
+            venta = self._sesion.cerrar_venta(
+                self._carrito, self.usuario, self._intento_cobro
+            )
         except ErrorDominio as error:
             dialogos.mostrar_error(self, str(error))
             self.enfocar_escaneo()
             return
 
+        self._intento_cobro = None
         self._carrito.vaciar()
         self._refrescar()
         self._avisar(

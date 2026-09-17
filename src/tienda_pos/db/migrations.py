@@ -15,7 +15,7 @@ import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 
-VERSION_ESQUEMA = 2
+VERSION_ESQUEMA = 3
 
 _RUTA_ESQUEMA = Path(__file__).with_name("schema.sql")
 
@@ -71,10 +71,30 @@ def _descuento_por_linea(conexion: sqlite3.Connection) -> None:
     )
 
 
+def _intento_de_cobro(conexion: sqlite3.Connection) -> None:
+    """Añade el identificador del intento de cobro, que hace idempotente `cerrar_venta`.
+
+    Con dos cajas (D-015), un cobro puede agotar su tiempo límite sin que la caja llegue a
+    saber si el servidor lo registró. Reintentar a ciegas duplicaría la venta; no reintentar
+    la perdería. Las dos cosas son inaceptables en una caja, así que la caja genera un
+    identificador por intento y el servidor lo usa para reconocer un reintento.
+
+    El índice es UNIQUE, que es lo que convierte la garantía en una regla de la base y no en
+    una comprobación que alguien pueda olvidar. En SQLite los NULL no colisionan entre sí en
+    un índice único, de modo que las ventas ya registradas se quedan como están y la
+    migración no reescribe ni una fila.
+    """
+    conexion.execute("ALTER TABLE venta ADD COLUMN intento_id TEXT")
+    conexion.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_venta_intento ON venta (intento_id)"
+    )
+
+
 # Versión de destino -> función que lleva la base desde la versión anterior hasta ella.
 _MIGRACIONES: dict[int, Callable[[sqlite3.Connection], None]] = {
     1: _crear_esquema_inicial,
     2: _descuento_por_linea,
+    3: _intento_de_cobro,
 }
 
 

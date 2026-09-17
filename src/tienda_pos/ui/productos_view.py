@@ -6,7 +6,6 @@ servicios: ocultar un botón no es control de acceso.
 
 from __future__ import annotations
 
-import sqlite3
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIntValidator
@@ -27,7 +26,7 @@ from PySide6.QtWidgets import (
 
 from ..domain.errors import ErrorDominio
 from ..domain.models import Producto, Usuario
-from ..services import catalogo
+from ..red.sesion import Sesion
 from ..utils.money import formatear_clp, parsear_clp
 from . import dialogos, tablas
 
@@ -122,9 +121,9 @@ class ProductosView(QWidget):
 
     salir_solicitado = Signal()
 
-    def __init__(self, conexion: sqlite3.Connection, padre: QWidget | None = None) -> None:
+    def __init__(self, sesion: Sesion, padre: QWidget | None = None) -> None:
         super().__init__(padre)
-        self._conexion = conexion
+        self._sesion = sesion
         self.usuario: Usuario | None = None
         self._productos: list[Producto] = []
 
@@ -191,7 +190,7 @@ class ProductosView(QWidget):
     # ------------------------------------------------------------------ datos
 
     def recargar(self) -> None:
-        self._productos = catalogo.listar(self._conexion)
+        self._productos = self._sesion.listar_productos()
         self._pintar()
         self.campo_filtro.setFocus()
 
@@ -250,7 +249,7 @@ class ProductosView(QWidget):
             return
         codigo, nombre, precio, stock = dialogo.datos
         try:
-            catalogo.crear_producto(self._conexion, self.usuario, codigo, nombre, precio, stock)
+            self._sesion.crear_producto(self.usuario, codigo, nombre, precio, stock)
         except ErrorDominio as error:
             dialogos.mostrar_error(self, str(error))
             return
@@ -267,8 +266,8 @@ class ProductosView(QWidget):
             return
         codigo, nombre, precio, stock = dialogo.datos
         try:
-            catalogo.actualizar_producto(
-                self._conexion, self.usuario, producto.id, codigo, nombre, precio, stock
+            self._sesion.actualizar_producto(
+                self.usuario, producto.id, codigo, nombre, precio, stock
             )
         except ErrorDominio as error:
             dialogos.mostrar_error(self, str(error))
@@ -291,7 +290,7 @@ class ProductosView(QWidget):
             return
 
         try:
-            catalogo.desactivar_producto(self._conexion, self.usuario, producto.id)
+            self._sesion.desactivar_producto(self.usuario, producto.id)
         except ErrorDominio as error:
             dialogos.mostrar_error(self, str(error))
             return
@@ -300,7 +299,7 @@ class ProductosView(QWidget):
     def ver_pendientes(self) -> None:
         """Códigos que se escanearon y no existen en el catálogo."""
         try:
-            pendientes = catalogo.codigos_pendientes(self._conexion, self.usuario)
+            pendientes = self._sesion.codigos_pendientes(self.usuario)
         except ErrorDominio as error:
             dialogos.mostrar_error(self, str(error))
             return

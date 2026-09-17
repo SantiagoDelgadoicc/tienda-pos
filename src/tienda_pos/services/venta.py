@@ -225,9 +225,63 @@ class Carrito:
     def total_clp(self) -> int:
         return self.subtotal_clp - self.descuento_clp
 
+    # ------------------------------------------------------------------ serialización
+
+    def a_dict(self) -> dict:
+        """Describe el carrito entero para poder mandarlo a cobrar por la red (D-015).
+
+        Vive aquí y no en la capa de red para no tener que exponer los campos privados del
+        descuento. El carrito no se sincroniza nunca: cruza la red una sola vez, completo, en
+        el momento del cobro.
+        """
+        return {
+            "lineas": [
+                {
+                    "producto_id": linea.producto_id,
+                    "codigo_barras": linea.codigo_barras,
+                    "nombre": linea.nombre,
+                    "precio_unit_clp": linea.precio_unit_clp,
+                    "cantidad": linea.cantidad,
+                    "descuento_monto_clp": linea.descuento_monto_clp,
+                    "descuento_porcentaje": linea.descuento_porcentaje,
+                }
+                for linea in self.lineas
+            ],
+            "descuento_monto_clp": self._descuento_monto,
+            "descuento_porcentaje": self._descuento_porcentaje,
+        }
+
+    @classmethod
+    def desde_dict(cls, datos: dict) -> Carrito:
+        """Reconstruye en el servidor el carrito que armó la caja.
+
+        Se reconstruye sin pasar por `agregar`, y es deliberado: `agregar` necesita un
+        `Producto` de la base y volvería a validar topes que la caja ya validó. Lo que el
+        servidor sí revalida, porque es lo que importa, es el stock y la existencia del
+        producto, y eso ocurre dentro de la transacción de `cerrar_venta`.
+        """
+        carrito = cls()
+        for d in datos.get("lineas", []):
+            linea = LineaCarrito(
+                producto_id=d["producto_id"],
+                codigo_barras=d["codigo_barras"],
+                nombre=d["nombre"],
+                precio_unit_clp=d["precio_unit_clp"],
+                cantidad=d["cantidad"],
+                descuento_monto_clp=d.get("descuento_monto_clp", 0),
+                descuento_porcentaje=d.get("descuento_porcentaje"),
+            )
+            carrito._lineas[linea.codigo_barras] = linea
+        carrito._descuento_monto = datos.get("descuento_monto_clp", 0)
+        carrito._descuento_porcentaje = datos.get("descuento_porcentaje")
+        return carrito
+
 
 def cerrar_venta(
-    conexion: sqlite3.Connection, carrito: Carrito, usuario: Usuario | None = None
+    conexion: sqlite3.Connection,
+    carrito: Carrito,
+    usuario: Usuario | None = None,
+    intento_id: str | None = None,
 ) -> Venta:
     """Registra la venta y descuenta el stock, todo dentro de una única transacción.
 
@@ -239,16 +293,56 @@ def cerrar_venta(
     cliente. Si alguien cambió el precio mientras la venta estaba abierta, se respeta lo
     exhibido.
 
+    Args:
+        intento_id: identificador único del intento de cobro, generado por la caja. Si ya
+            existe una venta con ese identificador, se devuelve **esa** en lugar de crear
+            una nueva. Es lo que permite reintentar un cobro cuya respuesta se perdió por la
+            red sin cobrarle dos veces al cliente (D-024). En monopuesto se puede omitir.
+
     Raises:
         CarritoVacio, StockInsuficiente, DatosInvalidos
     """
     if carrito.esta_vacio:
         raise CarritoVacio()
 
+    # Fuera de la transacción a propósito: es una lectura, y el caso normal —que no sea un
+    # reintento— no debe pagar el coste de tomar el bloqueo de escritura. El caso de carrera
+    # real (dos peticiones con el mismo intento a la vez) lo ataja el índice UNIQUE de abajo.
+    if intento_id:
+        ya_registrada = repo_ventas.obtener_por_intento(conexion, intento_id)
+        if ya_registrada is not None:
+            return ya_registrada
+
     subtotal = carrito.subtotal_clp
     descuento = carrito.descuento_clp
     total = subtotal - descuento
 
+    try:
+        venta = _registrar(conexion, carrito, usuario, intento_id, subtotal, descuento, total)
+    except sqlite3.IntegrityError:
+        # Dos cobros con el mismo intento llegaron a la vez y este perdió la carrera contra el
+        # índice UNIQUE. No es un fallo: la venta que la caja quería existe. La transacción ya
+        # revirtió, así que basta con devolver la que ganó.
+        if intento_id:
+            ganadora = repo_ventas.obtener_por_intento(conexion, intento_id)
+            if ganadora is not None:
+                return ganadora
+        raise
+
+    return venta
+
+
+def _registrar(
+    conexion: sqlite3.Connection,
+    carrito: Carrito,
+    usuario: Usuario | None,
+    intento_id: str | None,
+    subtotal: int,
+    descuento: int,
+    total: int,
+) -> Venta:
+    """Cuerpo transaccional de `cerrar_venta`. Separado solo para que el manejo del reintento
+    duplicado quede legible y fuera de la transacción."""
     with transaccion(conexion):
         for linea in carrito.lineas:
             producto = repo_productos.obtener_por_id(conexion, linea.producto_id)
@@ -267,6 +361,7 @@ def cerrar_venta(
             total_clp=total,
             usuario_id=usuario.id if usuario else None,
             usuario_nombre=usuario.nombre if usuario else None,
+            intento_id=intento_id,
             lineas=[
                 LineaVenta(
                     producto_id=linea.producto_id,

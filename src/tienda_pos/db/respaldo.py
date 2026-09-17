@@ -68,6 +68,23 @@ def crear_respaldo(
     return destino
 
 
+def cerrar_limpiamente(conexion: sqlite3.Connection) -> None:
+    """Deja el archivo `.db` autocontenido antes de cerrar.
+
+    En modo WAL, lo que se ha escrito vive en `tienda.db-wal` hasta que SQLite lo integra en
+    el archivo principal. Mientras tanto, **copiar solo `tienda.db` produce una base vacía**:
+    comprobado, y es silencioso, que es lo peligroso. Un `wal_checkpoint(TRUNCATE)` al cerrar
+    integra todo y vacía el `-wal`, de modo que a partir de ahí copiar el `.db` a un pendrive
+    es seguro aunque quien lo haga no sepa nada de esto.
+
+    No lanza: un fallo aquí no puede impedir que el programa cierre.
+    """
+    try:
+        conexion.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    except sqlite3.Error:
+        _logger.warning("No se pudo integrar el WAL al cerrar", exc_info=True)
+
+
 def listar_respaldos(carpeta: Path | None = None) -> list[Path]:
     """Respaldos existentes, del más reciente al más antiguo."""
     carpeta = carpeta or config.directorio_respaldos()

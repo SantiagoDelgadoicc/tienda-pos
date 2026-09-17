@@ -1,0 +1,215 @@
+===============================================================================
+  TIENDA POS - CONECTAR LAS DOS CAJAS
+  Plan para la visita del 2026-09-15
+===============================================================================
+
+
+  *** LO PRIMERO, Y NO ES NEGOCIABLE ***
+
+  El PC 1 tiene los productos que cargaron ayer. Eso es lo unico
+  irreemplazable de todo esto. Ningun archivo de este pendrive toca
+  esa base de datos, PERO la regla es:
+
+      EJECUTA PASO-1-RESPALDAR.bat ANTES QUE NADA, EN EL PC 1.
+
+  Si algo sale mal despues, se vuelve atras con ese respaldo.
+
+
+-------------------------------------------------------------------------------
+  EL PLAN, EN UNA LINEA
+-------------------------------------------------------------------------------
+
+  Un cable de red directo entre los dos PC, con direcciones fijas.
+  El PC 1 sirve el catalogo, el PC 2 se lo pide.
+
+  Por que cable y no wifi:
+    - el numero nunca cambia (el wifi depende del router, que puede
+      cambiarlo solo cualquier dia y romper todo sin motivo aparente)
+    - no hay cortes ni tirones
+    - no hace falta entrar al router ni saber su contrasena
+    - esta listo en cuanto arranca Windows
+
+  El wifi de los dos PC NO se toca. Sigue funcionando igual para lo que
+  sea que lo usen. El cable es una segunda red, solo entre las dos cajas.
+
+  Si el cable no se puede, hay PLAN-B-WIFI.bat. Funciona, pero peor.
+
+
+-------------------------------------------------------------------------------
+  QUE NECESITAS LLEVAR
+-------------------------------------------------------------------------------
+
+  - Este pendrive
+  - UN CABLE DE RED (ethernet, RJ45) que llegue de un PC al otro
+
+  Sobre el cable: vale cualquiera, normal y corriente. NO hace falta uno
+  "cruzado": los PC de los ultimos 20 anos se arreglan solos con eso.
+  Mide la distancia entre las dos cajas antes de comprarlo.
+
+
+===============================================================================
+  EN EL PC 1  (el que tiene los productos)
+===============================================================================
+
+  PASO 1 - RESPALDAR
+  ------------------
+    Cierra Tienda POS.
+    Doble clic en:   PASO-1-RESPALDAR.bat
+
+    Copia el catalogo al pendrive, a la carpeta RESPALDOS.
+    No cambia nada. Solo copia.
+
+    COMPROBAR: al final lista los archivos copiados.
+    Si tienda.db son 4096 bytes NO TE ASUSTES: el catalogo esta en el
+    archivo tienda.db-wal, que tambien se copia. Es normal.
+
+
+  PASO 2 - ACTUALIZAR EL PROGRAMA
+  -------------------------------
+    Doble clic en:   PASO-2-ACTUALIZAR-PROGRAMA.bat
+
+    Copia solo el programa. NO TOCA LA BASE DE DATOS.
+
+
+  Ahora ENCHUFA EL CABLE de red entre los dos PC.
+
+
+  PASO 3 - CONFIGURAR
+  -------------------
+    Doble clic en:   PASO-3-PC1-PRINCIPAL.bat
+
+    Va a pedir permisos de administrador: dile que SI.
+
+    Hace cuatro cosas:
+      - le pone la direccion fija 192.168.50.1 al cable
+      - abre el permiso en el cortafuegos
+      - deja este PC en modo servidor
+      - hace que Tienda POS se abra solo al encender
+
+    COMPROBAR: al final dice "PC 1 LISTO" y la direccion.
+
+    Abre Tienda POS y MIRA QUE ESTEN TODOS LOS PRODUCTOS que
+    cargaron ayer. Si falta algo, PARA y avisa.
+
+    DEJA TIENDA POS ABIERTO y vete al otro PC.
+
+
+===============================================================================
+  EN EL PC 2  (el que tiene el catalogo de ejemplo)
+===============================================================================
+
+  PASO 2 - ACTUALIZAR EL PROGRAMA
+  -------------------------------
+    Doble clic en:   PASO-2-ACTUALIZAR-PROGRAMA.bat
+
+
+  PASO 4 - CONFIGURAR
+  -------------------
+    Doble clic en:   PASO-4-PC2-SECUNDARIA.bat
+
+    Permisos de administrador: SI.
+
+    Hace cuatro cosas:
+      - le pone la direccion fija 192.168.50.2 al cable
+      - aparta el catalogo de ejemplo (lo renombra, NO lo borra)
+      - deja este PC en modo caja, apuntando al PC 1
+      - hace que Tienda POS se abra solo al encender
+
+    Al final prueba solo si ve al PC 1 y te lo dice.
+
+    COMPROBAR en el navegador:
+
+        http://192.168.50.1:8477/api/estado
+
+    Tiene que salir un texto con llaves, tipo:
+        {"resultado": {"version_protocolo": 1, ...
+
+    SI SALE  -> abre Tienda POS. Ya esta.
+    SI NO SALE -> ejecuta DIAGNOSTICO.bat en los dos PC.
+
+
+===============================================================================
+  LA PRUEBA FINAL
+===============================================================================
+
+  1. Escanea un producto en el PC 2. Debe salir el precio.
+
+  2. LA IMPORTANTE:
+     Cambia un precio en el PC 1 y guarda.
+     Escanea ese mismo producto en el PC 2.
+     Debe salir el precio NUEVO.
+
+  3. Cobra una venta pequena en el PC 2.
+     Miralo en el informe del dia del PC 1. Tiene que estar.
+
+  4. Con productos en el carrito del PC 2, desenchufa el cable.
+     Intenta cobrar.
+     Debe avisar en menos de 3 segundos, sin perder el carrito.
+     Vuelve a enchufar y cobra: tiene que funcionar.
+
+
+===============================================================================
+  COMO QUEDA EL DIA A DIA
+===============================================================================
+
+  Se encienden los dos PC. Nada mas.
+
+    PC 1:  Windows arranca -> Tienda POS se abre solo -> pide el PIN
+    PC 2:  Windows arranca -> Tienda POS se abre solo -> espera a que el
+           PC 1 este listo (hasta 90 segundos, con un cartel que lo dice)
+           -> pide el PIN
+
+  No importa cual se encienda primero. El PC 2 espera al PC 1 sin
+  quejarse ni pedir nada.
+
+  Lo unico que hay que hacer a mano es escribir el PIN, y eso no se
+  puede quitar: es lo que permite saber quien vendio cada cosa.
+
+  Si el PC 1 esta apagado, el PC 2 no puede vender y lo dice claro.
+  Es a proposito: vender sin ver el stock real descuadra el inventario.
+
+
+===============================================================================
+  SI ALGO FALLA
+===============================================================================
+
+  DIAGNOSTICO.bat   en el PC que falle. Dice que papel cree que juega,
+                    si tiene catalogo propio y las ultimas lineas del
+                    registro.
+
+  Y mandame el archivo de registro de los dos PC. Para llegar rapido:
+  tecla Windows + R, pegar esto, Enter:
+
+      %LOCALAPPDATA%\TiendaPOS\logs
+
+
+  SI EL CABLE NO FUNCIONA
+  -----------------------
+    PLAN-B-WIFI.bat    en los dos PC. Te pregunta cual es cual.
+    En el PC 1 te dara su direccion de wifi; apuntala para el PC 2.
+
+    Aviso: por wifi, si el router le cambia la direccion al PC 1, el
+    PC 2 deja de conectar. Para evitarlo hay que reservar la direccion
+    en el router. Por eso el cable es mejor.
+
+
+===============================================================================
+  COSAS QUE CONVIENE SABER
+===============================================================================
+
+  LOS PIN SIGUEN SIENDO LOS DE FABRICA
+    1234 (Administrador) y 1111 (Cajero), y estan publicados en el
+    manual de usuario. Antes de que la tienda opere de verdad hay que
+    cambiarlos. Avisame y te paso como.
+
+  RESPALDOS
+    El programa copia la base al abrir y al cerrar, y guarda las 7
+    ultimas en  %LOCALAPPDATA%\TiendaPOS\backups
+    Estan en el mismo disco: NO sirven si el disco se rompe. Copia esa
+    carpeta a un pendrive cada cierto tiempo.
+
+  LLEVARSE EL CATALOGO A MANO
+    CIERRA EL PROGRAMA PRIMERO. Con el abierto, lo que copias puede ser
+    un archivo vacio que parece bueno.
+
+===============================================================================

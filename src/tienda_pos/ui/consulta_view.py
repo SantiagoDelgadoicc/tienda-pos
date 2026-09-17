@@ -10,7 +10,6 @@ pantalla cuando llegue el siguiente.
 
 from __future__ import annotations
 
-import sqlite3
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
@@ -23,7 +22,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..domain.errors import ErrorDominio, ProductoNoEncontrado
-from ..services import catalogo
+from ..red.sesion import Sesion
 from ..utils import sonido
 from ..utils.money import formatear_clp
 
@@ -37,9 +36,9 @@ class ConsultaView(QWidget):
     #: Se emite cuando el usuario quiere volver a la pantalla de venta.
     salir_solicitado = Signal()
 
-    def __init__(self, conexion: sqlite3.Connection, padre: QWidget | None = None) -> None:
+    def __init__(self, sesion: Sesion, padre: QWidget | None = None) -> None:
         super().__init__(padre)
-        self._conexion = conexion
+        self._sesion = sesion
         self._temporizador = QTimer(self)
         self._temporizador.setSingleShot(True)
         self._temporizador.timeout.connect(self.limpiar)
@@ -133,7 +132,7 @@ class ConsultaView(QWidget):
         """Busca el código y muestra el resultado. Separado de la lectura del campo para
         poder invocarlo desde las pruebas y desde la herramienta de capturas."""
         try:
-            producto = catalogo.consultar_por_codigo(self._conexion, codigo)
+            producto = self._sesion.consultar_por_codigo(codigo)
         except ProductoNoEncontrado:
             self._mostrar_no_encontrado(codigo)
             return

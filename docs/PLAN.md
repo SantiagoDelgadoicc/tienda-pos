@@ -3,9 +3,10 @@
 Documento vivo. Se actualiza a medida que avanzamos.
 `[ ]` pendiente · `[x]` completado
 
-**Plazo objetivo:** demostración al cliente esta semana.
+**Estado:** las fases 0 a 7 están cerradas y el prototipo ya se presentó. Las fases 8 a 14 son la
+segunda etapa, abierta tras la primera reunión con el cliente.
 
-> **Advertencia de plazo asumida conscientemente:** un POS completo, empaquetado y
+> **Advertencia de plazo de la primera etapa, que se cumplió:** un POS completo, empaquetado y
 > documentado en una semana es ambicioso. Por eso las fases están ordenadas de forma que
 > **al terminar la Fase 2 ya existe una demo presentable**. Si el tiempo se agota, se corta
 > en la fase que sea y lo entregado sigue siendo coherente y estable.
@@ -133,41 +134,269 @@ resto del punto 3.2 de `CLAUDE.md`.
 
 ---
 
-## Pendiente para una instalación real
+## Segunda etapa — tras la primera reunión con el cliente (2026-09-13)
 
-Las seis fases del prototipo están terminadas. Esto no es una decisión del cliente, es un
-hueco conocido del sistema, y se anota aquí para que no se descubra el día de la instalación:
+El cliente vio el prototipo y aportó información que hasta ahora no teníamos. Lo relevante:
 
-- [ ] **Pantalla de gestión de usuarios**: crear, cambiar el PIN y dar de baja. Hoy los dos
-      usuarios se crean en `db/seed.py` y sus PIN están publicados en el manual. La lógica
-      existe y está probada (`services/auth.py::cambiar_pin`), pero no está conectada a
-      ninguna vista. Para la demostración no estorba; para una tienda de verdad, sí.
+- Su sistema anterior **se le quedaba pegado**. Es su queja concreta, y convierte el rendimiento en
+  un requisito medible en vez de en una aspiración (D-022).
+- En ese sistema tenía, por producto, **cantidad, precio de compra, precio de venta y familia**.
+  Hoy solo existen el precio de venta y el stock. *(2026-09-14: el cliente retiró la familia y el
+  precio de compra. Se quedan cantidad y precio de venta, o sea lo que ya había. D-016 y D-017
+  quedan retiradas.)*
+- Quiere **conservar esos datos**, pero el PC donde estaban no enciende. Ver `RESCATE-DATOS.md`.
+- El sistema debe funcionar en **dos PC**. Esto desmonta el supuesto de "una sola caja" con el que
+  se construyeron las siete fases anteriores (D-015).
+- Quiere una **instalación mejor** que copiar una carpeta (D-020).
+- Mencionó **LocalShop** y preguntó si se puede hacer algo parecido. LocalShop es un servicio
+  chileno por suscripción, en la nube, con catálogo precargado y boleta electrónica ante el SII.
+  Según lo hablado, lo que le atrajo fue lo completo que se ve, no la nube ni el SII —pero eso hay
+  que confirmarlo, porque si pide boleta electrónica es otro proyecto. Ver el bloque G de
+  `PREGUNTAS-CLIENTE.md`.
+
+**Ya estaba hecho, y solo hay que confirmárselo:** el stock baja al vender, dentro de la misma
+transacción que registra la venta, y la venta se rechaza si no alcanza (D-009).
+
+Las fases están ordenadas para que lo que se puede enseñar llegue antes que lo caro e invisible. La
+fase 13 es la más costosa y la que más código toca, y por eso va después de las que cambian el
+modelo de datos: da igual portar cinco funciones más que cinco menos.
+
+### Orden de ejecución revisado el 2026-09-14
+
+Los números de fase se conservan para no romper las referencias, pero **el orden en que se abordan
+cambia**. Dos hechos nuevos lo justifican: el cliente ya designó el PC principal y está por cargar
+el catálogo, pero **todavía no vende**; y al retirar la familia y el precio de compra, la fase 9
+deja de ser bloqueante, que era el único motivo para ponerla primero.
+
+1. **Fase 10 — importación CSV.** Es lo que hace falta esta semana: es la diferencia entre teclear
+   el catálogo entero y abrirlo de un archivo.
+2. **Fase 13 — las dos cajas.** Ya sin nada que la bloquee. Mientras solo carguen catálogo no
+   hace falta, pero tiene que estar antes de que empiecen a vender.
+3. **Fase 12 — usuarios.** Antes de vender de verdad: los PIN de fábrica están publicados en el
+   manual.
+4. **Fase 9 — trazabilidad de inventario.** Recortada a D-018 y sin prisa.
+5. **Fase 11 y fase 14** cuando toquen.
+
+La fase 8 sigue por delante de todo lo que dependa del catálogo real: mientras no se sepa si los
+datos del PC viejo se rescatan o hay que teclearlos, no se sabe cuánto trabajo es cargarlo.
+
+**Mientras tanto, sin escribir código:** que carguen en una planilla y no en el programa —dos
+personas pueden llenarla en paralelo sin ningún problema de sincronización— y que el catálogo se
+cargue **solo en el PC principal** si lo meten directo al sistema. Cargar en los dos vuelve a crear
+el problema de bases divergentes, y esta vez con los datos de verdad.
+
+---
+
+## Fase 8 — Rescate de los datos del cliente ← lo urgente
+
+No es programación. Es ejecutar `docs/RESCATE-DATOS.md` y no se puede escribir el importador de
+verdad hasta saber en qué formato están los datos.
+
+- [ ] Paso 0: preguntar si ya existe una copia (pendrive, correo, contador, listado impreso)
+- [ ] Paso 1: diagnosticar el PC y decidir la ruta de rescate
+- [ ] Paso 2 y 3: obtener los archivos y copiarlos en bloque a un disco sano
+- [ ] Paso 4: identificar el formato y exportarlo a CSV en UTF-8
+- [ ] Paso 5: normalizar al CSV de importación
+- [ ] Avisar al cliente de que las cantidades habrá que contarlas físicamente igualmente
+
+**Criterio de aceptación:** existe un CSV normalizado con el catálogo real del cliente, o la
+constancia escrita de que hay que recargarlo a mano y cuánto costaría (paso 6 de la guía).
+
+---
+
+## Fase 9 — Trazabilidad de inventario (D-018)
+
+**Recortada el 2026-09-14.** Era "modelo de datos ampliado (D-016, D-017, D-018)". El cliente retiró
+la familia y el precio de compra, así que se cae todo lo que dependía de ellos: la tabla `familia`,
+`producto.familia_id`, `producto.costo_clp`, `venta_linea.costo_unit_clp`, la pantalla de familias y
+los informes de margen y de ventas por familia. Queda D-018, que nunca dependió de esos campos.
+
+**Deja de ser bloqueante.** El motivo para hacerla antes que nada era evitar que el catálogo se
+cargara sin familia ni costo y hubiera que reabrir producto por producto. Sin esos campos, ese
+retrabajo no existe: el catálogo se puede cargar contra el esquema de hoy.
+
+Migración 3: subir `VERSION_ESQUEMA`, registrar la función en `_MIGRACIONES` y no tocar jamás las
+migraciones ya publicadas.
+
+- [ ] Tabla `movimiento_inventario`, y el stock deja de cambiar sin emitir un movimiento. Hoy hay
+      dos vías que lo cambian: `venta.py::cerrar_venta` vía `descontar_stock`, y
+      `catalogo.py::actualizar_producto`, que **sobreescribe el número a pelo**. La segunda es el
+      agujero: llega mercadería, alguien edita el stock y no queda rastro de qué entró ni de quién
+      fue.
+- [ ] `producto.stock_minimo` (hoy el umbral está fijo en `_STOCK_BAJO = 5` en `productos_view.py`,
+      igual para el pan que para el whisky)
+- [ ] Generar un movimiento `carga_inicial` para el catálogo ya existente dentro de la propia
+      migración, o el histórico arranca con un salto inexplicable
+- [ ] Pantalla de ingreso de mercadería, que sube stock y deja movimiento
+- [ ] Historial de movimientos de un producto, que es para lo que existe todo esto
+- [ ] Decidir y dejar escrito qué pasa con `db/schema.sql`: hoy está congelado como v1 y ya no
+      refleja la base real, porque le falta la columna que añadió la migración 2. Recomendación:
+      mantenerlo congelado y ponerle una cabecera que lo diga.
+
+**Criterio de aceptación:** una base ya existente migra sin perder nada; el stock no se puede
+cambiar por ninguna vía sin dejar rastro; ante un descuadre se puede abrir un producto y leer de
+dónde salió cada unidad.
+
+---
+
+## Fase 10 — Importación y exportación CSV (D-019)
+
+Dos pasos separados: **analizar**, que no toca la base y devuelve fila por fila si es alta,
+actualización o error; y **aplicar**, que escribe todo en una sola transacción.
+
+Columnas: `codigo_barras,nombre,precio_venta,stock`.
+
+*(2026-09-14: eran `codigo_barras,nombre,familia,precio_venta,precio_compra,stock`. Se quitan las
+dos columnas retiradas por el cliente. **Si el importador encuentra `familia` o `precio_compra` en
+el archivo, las ignora sin dar error**: el CSV que el cliente o el rescate produzcan puede traerlas,
+y un archivo con columnas de más no es un archivo inválido.)*
+
+- [ ] Servicio de importación con sus dos pasos
+- [ ] Pantalla con vista previa: cuántas altas, cuántas actualizaciones, qué filas fallan y por qué
+- [ ] Exportación del catálogo a CSV
+- [ ] Casos límite, que aquí son la mitad del trabajo: codificación Windows-1252 frente a UTF-8;
+      separador `;` frente a `,`; miles con punto y decimal con coma; códigos repetidos dentro del
+      propio archivo; productos sin código de barras; stock negativo; archivo vacío; archivo sin
+      cabecera; archivo de 20.000 filas
+
+**Criterio de aceptación:** el CSV de la fase 8 entra sin perder ni una fila, y volver a importarlo
+actualiza en lugar de duplicar.
+
+---
+
+## Fase 11 — Rendimiento demostrable (D-022)
+
+- [ ] Generador de catálogo sintético de 20.000 productos
+- [ ] Pruebas con umbral que falle: escaneo → precio en pantalla < 150 ms; búsqueda por nombre
+      < 200 ms; arranque < 3 s
+- [ ] Revisar los dos puntos ya identificados: la búsqueda por nombre usa `LIKE '%texto%'`, que no
+      puede usar índice, y el listado del catálogo lo trae entero a memoria
+- [ ] Publicar los números medidos en `TECNICA.md`
+
+**Criterio de aceptación:** los umbrales se cumplen con 20.000 productos y hay una prueba que
+avisará el día que alguien los rompa. Si no se cumplen, se arregla antes de cerrar la fase.
+
+---
+
+## Fase 12 — Gestión de usuarios
+
+Es el hueco que ya estaba pendiente antes de esta reunión. La lógica existe y está probada
+(`services/auth.py::cambiar_pin`), pero no está conectada a ninguna pantalla. Con dos cajas y dos
+personas atendiendo deja de ser opcional: hay que saber quién vendió qué, y los PIN de hoy están
+publicados en el manual.
+
+- [ ] Pantalla de usuarios: crear, cambiar el PIN, dar de baja
+- [ ] Obligar a cambiar el PIN de fábrica la primera vez
+- [ ] Ventas del día por cajero
+
+**Criterio de aceptación:** se puede poner el sistema en una tienda sin que ningún PIN publicado en
+la documentación sirva para entrar.
+
+---
+
+## Fase 13 — Dos cajas (D-015) ← la fase cara
+
+**Cómo, decidido el 2026-09-14:** el transporte es **HTTP con JSON sobre la biblioteca estándar**
+(D-023) y la interfaz llama **de forma bloqueante con tiempo límite corto**, sin hilos trabajadores
+(D-024).
+
+**Superficie que cruza la red: 13 operaciones.** Catálogo 7, venta 1, acceso 2, reportes 3. El
+`Carrito` es puro, vive en memoria en la caja y solo se serializa entero al cobrar.
+
+### Arreglos previos, útiles con o sin red
+
+- [x] **Envolver en `services/` las llamadas que la interfaz hacía al repositorio.** `login_dialog`
+      llamaba a `repo_usuarios.listar` y `reportes_view` a tres funciones de `repo_ventas`. Ahora
+      pasan por `auth.listar_usuarios` y por el nuevo `services/reportes.py`. *(2026-09-14)*
+- [x] **Eliminar el N+1 del informe del día.** Pedía las líneas de cada venta dentro del bucle: una
+      ida y vuelta por venta. Ahora `reportes.ventas_del_dia` las trae en dos consultas, mediante
+      `repo_ventas.lineas_de_varias`. *(2026-09-14)*
+- [x] **Hacer `cerrar_venta` idempotente.** Migración 3: `venta.intento_id` con índice único. La
+      caja genera un identificador al cobrar y lo reutiliza si reintenta; el servidor devuelve la
+      venta original en lugar de crear otra. Las ventas antiguas quedan en NULL y la migración no
+      reescribe ni una fila. *(2026-09-14)*
+
+### La fase propiamente dicha
+
+- [x] `Sesion` en `red/sesion.py`, con `SesionLocal` y `SesionRemota`. `ui/` ya no importa
+      `sqlite3` en ningún sitio. *(2026-09-14)*
+- [x] Servidor en `red/servidor.py`: HTTP + JSON, expone las 12 operaciones de `services/`, atiende
+      de una en una. *(2026-09-14)*
+- [x] Autenticación por PIN validada en el servidor *(2026-09-14)*
+- [x] Comprobación de versión de esquema y de protocolo al conectar *(2026-09-14)*
+- [x] Tiempo límite en todas las llamadas (`TIEMPO_LIMITE_RED_S = 1.5`) y `esta_conectada()` para
+      el indicador *(2026-09-14)*
+- [x] Modo configurable en `red.json`, editable con el Bloc de notas, sin reinstalar *(2026-09-14)*
+- [x] Pruebas de dos cajas concurrentes: dos cobros simultáneos sobre el mismo stock, 10 cobros
+      concurrentes sin repetir folio, reintento idempotente por red, caída del servidor
+      *(2026-09-14, ejecutadas a mano — ver abajo)*
+- [ ] **Indicador de conexión en la ventana**, que use `sesion.esta_conectada()`. Es lo único de la
+      condición 2 de D-015 que falta: el tiempo límite ya está, pero el cajero todavía no ve el
+      estado hasta que una operación falla.
+- [ ] **Llevar las pruebas manuales a `tests/`** como pruebas de pytest, y añadirlas a la suite.
+- [x] **Probar en los dos PC reales.** Instalado y funcionando en la tienda desde el 2026-09-15:
+      dos equipos unidos por cable directo, catálogo único, verificado incluido el reinicio de
+      ambos. Ver `docs/DESPLIEGUE-TIENDA.md`.
+- [ ] Desactivar la carga de datos demo en instalaciones reales
+      (`abrir_base_datos(con_datos_demo=False)`). En la tienda los 65 productos de ejemplo se
+      mezclaron con el catálogo real y hubo que separarlos a mano.
+
+**Criterio de aceptación:** dos cajas cobrando el mismo producto a la vez no descuadran el stock ni
+repiten folio; desenchufar el cable de red durante una venta muestra un aviso claro en menos de 3
+segundos y no pierde el carrito; la caja principal sigue vendiendo aunque la secundaria esté
+apagada.
+
+---
+
+## Fase 14 — Instalador (D-020)
+
+- [ ] `.iss` de Inno Setup con selección de modo: servidor y caja, o caja secundaria
+- [ ] Dirección del servidor pedida en el modo caja secundaria
+- [ ] Regla de cortafuegos en el modo servidor
+- [ ] Desinstalación que **no borra** `%LOCALAPPDATA%\TiendaPOS\` y avisa dónde quedaron los datos
+- [ ] Probado en un Windows limpio, en los dos modos
+
+**Criterio de aceptación:** dos PC quedan funcionando ejecutando un instalador en cada uno y
+respondiendo preguntas, sin copiar carpetas a mano ni editar archivos de configuración.
 
 ---
 
 ## Decisiones pendientes
 
-- [ ] **Arranque automático al encender el PC.** Recomendación: **no** por defecto. Secuestra
-      el equipo, complica las actualizaciones y estorba si el PC se usa para otra cosa.
-      Se deja acceso directo en el escritorio; si el cliente insiste, se activa en un minuto.
-- [ ] **Instalador de Windows (.msi o .exe con asistente).** Se puede hacer, y con el
-      empaquetado actual es trabajo acotado. Hoy se instala copiando una carpeta. Ver la
-      nota al final de `docs/TECNICA.md`.
-- [ ] **Impresora de tickets.** Fuera del prototipo hasta saber si el cliente tiene una.
-- [ ] **Respaldo en dispositivo externo.** Depende de cuán críticos considere sus datos.
-- [ ] **Segunda caja / multipuesto.** Obligaría a pasar de SQLite local a un servidor. Es la
-      decisión más cara de revertir; no se toca sin petición explícita del cliente.
-- [ ] **Trazabilidad de inventario.** Hoy el stock es un contador, sin tabla de movimientos.
-      Deuda técnica consciente y documentada.
+Resueltas en esta etapa: **instalador** → D-020 · **segunda caja** → D-015 · **trazabilidad de
+inventario** → D-018.
+
+Siguen abiertas:
+
+- [ ] **Arranque automático al encender el PC.** Recomendación: **no** por defecto. Secuestra el
+      equipo, complica las actualizaciones y estorba si el PC se usa para otra cosa. Se deja acceso
+      directo en el escritorio; si el cliente insiste, se activa en un minuto. *Matiz nuevo:* en el
+      PC servidor sí tiene sentido que el servicio arranque solo, porque si no, la segunda caja
+      depende de que alguien abra el programa en el primero.
+- [ ] **Impresora de tickets.** Fuera del alcance hasta saber si el cliente tiene una.
+- [ ] **Respaldo en dispositivo externo.** Depende de cuán críticos considere sus datos. Con dos
+      PC gana peso: todo vive en uno solo de los dos.
+- [ ] **Firma de código** (D-021). Tiene coste anual y es decisión de Santiago.
+- [ ] **PC servidor dedicado.** Si la caja principal hace de servidor, apagarla deja muda a la
+      segunda. Un mini-PC lo resuelve, pero es un coste del cliente. Con D-015 es un cambio de
+      configuración, no de código.
+- [ ] **Boleta electrónica ante el SII.** No está pedida y D-006 la excluye deliberadamente. Se
+      anota aquí porque LocalShop la tiene y el cliente lo nombró: si resulta que era eso lo que le
+      gustaba, hay que decir claramente que es otro proyecto, con certificado digital y
+      responsabilidad tributaria.
 
 ---
 
 ## Sugerencias propuestas, no confirmadas
 
-1. **Registro de códigos no encontrados.** Guardar lo que se escanea y no está en el catálogo,
-   para que el dueño vea al final del día qué le falta cargar. Barato y demuestra que
-   entendimos su operación. *Recomendada.*
-2. **Guion de demo escrito.** Pasos exactos y códigos concretos, para no improvisar delante
-   del cliente. *Muy recomendada.*
-3. **Catálogo demo con productos reales del cliente.** Si se averigua qué vende, cargar 20 de
-   sus productos cambia por completo la reacción en la reunión. *Recomendada.*
+1. **Modo de carga rápida por teclado** para el peor caso del rescate: pistola → nombre → precio de
+   venta → stock → Enter, sin tocar el ratón. Unas 2 horas para 300 productos entre dos personas.
+   *Recomendada:* es el seguro de vida de la fase 8, y con dos campos menos por producto que antes
+   del 2026-09-14 es aún más rápida.
+2. **Toma de inventario físico** asistida: recorrer la tienda escaneando y anotando la cantidad
+   real, y que el sistema genere los movimientos de ajuste. Va a hacer falta al menos una vez,
+   porque las cantidades importadas estarán desfasadas. *Recomendada.*
+3. **Catálogo demo con productos reales del cliente.** Sigue sin hacerse, y ahora es casi gratis: en
+   cuanto haya CSV de importación, cargar veinte de sus productos cambia la reunión.
+4. ~~**Sugerencia de precio de venta** a partir del costo y un margen objetivo.~~ *Descartada el
+   2026-09-14:* dependía del precio de compra, que el cliente retiró (D-017).

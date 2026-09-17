@@ -28,6 +28,40 @@ PERMITIR_STOCK_NEGATIVO = False
 #: Longitud máxima aceptada para un código de barras leído.
 CODIGO_LONGITUD_MAX = 32
 
+# --------------------------------------------------------------------------- red (D-015)
+
+#: Puerto en el que escucha el servidor. Por encima de 1024 para no necesitar privilegios, y
+#: fuera de los rangos habituales para no chocar con nada que el cliente tenga instalado.
+PUERTO_SERVIDOR = 8477
+
+#: Segundos que la caja espera una respuesta antes de darla por perdida. El criterio de la
+#: fase 13 es avisar en menos de 3 s; este límite es la mitad, de modo que quede margen para
+#: mostrar el aviso. En una red local sana la ida y vuelta son 1–2 ms: esta espera solo ocurre
+#: cuando la red está realmente caída. Ver D-024.
+TIEMPO_LIMITE_RED_S = 1.5
+
+#: Tiempo límite del sondeo de estado, más corto que el de una operación: sirve para pintar el
+#: indicador de conexión y no debe hacer esperar a nadie.
+TIEMPO_LIMITE_SONDEO_S = 0.8
+
+#: Cuánto espera la caja secundaria, al arrancar, a que la principal esté lista antes de
+#: preguntarle nada a nadie. Cubre el caso de cada mañana: se encienden los dos equipos a la
+#: vez y la secundaria llega antes de que la principal haya terminado de abrir el programa.
+#: Noventa segundos dan de sobra para un arranque de Windows con el programa en el inicio.
+ESPERA_SERVIDOR_AL_ARRANCAR_S = 90.0
+
+
+def archivo_configuracion_red() -> Path:
+    """Dónde se guarda si este PC es servidor o caja secundaria, y a quién apunta.
+
+    Va en un archivo aparte de `preferencias.json` a propósito: las preferencias son del
+    gusto de quien usa el equipo (tema, sonido) y se pueden borrar sin consecuencias; esto es
+    configuración de instalación, y borrarlo deja la caja secundaria sin saber dónde está su
+    servidor. Se puede editar a mano, que es lo que pide D-015 al exigir que el modo se cambie
+    sin reinstalar.
+    """
+    return directorio_datos() / "red.json"
+
 
 def directorio_datos() -> Path:
     """Carpeta donde viven la base de datos, los respaldos y los logs.

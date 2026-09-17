@@ -2,3 +2,13 @@
 *.png binary
 *.ico binary
 *.wav binary
+
+# Excepción a la regla de arriba: los scripts de instalación se ejecutan en
+# Windows y DEBEN conservar CRLF. Un .bat con finales de línea de Unix falla de
+# formas silenciosas y raras —sobre todo con `goto` y con bloques `if (...)`—,
+# que es justo lo que no se quiere en el archivo que instala el sistema en la
+# tienda del cliente.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+INSTALACION/*.txt text eol=crlf

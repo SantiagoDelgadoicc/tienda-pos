@@ -21,6 +21,7 @@ def _a_venta(fila: sqlite3.Row) -> Venta:
         descuento_clp=fila["descuento_clp"],
         total_clp=fila["total_clp"],
         estado=EstadoVenta(fila["estado"]),
+        intento_id=fila["intento_id"] if "intento_id" in fila.keys() else None,
     )
 
 
@@ -54,7 +55,7 @@ def insertar(conexion: sqlite3.Connection, venta: Venta) -> Venta:
     """Inserta la venta y todas sus líneas. Debe ejecutarse dentro de una transacción."""
     cursor = conexion.execute(
         "INSERT INTO venta (folio, usuario_id, fecha_hora, subtotal_clp, descuento_clp, "
-        "total_clp, estado) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "total_clp, estado, intento_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (
             venta.folio,
             venta.usuario_id,
@@ -63,6 +64,7 @@ def insertar(conexion: sqlite3.Connection, venta: Venta) -> Venta:
             venta.descuento_clp,
             venta.total_clp,
             str(venta.estado),
+            venta.intento_id,
         ),
     )
     venta.id = int(cursor.lastrowid)
@@ -103,11 +105,57 @@ def obtener(conexion: sqlite3.Connection, venta_id: int) -> Venta | None:
     return venta
 
 
+def obtener_por_intento(conexion: sqlite3.Connection, intento_id: str) -> Venta | None:
+    """Busca una venta por el identificador del intento de cobro que la creó.
+
+    Es la pieza que hace idempotente el cobro: si la caja reintenta porque no supo si su
+    primera petición llegó, esto devuelve la venta original en lugar de crear otra.
+    """
+    fila = conexion.execute(
+        "SELECT v.*, u.nombre AS usuario_nombre FROM venta v "
+        "LEFT JOIN usuario u ON u.id = v.usuario_id WHERE v.intento_id = ?",
+        (intento_id,),
+    ).fetchone()
+    if not fila:
+        return None
+    venta = _a_venta(fila)
+    venta.lineas = lineas_de(conexion, int(fila["id"]))
+    return venta
+
+
 def lineas_de(conexion: sqlite3.Connection, venta_id: int) -> list[LineaVenta]:
     filas = conexion.execute(
         "SELECT * FROM venta_linea WHERE venta_id = ? ORDER BY id", (venta_id,)
     ).fetchall()
     return [_a_linea(f) for f in filas]
+
+
+def lineas_de_varias(
+    conexion: sqlite3.Connection, venta_ids: list[int]
+) -> dict[int, list[LineaVenta]]:
+    """Líneas de varias ventas en una sola consulta, agrupadas por venta.
+
+    Existe para no pedir las líneas venta por venta dentro de un bucle. En local esa
+    diferencia no se nota; contra el servidor de `D-015` son N idas y vueltas por la red en
+    lugar de una, y eso sí se siente en pantalla.
+
+    Las ventas sin líneas no aparecen en el resultado: quien lo use debe tratar la ausencia
+    como lista vacía.
+    """
+    if not venta_ids:
+        return {}
+
+    # Los marcadores se generan por número de parámetros, nunca interpolando valores.
+    marcadores = ",".join("?" for _ in venta_ids)
+    filas = conexion.execute(
+        f"SELECT * FROM venta_linea WHERE venta_id IN ({marcadores}) ORDER BY venta_id, id",
+        tuple(venta_ids),
+    ).fetchall()
+
+    agrupadas: dict[int, list[LineaVenta]] = {}
+    for fila in filas:
+        agrupadas.setdefault(fila["venta_id"], []).append(_a_linea(fila))
+    return agrupadas
 
 
 def del_dia(conexion: sqlite3.Connection, dia: date | None = None) -> list[Venta]:

@@ -117,3 +117,45 @@ class TestDialogoDeConfiguracion:
         assert servicio.ruta().exists()
         assert servicio.ruta().parent == config.directorio_datos()
         assert servicio.cargar().tema == servicio.TEMA_OSCURO
+
+
+class TestBarraLateral:
+    """Plegarla es un ajuste del equipo, así que tiene que sobrevivir al cierre."""
+
+    def test_plegar_esconde_los_rotulos_y_estrecha_la_barra(self, ventana) -> None:
+        from tienda_pos.ui import estilos
+
+        barra = ventana.barra_lateral
+        assert barra.width() == estilos.ANCHO_BARRA_LATERAL
+
+        barra.alternar_plegado()
+        assert barra.esta_plegada
+        assert barra.width() == estilos.ANCHO_BARRA_LATERAL_PLEGADA
+
+        barra.alternar_plegado()
+        assert not barra.esta_plegada
+        assert barra.width() == estilos.ANCHO_BARRA_LATERAL
+
+    def test_el_plegado_se_guarda_en_el_disco(self, ventana) -> None:
+        ventana.barra_lateral.alternar_plegado()
+        assert servicio.cargar().barra_lateral_plegada is True
+
+        ventana.barra_lateral.alternar_plegado()
+        assert servicio.cargar().barra_lateral_plegada is False
+
+    def test_aplicar_preferencias_pliega_la_barra(self, ventana) -> None:
+        ventana.aplicar_preferencias(servicio.Preferencias(barra_lateral_plegada=True))
+        assert ventana.barra_lateral.esta_plegada
+
+    def test_guardar_otro_ajuste_no_despliega_la_barra(self, ventana) -> None:
+        # El diálogo no muestra el plegado, pero tampoco puede perderlo al guardar el tema.
+        ventana.barra_lateral.alternar_plegado()
+        dialogo = DialogoConfiguracion(ventana.preferencias, ventana)
+        dialogo.casilla_sonido.setChecked(False)
+
+        assert dialogo.preferencias.barra_lateral_plegada is True
+
+    def test_la_barra_sigue_navegando_plegada(self, ventana) -> None:
+        ventana.barra_lateral.alternar_plegado()
+        ventana.barra_lateral.navegacion_solicitada.emit("consulta")
+        assert ventana.pantallas.currentWidget() is ventana.vista_consulta

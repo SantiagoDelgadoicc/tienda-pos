@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QStackedWidget,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -35,7 +36,7 @@ from ..services.venta import Carrito
 from ..utils import sonido
 from ..utils.money import formatear_clp
 from ..utils.scanner import DetectorLector
-from . import dialogos, tablas
+from . import dialogos, estilos, iconos, tablas
 
 # Cuánto tiempo permanece visible un mensaje de éxito o de error antes de desvanecerse.
 _MENSAJE_MS = 5000
@@ -85,9 +86,12 @@ class VentaView(QWidget):
         self._auto = QTimer(self)
         self._auto.setSingleShot(True)
         self._auto.timeout.connect(self._confirmar_automatico)
+        # Un único temporizador para el aviso, reutilizado en cada mensaje. Ver `_avisar`.
+        self._temporizador_mensaje = QTimer(self)
+        self._temporizador_mensaje.setSingleShot(True)
 
         self._construir()
-        self._refrescar()
+        self.repintar()
         # El campo de escaneo se queda con el foco toda la sesión, así que es ahí donde hay
         # que interceptar las teclas que gobiernan el carrito.
         self.campo_codigo.installEventFilter(self)
@@ -96,45 +100,102 @@ class VentaView(QWidget):
 
     def _construir(self) -> None:
         raiz = QHBoxLayout(self)
-        raiz.setContentsMargins(20, 20, 20, 20)
-        raiz.setSpacing(18)
-        raiz.addWidget(self._panel_izquierdo(), stretch=3)
+        raiz.setContentsMargins(24, 22, 24, 22)
+        raiz.setSpacing(20)
+        raiz.addWidget(self._panel_izquierdo(), stretch=1)
         raiz.addWidget(self._panel_totales(), stretch=0)
 
     def _panel_izquierdo(self) -> QWidget:
         contenedor = QWidget()
+        contenedor.setObjectName("transparente")
         columna = QVBoxLayout(contenedor)
         columna.setContentsMargins(0, 0, 0, 0)
-        columna.setSpacing(12)
+        columna.setSpacing(14)
 
-        titulo = QLabel("Escanee el producto")
-        titulo.setObjectName("tituloPantalla")
-        columna.addWidget(titulo)
+        columna.addWidget(self._campo_de_escaneo())
+        columna.addWidget(self._tarjeta_carrito(), stretch=1)
+        return contenedor
 
-        ayuda = QLabel(
-            "Pase el producto por el lector, o escriba el código y pulse Enter."
-        )
-        ayuda.setObjectName("subtitulo")
-        columna.addWidget(ayuda)
+    def _campo_de_escaneo(self) -> QWidget:
+        """El campo grande, con el icono del lector dentro.
 
+        Va suelto sobre el lienzo y no dentro de una tarjeta: es el único sitio donde el
+        cajero escribe, y meterlo en una caja dentro de otra caja solo le quitaba peso.
+        """
         self.campo_codigo = QLineEdit()
         self.campo_codigo.setObjectName("campoEscaneo")
-        self.campo_codigo.setPlaceholderText("Código de barras")
+        self.campo_codigo.setPlaceholderText("Escanee o escriba el código de barras")
         self.campo_codigo.setClearButtonEnabled(True)
         self.campo_codigo.returnPressed.connect(self._procesar_codigo)
         self.campo_codigo.textEdited.connect(self._teclear)
-        columna.addWidget(self.campo_codigo)
+        # Qt coloca la acción dentro del campo y desplaza el texto: es la forma de tener el
+        # icono ahí dentro sin montar un contenedor con el campo sin borde.
+        self._icono_campo = self.campo_codigo.addAction(
+            iconos.icono("escanear", 24, estilos.actual.texto_apagado),
+            QLineEdit.ActionPosition.LeadingPosition,
+        )
+        return self.campo_codigo
 
-        self.mensaje = QLabel()
-        self.mensaje.setWordWrap(True)
-        self.mensaje.hide()
-        columna.addWidget(self.mensaje)
+    def _tarjeta_carrito(self) -> QWidget:
+        tarjeta = QFrame()
+        tarjeta.setObjectName("tarjeta")
+        estilos.aplicar_sombra(tarjeta)
 
-        columna.addWidget(self._tabla_carrito(), stretch=1)
-        return contenedor
+        columna = QVBoxLayout(tarjeta)
+        columna.setContentsMargins(20, 16, 20, 12)
+        columna.setSpacing(0)
+
+        cabecera = QHBoxLayout()
+        cabecera.setContentsMargins(0, 0, 0, 0)
+        titulo = QLabel("Carrito")
+        titulo.setObjectName("tituloTarjeta")
+        cabecera.addWidget(titulo)
+        cabecera.addStretch()
+        self.etiqueta_articulos = QLabel("Carrito vacío")
+        self.etiqueta_articulos.setObjectName("ficha")
+        cabecera.addWidget(self.etiqueta_articulos)
+        columna.addLayout(cabecera)
+        columna.addSpacing(14)
+
+        # Carrito vacío y carrito con líneas son dos estados, no uno con la tabla a cero:
+        # una cabecera de tabla sobre un vacío blanco no dice nada, y lo primero que ve un
+        # cajero al abrir la caja es justamente esto.
+        self._pila_carrito = QStackedWidget()
+        self._pila_carrito.setObjectName("transparente")
+        self._pila_carrito.addWidget(self._carrito_vacio())
+        self._pila_carrito.addWidget(self._tabla_carrito())
+        columna.addWidget(self._pila_carrito, stretch=1)
+        return tarjeta
+
+    def _carrito_vacio(self) -> QWidget:
+        panel = QWidget()
+        panel.setObjectName("transparente")
+        columna = QVBoxLayout(panel)
+        columna.setContentsMargins(0, 0, 0, 0)
+        columna.setSpacing(10)
+        columna.addStretch()
+
+        self._icono_vacio = QLabel()
+        self._icono_vacio.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        columna.addWidget(self._icono_vacio)
+
+        titulo = QLabel("Todavía no hay productos")
+        titulo.setObjectName("consultaVacio")
+        titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        columna.addWidget(titulo)
+
+        pista = QLabel("Pase el primero por el lector para empezar la venta.")
+        pista.setObjectName("subtitulo")
+        pista.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        columna.addWidget(pista)
+
+        columna.addStretch()
+        return panel
 
     def _tabla_carrito(self) -> QTableWidget:
         self.tabla = QTableWidget(0, len(_COLUMNAS))
+        # Sin marco propio: el marco ya lo pone la tarjeta que la contiene.
+        self.tabla.setObjectName("tablaLimpia")
         self.tabla.setHorizontalHeaderLabels(_COLUMNAS)
         self.tabla.verticalHeader().setVisible(False)
         self.tabla.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -145,8 +206,11 @@ class VentaView(QWidget):
         self.tabla.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.tabla.setAlternatingRowColors(False)
         self.tabla.setShowGrid(False)
+        self.tabla.verticalHeader().setDefaultSectionSize(46)
 
         cabecera = self.tabla.horizontalHeader()
+        cabecera.setHighlightSections(False)
+        cabecera.setFixedHeight(34)
         # Solo el nombre del producto se estira; el resto ocupa lo que necesita, que en una
         # tabla de caja es lo que permite leerla de un vistazo.
         for columna in range(len(_COLUMNAS)):
@@ -180,62 +244,141 @@ class VentaView(QWidget):
         return self.tabla
 
     def _panel_totales(self) -> QWidget:
+        """La columna derecha: lo que se está sumando arriba, lo que se cobra abajo.
+
+        Son dos tarjetas y no una porque una sola, estirada a todo el alto, dejaba un hueco
+        blanco enorme entre el título y las cifras. Partida en dos, ese hueco deja de ser un
+        vacío y pasa a ser la separación entre dos cosas distintas: el detalle de la cuenta y
+        el acto de cobrarla. El botón de cobrar sigue anclado abajo, que es donde la mano ya
+        está y donde el cajero lo busca sin mirar.
+        """
+        panel = QWidget()
+        panel.setObjectName("transparente")
+        panel.setFixedWidth(300)
+
+        columna = QVBoxLayout(panel)
+        columna.setContentsMargins(0, 0, 0, 0)
+        columna.setSpacing(14)
+        self.tarjeta_detalle = self._tarjeta_detalle()
+        columna.addWidget(self.tarjeta_detalle)
+        columna.addStretch()
+        columna.addWidget(self._aviso())
+        columna.addWidget(self._tarjeta_cobro())
+        return panel
+
+    def _aviso(self) -> QWidget:
+        """El mensaje que confirma o rechaza cada escaneo.
+
+        Vive en el hueco de esta columna y no bajo el campo de escaneo, que sería su sitio
+        natural, por una razón práctica: ahí abajo empujaba el carrito hacia abajo al
+        aparecer y lo subía al desvanecerse, de modo que la tabla daba un salto en cada
+        producto. Aquí crece hacia arriba contra un espacio que ya estaba vacío, así que ni
+        el carrito ni el botón de cobrar se mueven nunca. De paso queda al lado del total,
+        que es lo otro que el cajero mira al terminar de pasar un producto.
+
+        Se usa un mensaje en línea y no un diálogo porque interrumpir el flujo con una
+        ventana modal por cada producto escaneado haría el sistema inusable.
+        """
+        self.mensaje = QLabel()
+        # El id se fija ya en la construcción, y no solo al mostrar un aviso: Qt calcula el
+        # relleno y el radio la primera vez que poliza el widget, y si entonces no hay
+        # ninguna regla por id, el mensaje se queda para siempre pegado al borde. Las dos
+        # variantes comparten geometría, así que alternarlas después solo cambia colores.
+        self.mensaje.setObjectName("mensajeExito")
+        self.mensaje.setWordWrap(True)
+        self.mensaje.hide()
+        self._temporizador_mensaje.timeout.connect(self.mensaje.hide)
+        return self.mensaje
+
+    def _tarjeta_detalle(self) -> QWidget:
+        """Lo que se lleva sumado: subtotal y, si lo hay, el descuento.
+
+        Con el carrito vacío no se muestra: una tarjeta que solo dice «SUBTOTAL $0» no
+        informa de nada y deja la columna con un recuadro huérfano arriba. Aparece con el
+        primer producto, que es cuando el número empieza a significar algo.
+        """
         tarjeta = QFrame()
         tarjeta.setObjectName("tarjeta")
-        tarjeta.setFixedWidth(330)
+        estilos.aplicar_sombra(tarjeta)
 
         columna = QVBoxLayout(tarjeta)
-        columna.setContentsMargins(22, 22, 22, 22)
-        columna.setSpacing(6)
+        columna.setContentsMargins(22, 18, 22, 18)
+        columna.setSpacing(0)
 
-        self.etiqueta_articulos = QLabel("0 artículos")
-        self.etiqueta_articulos.setObjectName("subtitulo")
-        columna.addWidget(self.etiqueta_articulos)
-
-        columna.addSpacing(10)
-        columna.addWidget(self._etiqueta_pequena("Subtotal"))
         self.valor_subtotal = QLabel("$0")
         self.valor_subtotal.setObjectName("valorSubtotal")
-        columna.addWidget(self.valor_subtotal)
+        columna.addLayout(self._renglon(self._etiqueta_pequena("Subtotal"), self.valor_subtotal))
 
+        # Renglón del descuento: aparece solo cuando hay uno, para que una venta normal no
+        # arrastre una línea a cero.
         self.fila_descuento = QWidget()
-        fila = QVBoxLayout(self.fila_descuento)
-        fila.setContentsMargins(0, 8, 0, 0)
-        fila.setSpacing(2)
+        self.fila_descuento.setObjectName("transparente")
+        interior = QVBoxLayout(self.fila_descuento)
+        interior.setContentsMargins(0, 12, 0, 0)
+        interior.setSpacing(0)
         self.etiqueta_descuento = self._etiqueta_pequena("Descuento")
-        fila.addWidget(self.etiqueta_descuento)
+        # El rótulo dice de dónde sale el descuento y a veces no cabe en un renglón de 300 px.
+        # Se parte en dos líneas antes que recortar la explicación, que es justo lo que evita
+        # que un total más bajo de lo esperado parezca un error (D-012).
+        self.etiqueta_descuento.setWordWrap(True)
         self.valor_descuento = QLabel("$0")
         self.valor_descuento.setObjectName("valorDescuento")
-        fila.addWidget(self.valor_descuento)
+        interior.addLayout(self._renglon(self.etiqueta_descuento, self.valor_descuento))
         columna.addWidget(self.fila_descuento)
         self.fila_descuento.hide()
 
-        columna.addSpacing(14)
-        columna.addWidget(self._etiqueta_pequena("TOTAL A PAGAR"))
+        return tarjeta
+
+    def _tarjeta_cobro(self) -> QWidget:
+        """El total y las cuatro acciones que cierran o deshacen la venta."""
+        tarjeta = QFrame()
+        tarjeta.setObjectName("tarjeta")
+        estilos.aplicar_sombra(tarjeta)
+
+        columna = QVBoxLayout(tarjeta)
+        columna.setContentsMargins(22, 20, 22, 20)
+        columna.setSpacing(0)
+
+        etiqueta = self._etiqueta_pequena("Total a pagar")
+        etiqueta.setObjectName("etiquetaTotalFuerte")
+        columna.addWidget(etiqueta)
+        columna.addSpacing(2)
+
         self.valor_total = QLabel("$0")
         self.valor_total.setObjectName("valorTotal")
         columna.addWidget(self.valor_total)
+        columna.addSpacing(18)
 
-        columna.addStretch()
-
-        self.boton_cobrar = QPushButton("Cobrar   (F12)")
+        self.boton_cobrar = QPushButton("Cobrar   ·   F12")
         self.boton_cobrar.setObjectName("botonPrincipal")
+        self.boton_cobrar.setMinimumHeight(56)
+        self.boton_cobrar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.boton_cobrar.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.boton_cobrar.clicked.connect(self.cobrar)
         columna.addWidget(self.boton_cobrar)
+        columna.addSpacing(10)
 
-        self.boton_quitar = QPushButton("Quitar línea   (F5)")
-        self.boton_quitar.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        # Las dos acciones intermedias van en una fila: bajan de peso frente a cobrar y
+        # dejan sitio para que el total respire.
+        pareja = QHBoxLayout()
+        pareja.setContentsMargins(0, 0, 0, 0)
+        pareja.setSpacing(8)
+        self.boton_quitar = QPushButton("Quitar")
+        self.boton_quitar.setToolTip("Quitar una unidad de la línea seleccionada   (F5)")
         self.boton_quitar.clicked.connect(self.quitar_linea_seleccionada)
-        columna.addWidget(self.boton_quitar)
-
-        self.boton_descuento = QPushButton("Descuento   (F4)")
-        self.boton_descuento.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.boton_descuento = QPushButton("Descuento")
+        self.boton_descuento.setToolTip("Aplicar un descuento   (F4)")
         self.boton_descuento.clicked.connect(self.aplicar_descuento)
-        columna.addWidget(self.boton_descuento)
+        for boton in (self.boton_quitar, self.boton_descuento):
+            boton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            boton.setCursor(Qt.CursorShape.PointingHandCursor)
+            pareja.addWidget(boton)
+        columna.addLayout(pareja)
+        columna.addSpacing(8)
 
-        self.boton_vaciar = QPushButton("Cancelar venta   (F6)")
+        self.boton_vaciar = QPushButton("Cancelar venta   ·   F6")
         self.boton_vaciar.setObjectName("botonPeligro")
+        self.boton_vaciar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.boton_vaciar.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.boton_vaciar.clicked.connect(self.cancelar_venta)
         columna.addWidget(self.boton_vaciar)
@@ -243,19 +386,55 @@ class VentaView(QWidget):
         return tarjeta
 
     @staticmethod
+    def _renglon(etiqueta: QLabel, valor: QLabel) -> QHBoxLayout:
+        """Rótulo a la izquierda, cifra a la derecha, como en un recibo.
+
+        Apilados uno sobre otro ocupaban el doble de alto y obligaban a leer en zigzag; en un
+        renglón, la vista baja por la columna de cifras y ya está.
+        """
+        fila = QHBoxLayout()
+        fila.setContentsMargins(0, 0, 0, 0)
+        fila.setSpacing(12)
+        fila.addWidget(etiqueta, alignment=Qt.AlignmentFlag.AlignVCenter)
+        fila.addStretch()
+        valor.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        fila.addWidget(valor)
+        return fila
+
+    @staticmethod
+    def _separador() -> QFrame:
+        """Filete de 1 px. El alto se fija aquí: un QFrame sin forma no tiene tamaño propio
+        y la hoja de estilos sola lo dejaría en nada."""
+        linea = QFrame()
+        linea.setObjectName("separador")
+        linea.setFixedHeight(1)
+        return linea
+
+    @staticmethod
     def _etiqueta_pequena(texto: str) -> QLabel:
-        etiqueta = QLabel(texto)
+        """Etiqueta de un bloque de métrica: pequeña, gris y en mayúsculas.
+
+        Las mayúsculas se ponen aquí y no en la hoja de estilos porque Qt no entiende
+        `text-transform`.
+        """
+        etiqueta = QLabel(texto.upper())
         etiqueta.setObjectName("etiquetaTotal")
         return etiqueta
 
     # ------------------------------------------------------------------ acciones
 
     def repintar(self) -> None:
-        """Vuelve a dibujar la tabla con los colores del tema actual.
+        """Vuelve a dibujar con los colores del tema actual lo que la hoja no alcanza.
 
-        Los colores de las celdas de acción se fijan al crearlas, así que un cambio de tema
-        no las alcanza: sin esto, quedarían con el fondo del tema anterior.
+        Son dos cosas: los colores de las celdas de acción, que se fijan al crearlas, y el
+        icono del campo de escaneo, que es un mapa de píxeles ya pintado.
         """
+        self._icono_campo.setIcon(
+            iconos.icono("escanear", 24, estilos.actual.texto_apagado)
+        )
+        self._icono_vacio.setPixmap(
+            iconos.pixmap("escanear", 44, estilos.actual.texto_apagado)
+        )
         self._refrescar()
 
     def enfocar_escaneo(self) -> None:
@@ -660,6 +839,9 @@ class VentaView(QWidget):
                 activa=linea.cantidad < tope,
             )
 
+        hay_algo = not self._carrito.esta_vacio
+        self._pila_carrito.setCurrentIndex(0 if not hay_algo else 1)
+        self.tarjeta_detalle.setVisible(hay_algo)
         self.etiqueta_articulos.setText(
             "Carrito vacío"
             if self._carrito.esta_vacio
@@ -673,7 +855,7 @@ class VentaView(QWidget):
         self.valor_descuento.setText(f"-{formatear_clp(descuento)}")
         # Cuando el descuento viene de varios sitios, el panel dice de dónde: si no, un
         # total más bajo de lo esperado no tendría explicación a la vista.
-        self.etiqueta_descuento.setText(self._titulo_descuento(hay_descuento_de_linea))
+        self.etiqueta_descuento.setText(self._titulo_descuento(hay_descuento_de_linea).upper())
 
         hay_productos = not self._carrito.esta_vacio
         self.boton_cobrar.setEnabled(hay_productos)
@@ -705,7 +887,7 @@ class VentaView(QWidget):
         if activa:
             paleta = estilos.actual
             celda.setBackground(QBrush(QColor(paleta.superficie_alterna)))
-            celda.setForeground(QBrush(QColor(paleta.primario)))
+            celda.setForeground(QBrush(QColor(paleta.texto_suave)))
             fuente = celda.font()
             fuente.setBold(True)
             celda.setFont(fuente)
@@ -753,11 +935,7 @@ class VentaView(QWidget):
                 return
 
     def _avisar(self, texto: str, exito: bool) -> None:
-        """Muestra un mensaje breve bajo el campo de escaneo.
-
-        Se usa un mensaje en línea y no un diálogo porque interrumpir el flujo con una
-        ventana modal por cada producto escaneado haría el sistema inusable.
-        """
+        """Muestra un mensaje breve en la columna de totales. Ver `_aviso`."""
         sonido.exito() if exito else sonido.error()
         self.mensaje.setText(texto)
         self.mensaje.setObjectName("mensajeExito" if exito else "mensajeError")
@@ -765,7 +943,11 @@ class VentaView(QWidget):
         self.mensaje.style().unpolish(self.mensaje)
         self.mensaje.style().polish(self.mensaje)
         self.mensaje.show()
-        QTimer.singleShot(_MENSAJE_MS, self.mensaje.hide)
+        # La cuenta atrás se reinicia, no se acumula. Antes cada aviso programaba un
+        # temporizador nuevo sin cancelar el anterior, así que escanear un producto a los
+        # 4,8 s del anterior hacía que el temporizador viejo escondiera el mensaje nuevo a
+        # los 200 ms. Parecía un fallo de pintado y era un temporizador de más.
+        self._temporizador_mensaje.start(_MENSAJE_MS)
 
     # ------------------------------------------------------------------ consultas
 

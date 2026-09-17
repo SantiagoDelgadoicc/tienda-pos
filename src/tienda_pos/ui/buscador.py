@@ -74,6 +74,7 @@ class DialogoResultados(QDialog):
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         botones.button(QDialogButtonBox.StandardButton.Ok).setText("Agregar al carrito")
+        botones.button(QDialogButtonBox.StandardButton.Ok).setObjectName("botonAccion")
         botones.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
         botones.accepted.connect(self.accept)
         botones.rejected.connect(self.reject)

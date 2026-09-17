@@ -17,7 +17,6 @@ from collections.abc import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
-    QComboBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
@@ -33,6 +32,7 @@ from .. import config
 from ..services.preferencias import TEMA_CLARO, TEMA_OSCURO, Preferencias
 from ..services import preferencias as servicio_preferencias
 from . import dialogos
+from .widgets.desplegable import Desplegable
 
 _logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class DialogoConfiguracion(QDialog):
         formulario = QFormLayout()
         formulario.setSpacing(10)
 
-        self.combo_tema = QComboBox()
+        self.combo_tema = Desplegable()
         for clave in (TEMA_CLARO, TEMA_OSCURO):
             self.combo_tema.addItem(_NOMBRE_TEMA[clave], clave)
         self.combo_tema.setCurrentIndex(self.combo_tema.findData(preferencias.tema))
@@ -109,6 +109,7 @@ class DialogoConfiguracion(QDialog):
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         botones.button(QDialogButtonBox.StandardButton.Ok).setText("Guardar")
+        botones.button(QDialogButtonBox.StandardButton.Ok).setObjectName("botonAccion")
         botones.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
         botones.accepted.connect(self.accept)
         botones.rejected.connect(self.reject)
@@ -190,6 +191,9 @@ class DialogoConfiguracion(QDialog):
             sonido=self.casilla_sonido.isChecked(),
             confirmar_cobro=self.casilla_confirmar.isChecked(),
             mostrar_atajos=self.casilla_atajos.isChecked(),
+            # El plegado no se elige aquí, pero se arrastra: si no, guardar cualquier ajuste
+            # desplegaría la barra por su cuenta.
+            barra_lateral_plegada=self._originales.barra_lateral_plegada,
         ).normalizar()
 
     # ------------------------------------------------------------------ uso

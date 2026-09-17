@@ -303,3 +303,100 @@ class TestCambioDeUsuario:
         ventana.cambiar_usuario()
 
         assert ventana.usuario.nombre == "Ana Pérez"
+
+
+class TestAjusteDeStock:
+    """El camino corto para corregir cantidades: contar mercadería es lo que más se repite."""
+
+    def _dialogo(self, como_admin, codigo):
+        from tienda_pos.ui.productos_view import DialogoStock
+
+        como_admin.mostrar_productos()
+        vista = como_admin.vista_productos
+        vista.seleccionar_codigo(codigo)
+        return vista, DialogoStock(vista._seleccionado(), vista)
+
+    def test_guardar_una_cantidad_nueva_la_deja_en_el_catalogo(self, como_admin, monkeypatch) -> None:
+        from tienda_pos.ui import productos_view
+
+        como_admin.mostrar_productos()
+        vista = como_admin.vista_productos
+        vista.seleccionar_codigo(COLA)
+        antes = vista._seleccionado().stock
+
+        monkeypatch.setattr(
+            productos_view, "DialogoStock", _dialogo_falso(antes + 7)
+        )
+        vista.ajustar_stock()
+
+        vista.recargar()
+        vista.seleccionar_codigo(COLA)
+        assert vista._seleccionado().stock == antes + 7
+
+    def test_sin_seleccion_avisa_y_no_toca_nada(self, como_admin, monkeypatch) -> None:
+        from tienda_pos.ui import productos_view
+
+        como_admin.mostrar_productos()
+        vista = como_admin.vista_productos
+        vista.tabla.clearSelection()
+        vista.tabla.setCurrentCell(-1, -1)
+
+        # Si el diálogo llegara a abrirse, esto haría fallar la prueba en lugar de dejarlo
+        # pasar en silencio.
+        monkeypatch.setattr(productos_view, "DialogoStock", _no_debe_abrirse)
+        vista.ajustar_stock()
+
+    def test_los_saltos_rapidos_no_bajan_de_cero(self, como_admin) -> None:
+        vista, dialogo = self._dialogo(como_admin, COLA)
+        dialogo.campo.setText("3")
+        dialogo._sumar(-10)
+        assert dialogo.stock == 0
+
+    def test_el_campo_vacio_vale_la_cantidad_actual(self, como_admin) -> None:
+        vista, dialogo = self._dialogo(como_admin, COLA)
+        actual = vista._seleccionado().stock
+        dialogo.campo.clear()
+        assert dialogo.stock == actual
+
+    def test_el_resumen_dice_cuanto_entra_y_cuanto_sale(self, como_admin) -> None:
+        vista, dialogo = self._dialogo(como_admin, COLA)
+        actual = vista._seleccionado().stock
+
+        dialogo.campo.setText(str(actual))
+        assert dialogo.resumen.text() == "Sin cambios"
+        dialogo.campo.setText(str(actual + 4))
+        assert "Entran 4" in dialogo.resumen.text()
+        dialogo.campo.setText(str(max(0, actual - 2)))
+        assert "Salen 2" in dialogo.resumen.text()
+
+    def test_guardar_la_misma_cantidad_no_llama_al_servicio(self, como_admin, monkeypatch) -> None:
+        from tienda_pos.ui import productos_view
+
+        como_admin.mostrar_productos()
+        vista = como_admin.vista_productos
+        vista.seleccionar_codigo(COLA)
+        igual = vista._seleccionado().stock
+
+        def _no_debe_guardar(*args, **kwargs):
+            raise AssertionError("No debía tocarse el producto")
+
+        monkeypatch.setattr(productos_view, "DialogoStock", _dialogo_falso(igual))
+        monkeypatch.setattr(vista._sesion, "actualizar_producto", _no_debe_guardar)
+        vista.ajustar_stock()
+
+
+def _dialogo_falso(stock_elegido: int):
+    """Sustituye al diálogo por uno que acepta y devuelve la cantidad indicada."""
+
+    class _Falso:
+        def __init__(self, producto, padre=None) -> None:
+            self.stock = stock_elegido
+
+        def exec(self) -> int:
+            return 1
+
+    return _Falso
+
+
+def _no_debe_abrirse(*args, **kwargs):
+    raise AssertionError("No debía abrirse el diálogo sin un producto seleccionado")

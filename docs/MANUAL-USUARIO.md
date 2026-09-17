@@ -1,13 +1,13 @@
 # Manual de usuario
 
-Sistema de punto de venta **Tienda POS**. Este manual está escrito para quien atiende la
+Sistema de punto de venta de **Punto y Fama**. Este manual está escrito para quien atiende la
 caja, no para quien programa.
 
 ---
 
 ## 1. Abrir el programa
 
-Haga doble clic en el icono **Tienda POS** del escritorio.
+Haga doble clic en el icono **Punto y Fama** del escritorio.
 
 El programa pide un usuario y un PIN:
 
@@ -255,7 +255,7 @@ Toda la información vive en un único archivo en este computador:
 carrito antes de cobrar, por si acaso, y avise a quien le dé soporte enviando el archivo de
 la carpeta `logs`.
 
-**El programa no abre.** Abra la carpeta donde está instalado y ejecute `TiendaPOS.exe` con
+**El programa no abre.** Abra la carpeta donde está instalado y ejecute `PuntoYFamaCaja.exe` con
 la opción `--verificar`. Se crea un archivo `autocomprobacion.txt` en
 `%LOCALAPPDATA%\TiendaPOS\` que dice exactamente qué falló.
 

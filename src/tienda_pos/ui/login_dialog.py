@@ -11,7 +11,6 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
-    QComboBox,
     QDialog,
     QDialogButtonBox,
     QLabel,
@@ -24,6 +23,7 @@ from ..config import NOMBRE_COMERCIAL, PIN_LONGITUD_MAX
 from ..domain.errors import ErrorDominio
 from ..domain.models import Rol, Usuario
 from ..red.sesion import Sesion
+from .widgets.desplegable import Desplegable
 
 
 class DialogoLogin(QDialog):
@@ -69,7 +69,7 @@ class DialogoLogin(QDialog):
 
         columna.addSpacing(6)
         columna.addWidget(QLabel("Usuario"))
-        self.combo_usuario = QComboBox()
+        self.combo_usuario = Desplegable()
         columna.addWidget(self.combo_usuario)
 
         columna.addWidget(QLabel("PIN"))
@@ -91,6 +91,7 @@ class DialogoLogin(QDialog):
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         botones.button(QDialogButtonBox.StandardButton.Ok).setText("Entrar")
+        botones.button(QDialogButtonBox.StandardButton.Ok).setObjectName("botonAccion")
         botones.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
         botones.accepted.connect(self._intentar)
         botones.rejected.connect(self.reject)

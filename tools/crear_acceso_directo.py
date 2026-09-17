@@ -5,7 +5,7 @@ sistema es hacer doble clic en un icono, que es exactamente lo que se pidió.
 
     python tools/crear_acceso_directo.py [ruta_al_exe]
 
-Sin argumentos usa dist/TiendaPOS/TiendaPOS.exe. Para deshacerlo basta con borrar el acceso
+Sin argumentos usa dist/PuntoYFamaCaja/PuntoYFamaCaja.exe. Para deshacerlo basta con borrar el acceso
 directo del escritorio: no toca el registro ni ninguna configuración del sistema.
 """
 
@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
-NOMBRE_ACCESO = "Tienda POS.lnk"
+NOMBRE_ACCESO = "Punto y Fama.lnk"
 
 # Se usa el objeto WScript.Shell de Windows a través de PowerShell. Es la forma estándar de
 # crear un .lnk sin añadir dependencias como pywin32 solo para esto.
@@ -35,7 +35,7 @@ Write-Output $destino
 
 
 def crear(exe: Path | None = None) -> Path:
-    exe = Path(exe) if exe else RAIZ / "dist" / "TiendaPOS" / "TiendaPOS.exe"
+    exe = Path(exe) if exe else RAIZ / "dist" / "PuntoYFamaCaja" / "PuntoYFamaCaja.exe"
     exe = exe.resolve()
     if not exe.exists():
         raise FileNotFoundError(

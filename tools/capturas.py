@@ -31,7 +31,7 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 from tienda_pos.db.inicio import abrir_base_datos  # noqa: E402
 from tienda_pos.db.seed import codigo_demo  # noqa: E402
 from tienda_pos.domain.models import Rol, Usuario  # noqa: E402
-from tienda_pos.services import auth  # noqa: E402
+from tienda_pos.red.sesion import SesionLocal  # noqa: E402
 from tienda_pos.services import preferencias as servicio_preferencias  # noqa: E402
 from tienda_pos.ui import estilos  # noqa: E402
 from tienda_pos.ui.login_dialog import DialogoLogin  # noqa: E402
@@ -71,7 +71,10 @@ def generar(destino: Path) -> list[Path]:
     estilos.aplicar(app, servicio_preferencias.TEMA_CLARO)
 
     conexion = abrir_base_datos(":memory:", con_datos_demo=True)
-    ventana = VentanaPrincipal(conexion)
+    # Las pantallas hablan con una Sesion, no con la conexion: es lo que permite que la
+    # misma interfaz funcione contra la base local o contra el servidor de la otra caja.
+    sesion = SesionLocal(conexion)
+    ventana = VentanaPrincipal(sesion)
     # Las capturas no deben depender de los ajustes que tenga guardados quien las genera.
     ventana.aplicar_preferencias(servicio_preferencias.Preferencias())
     ventana.resize(ANCHO, ALTO)
@@ -100,13 +103,13 @@ def generar(destino: Path) -> list[Path]:
     generadas.append(_guardar(ventana, destino, "04-consulta-no-encontrado"))
 
     # 5. Diálogo de acceso.
-    dialogo = DialogoLogin(conexion)
+    dialogo = DialogoLogin(sesion)
     dialogo.show()
     generadas.append(_guardar(dialogo, destino, "05-acceso"))
     dialogo.close()
 
     # A partir de aquí se necesita un administrador de verdad.
-    administrador = auth.autenticar(conexion, "Administrador", "1234")
+    administrador = sesion.autenticar("Administrador", "1234")
     ventana.establecer_usuario(administrador)
 
     # 6. Administración del catálogo.
@@ -136,7 +139,15 @@ def generar(destino: Path) -> list[Path]:
     generadas.append(_guardar(ventana, destino, "09-tema-oscuro"))
     ventana.aplicar_tema(servicio_preferencias.TEMA_CLARO)
 
-    # 10. La rueda de configuración.
+    # 10. La barra lateral plegada a tira de iconos.
+    ventana.mostrar_venta()
+    for indice in (0, 10, 19):
+        ventana.vista_venta.agregar_por_codigo(codigo_demo(indice))
+    ventana.barra_lateral.plegar(True)
+    generadas.append(_guardar(ventana, destino, "11-barra-plegada"))
+    ventana.barra_lateral.plegar(False)
+
+    # 11. La rueda de configuración.
     from tienda_pos.ui.configuracion_dialog import DialogoConfiguracion
 
     configuracion = DialogoConfiguracion(servicio_preferencias.Preferencias(), ventana)

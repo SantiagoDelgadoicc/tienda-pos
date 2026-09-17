@@ -7,10 +7,21 @@ pruebas puedan redirigirlas mediante la variable de entorno TIENDA_POS_HOME.
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
+#: Nombre de la carpeta de datos y del ejecutable. No cambia aunque cambie el rótulo del
+#: negocio: cambiarlo dejaría al programa sin encontrar la base de datos ya instalada.
 NOMBRE_APP = "TiendaPOS"
-NOMBRE_COMERCIAL = "Tienda POS"
+
+#: Lo que se ve en la barra lateral, en el título de la ventana y en los diálogos.
+NOMBRE_COMERCIAL = "Punto y Fama"
+RUBRO_COMERCIAL = "Botillería y market"
+
+#: Nombre del ejecutable y del acceso directo. Es cosa distinta de NOMBRE_APP: este se
+#: puede cambiar sin consecuencias, aquel no.
+NOMBRE_EJECUTABLE = "PuntoYFamaCaja"
+
 VERSION = "0.1.0"
 
 #: Cuántos respaldos automáticos se conservan antes de borrar el más antiguo.
@@ -51,6 +62,19 @@ TIEMPO_LIMITE_SONDEO_S = 0.8
 ESPERA_SERVIDOR_AL_ARRANCAR_S = 90.0
 
 
+def directorio_recursos() -> Path:
+    """Carpeta de los archivos que acompañan al programa: logotipo, icono.
+
+    No son datos del usuario y no viven en `%LOCALAPPDATA%`: viajan con el ejecutable. Al
+    empaquetar con PyInstaller quedan en la carpeta temporal que este monta al arrancar, y
+    cuyo camino deja en `sys._MEIPASS`.
+    """
+    empaquetado = getattr(sys, "_MEIPASS", None)
+    if empaquetado:
+        return Path(empaquetado) / "assets"
+    return Path(__file__).resolve().parents[2] / "assets"
+
+
 def archivo_configuracion_red() -> Path:
     """Dónde se guarda si este PC es servidor o caja secundaria, y a quién apunta.
 
@@ -64,7 +88,7 @@ def archivo_configuracion_red() -> Path:
 
 
 def directorio_datos() -> Path:
-    """Carpeta donde viven la base de datos, los respaldos y los logs.
+    r"""Carpeta donde viven la base de datos, los respaldos y los logs.
 
     En Windows es %LOCALAPPDATA%\TiendaPOS. Nunca se usa la carpeta del programa porque
     Windows bloquea la escritura dentro de "Archivos de Programa".

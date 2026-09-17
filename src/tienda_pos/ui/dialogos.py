@@ -105,6 +105,7 @@ class DialogoCodigoNoEncontrado(QDialog):
         botones.addWidget(boton_buscar)
 
         boton_cerrar = QPushButton("Continuar")
+        boton_cerrar.setObjectName("botonAccion")
         boton_cerrar.setDefault(True)
         boton_cerrar.clicked.connect(self.accept)
         botones.addWidget(boton_cerrar)
@@ -157,6 +158,7 @@ class DialogoTexto(QDialog):
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         caja.button(QDialogButtonBox.StandardButton.Ok).setText("Aceptar")
+        caja.button(QDialogButtonBox.StandardButton.Ok).setObjectName("botonAccion")
         caja.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
         caja.accepted.connect(self.accept)
         caja.rejected.connect(self.reject)
@@ -249,6 +251,7 @@ class DialogoDescuento(QDialog):
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         botones.button(QDialogButtonBox.StandardButton.Ok).setText("Aplicar")
+        botones.button(QDialogButtonBox.StandardButton.Ok).setObjectName("botonAccion")
         botones.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
         quitar = botones.addButton("Quitar descuento", QDialogButtonBox.ButtonRole.ResetRole)
         quitar.setToolTip("Quita el descuento del ámbito seleccionado arriba.")

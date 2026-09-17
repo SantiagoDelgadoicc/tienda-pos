@@ -20,67 +20,92 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ / "src"))
 
-# La plataforma "offscreen" de Qt no carga las fuentes del sistema y el simbolo de precio
-# saldria vacio, asi que en Windows se usa la nativa.
+# La plataforma "offscreen" de Qt no carga las fuentes del sistema, asi que en Windows se
+# usa la nativa.
 os.environ.setdefault("QT_QPA_PLATFORM", "windows" if os.name == "nt" else "offscreen")
 
-from PySide6.QtCore import QBuffer, QRectF, Qt  # noqa: E402
-from PySide6.QtGui import QColor, QFont, QImage, QPainter  # noqa: E402
+from PySide6.QtCore import QBuffer, QPointF, QRectF, Qt  # noqa: E402
+from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath, QPen  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 TAMANOS = (16, 32, 48, 64, 128, 256)
 
-_FONDO = "#1E3A8A"
-_BARRA = "#FFFFFF"
-_ACENTO = "#22C55E"
-
-# Anchos relativos de las barras del código, para que parezca un código de barras real y no
-# una reja uniforme.
-_PATRON = (3, 1, 2, 1, 1, 3, 1, 2, 1, 1, 2, 3)
+#: El rojo del logotipo. No se lee de la paleta de la interfaz porque la marca no cambia con
+#: el tema: el círculo es rojo tanto de día como de noche.
+_ROJO = "#BE1E2D"
+_FONDO = "#FFFFFF"
 
 
-def dibujar(lado: int) -> QImage:
+def _logotipo_del_cliente() -> "QImage | None":
+    """El archivo de logotipo, si lo hay.
+
+    Mientras no exista, el icono se dibuja. En cuanto alguien deje `assets/logo.png`, esta
+    herramienta lo usa sin tocar nada más.
+    """
+    for nombre in ("logo.png", "logo.jpg", "logo.jpeg"):
+        archivo = RAIZ / "assets" / nombre
+        if archivo.exists():
+            imagen = QImage(str(archivo))
+            if not imagen.isNull():
+                return imagen
+    return None
+
+
+def dibujar(lado: int, logotipo: "QImage | None" = None) -> QImage:
+    """Un icono cuadrado con la marca centrada sobre fondo blanco.
+
+    El fondo es blanco y no transparente a propósito: el logotipo es rojo sobre blanco, y
+    sobre una barra de tareas oscura el rojo solo se sostiene si lleva su papel debajo.
+    """
     imagen = QImage(lado, lado, QImage.Format.Format_ARGB32)
     imagen.fill(Qt.GlobalColor.transparent)
 
     pintor = QPainter(imagen)
     pintor.setRenderHint(QPainter.RenderHint.Antialiasing)
+    pintor.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
-    # Fondo redondeado.
     pintor.setBrush(QColor(_FONDO))
     pintor.setPen(Qt.PenStyle.NoPen)
     radio = lado * 0.22
     pintor.drawRoundedRect(QRectF(0, 0, lado, lado), radio, radio)
 
-    # Código de barras centrado en la mitad superior.
-    margen = lado * 0.18
-    arriba = lado * 0.22
-    alto_barras = lado * 0.40
-    ancho_util = lado - 2 * margen
-    unidades = sum(_PATRON) + len(_PATRON)  # barras más un espacio entre cada una
-    unidad = ancho_util / unidades
-
-    pintor.setBrush(QColor(_BARRA))
-    x = margen
-    for ancho in _PATRON:
-        pintor.drawRect(QRectF(x, arriba, unidad * ancho, alto_barras))
-        x += unidad * (ancho + 1)
-
-    # Símbolo de precio bajo el código. En los tamaños diminutos el texto se convierte en una
-    # mancha ilegible, así que se sustituye por una barra de color.
-    if lado >= 32:
-        pintor.setPen(QColor(_ACENTO))
-        fuente = QFont("Segoe UI", int(lado * 0.30), QFont.Weight.Bold)
-        pintor.setFont(fuente)
-        pintor.drawText(
-            QRectF(0, lado * 0.60, lado, lado * 0.32),
-            Qt.AlignmentFlag.AlignCenter,
-            "$",
+    if logotipo is not None:
+        margen = lado * 0.10
+        util = lado - 2 * margen
+        reducido = logotipo.scaled(
+            int(util),
+            int(util),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
         )
-    else:
-        pintor.setBrush(QColor(_ACENTO))
-        pintor.setPen(Qt.PenStyle.NoPen)
-        pintor.drawRect(QRectF(margen, lado * 0.70, ancho_util, lado * 0.12))
+        pintor.drawImage(
+            QRectF(
+                (lado - reducido.width()) / 2,
+                (lado - reducido.height()) / 2,
+                reducido.width(),
+                reducido.height(),
+            ),
+            reducido,
+        )
+        pintor.end()
+        return imagen
+
+    # Sin archivo, se dibuja la marca: el círculo rojo con su tallo. Es la parte del
+    # logotipo que sobrevive a 16 píxeles; el lettering a ese tamaño sería una mancha.
+    unidad = lado / 24.0
+    pintor.scale(unidad, unidad)
+
+    pluma = QPen(QColor(_ROJO), 2.1)
+    pluma.setCapStyle(Qt.PenCapStyle.RoundCap)
+    pintor.setPen(pluma)
+    pintor.setBrush(Qt.BrushStyle.NoBrush)
+    tallo = QPainterPath(QPointF(12.7, 8.4))
+    tallo.cubicTo(16.8, 3.4, 21.0, 6.6, 20.4, 14.2)
+    pintor.drawPath(tallo)
+
+    pintor.setPen(Qt.PenStyle.NoPen)
+    pintor.setBrush(QColor(_ROJO))
+    pintor.drawEllipse(QPointF(10.4, 14.4), 7.6, 7.6)
 
     pintor.end()
     return imagen
@@ -98,7 +123,8 @@ def _a_png(imagen: QImage) -> bytes:
 
 def construir_ico(destino: Path) -> Path:
     """Escribe un .ico con todos los tamaños, cada uno incrustado como PNG."""
-    imagenes = [_a_png(dibujar(lado)) for lado in TAMANOS]
+    logotipo = _logotipo_del_cliente()
+    imagenes = [_a_png(dibujar(lado, logotipo)) for lado in TAMANOS]
 
     cabecera = struct.pack("<HHH", 0, 1, len(TAMANOS))
     desplazamiento = len(cabecera) + 16 * len(TAMANOS)
@@ -119,7 +145,8 @@ def construir_ico(destino: Path) -> Path:
 
 if __name__ == "__main__":
     app = QApplication.instance() or QApplication(sys.argv)
-    ico = construir_ico(RAIZ / "assets" / "tienda_pos.ico")
-    png = RAIZ / "assets" / "tienda_pos.png"
-    dibujar(256).save(str(png))
-    print(f"Icono generado: {ico.relative_to(RAIZ)} y {png.relative_to(RAIZ)}")
+    ico = construir_ico(RAIZ / "assets" / "punto_y_fama.ico")
+    png = RAIZ / "assets" / "punto_y_fama.png"
+    dibujar(256, _logotipo_del_cliente()).save(str(png))
+    origen = "assets/logo.png" if _logotipo_del_cliente() is not None else "la marca dibujada"
+    print(f"Icono generado desde {origen}: {ico.relative_to(RAIZ)} y {png.relative_to(RAIZ)}")

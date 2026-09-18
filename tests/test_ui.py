@@ -147,6 +147,30 @@ class TestPanelDeTotales:
         assert not vista.boton_cobrar.isEnabled()
 
 
+class TestTotalDeLaVenta:
+    """El total se pinta al mayor tamaño que quepa en su tarjeta."""
+
+    def test_usa_uno_de_los_tamanos_declarados(self, ventana) -> None:
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        assert vista._tamano_total in venta_view._TAMANOS_TOTAL
+
+    def test_la_eleccion_no_depende_del_total_anterior(self, ventana) -> None:
+        # La fuente de medir se arma entera dentro de _ajustar_total. Si partiera de la que
+        # tuviera puesta la etiqueta, el tamaño saldría distinto segun el total anterior.
+        vista = ventana.vista_venta
+        vista.valor_total.setText("$13.240")
+        vista._ajustar_total()
+        desde_cero = vista._tamano_total
+
+        vista.valor_total.setText("$99.999.999")
+        vista._ajustar_total()
+        vista.valor_total.setText("$13.240")
+        vista._ajustar_total()
+
+        assert vista._tamano_total == desde_cero
+
+
 class TestAvisoEnLinea:
     """El mensaje que confirma cada escaneo."""
 

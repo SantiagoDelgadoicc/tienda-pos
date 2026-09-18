@@ -34,7 +34,7 @@ python main.py
 pytest
 ```
 
-255 pruebas, unos 40 segundos. No necesitan pantalla: las de interfaz usan la plataforma
+258 pruebas, unos 35 segundos. No necesitan pantalla: las de interfaz usan la plataforma
 `offscreen` de Qt, que `tests/conftest.py` activa automáticamente.
 
 ```bash

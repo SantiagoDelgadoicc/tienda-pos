@@ -193,7 +193,7 @@ src/tienda_pos/
     iconos.py             los iconos, dibujados con QPainter
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    255 pruebas
+tests/                    258 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -228,7 +228,7 @@ pip install -r requirements-dev.txt   # requirements.txt son solo las de ejecuci
 
 python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
-pytest                                # pruebas (255, unos 40 s)
+pytest                                # pruebas (258, unos 35 s)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

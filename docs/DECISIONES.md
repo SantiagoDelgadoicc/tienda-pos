@@ -832,9 +832,24 @@ hacia arriba contra un espacio que ya estaba vacío. Así **no se mueve nada** �
 botón de cobrar— y de paso el aviso queda al lado del total, que es lo otro que el cajero mira al
 terminar de pasar un producto. Lo que se pierde es ancho: un nombre largo ocupa dos líneas.
 
-**Consecuencias.** Cinco pruebas nuevas: que el detalle aparece con el primer producto y se va al
+**5. El total, al mayor tamaño que quepa.** Sube de 48 a **62 px**, que es lo máximo que admite un
+total de seis cifras —$480.000— en los 256 px útiles de la tarjeta; a 66 px ya se sale. Está medido
+con `QFontMetrics`, no elegido a ojo.
+
+Como el tamaño depende del texto y no del tema, se aplica sobre la etiqueta y no desde la hoja de
+estilos, y con una escalera de reserva: una venta de siete cifras baja un escalón en vez de salirse
+del borde. Dos trampas que costó ver:
+
+- La fuente con la que se mide hay que **armarla entera** —familia, peso e interletrado— en lugar de
+  partir de la que tenga puesta la etiqueta. Si se parte de ella, la medida arrastra el tamaño
+  anterior y la elección sale distinta según cuál fuera el total previo.
+- El estilo propio de la etiqueta lleva también el color, así que un cambio de tema no lo alcanza:
+  hay que rehacerlo desde `repintar()`.
+
+**Consecuencias.** Ocho pruebas nuevas: que el detalle aparece con el primer producto y se va al
 cancelar, que el cobro no se mueve con el carrito vacío, que un aviso nuevo reinicia la cuenta atrás
-en lugar de heredarla, y que un error sustituye al aviso de éxito. La suite pasa de 250 a 255.
+en lugar de heredarla, que un error sustituye al aviso de éxito, que el tamaño del total no depende
+del anterior y que el verde sobrevive al cambio de tema. La suite pasa de 250 a 258.
 
 El fallo del radio estaba desde D-026 y el del temporizador desde la fase 2, o sea desde la primera
 versión de la pantalla de venta. Ninguno lo habría detectado una prueba: el primero es estética y el

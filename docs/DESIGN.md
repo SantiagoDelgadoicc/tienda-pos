@@ -1,4 +1,9 @@
 # Seline Analytics — Style Reference
+
+> **Nota de Punto y Fama.** Este documento es la referencia de Seline tal como llegó. El
+> programa la sigue en estructura, tipografía, radios y superficies, pero **no en el color**:
+> en vez del cian único usa dos colores con significado, rojo y verde (D-026 y D-027). La
+> última sección, «Movimiento», no es de Seline: es nuestra (D-029).
 > Quiet analyst's desk on warm paper
 
 **Theme:** light
@@ -403,3 +408,70 @@ The signature typographic move is the inline highlight: one phrase per headline 
   --shadow-xl: rgba(17, 12, 46, 0.12) 0px 12px 45px 0px;
 }
 ```
+
+## Movimiento
+
+*Sección propia de Punto y Fama, no de Seline. Decisión D-029. Vive en `ui/movimiento.py`.*
+
+Una caja no se mira para disfrutarla: se mira de reojo para confirmar que lo que se hizo
+entró. Por eso **solo se anima lo que explica un cambio**, y nada que esté de adorno.
+
+### Reglas
+
+1. **El estado cambia al instante; solo el dibujo tarda.** La barra ya está plegada en el
+   momento de pulsar Ctrl+B y el aviso ya dice lo nuevo; la animación solo lo acompaña.
+2. **Nada retrasa el escaneo ni el foco.** Todo se puede interrumpir y rehacer desde donde
+   esté. Una pistola dispara varias veces por segundo.
+3. **Lo que pide el cajero arranca en el acto.** Curva de desaceleración (`OutCubic`), nunca
+   una que empiece despacio: se sentiría como una tecla lenta.
+4. **Lo que se va solo acelera** (`InCubic`) y dura un poco más que lo que entra.
+5. **Se puede apagar** desde F9, *Animar los cambios en pantalla*. Apagado, todo es inmediato.
+6. **El color del movimiento es el de su significado.** El destello de «entró» es el verde de
+   siempre; no hay colores propios de la animación.
+
+### Duraciones
+
+| Nombre | ms | Uso |
+|---|---|---|
+| `ENTRADA_MS` | 150 | algo aparece: el aviso de escaneo |
+| `SALIDA_MS` | 200 | algo se va solo: el aviso al vencer sus 5 s |
+| `PULSO_MS` | 220 | un aviso que ya estaba se renueva: baja al 35 % y vuelve |
+| `BARRA_MS` | 180 | la barra lateral se pliega o se despliega |
+| `DESTELLO_MS` | 700 | la línea del carrito que acaba de entrar o sumar una unidad |
+| `DIALOGO_MS` | 120 | una ventana de diálogo se abre |
+| `SACUDIDA_MS` | 320 | un PIN incorrecto: la ventana va y viene 9 px, amortiguándose |
+
+Una duración nueva se añade a esta tabla con su motivo, igual que un radio.
+
+### Qué se anima
+
+- **La línea del carrito que cambia** destella en el lavado verde (`exito_suave`): se sostiene
+  el primer 20 % y se apaga. Solo al agregar o sumar; quitar no destella.
+- **El aviso de escaneo** entra con un fundido y se va con otro. Si llega uno nuevo con el
+  anterior a la vista, no vuelve a entrar: parpadea.
+- **La barra lateral** anima su ancho. Viaja dibujada como tira de iconos y los textos
+  aparecen al final. Los iconos no se mueven ni en horizontal ni en vertical: los rótulos de
+  sección y el nombre del negocio conservan su sitio aunque estén ocultos.
+- **El resultado de la consulta de precio** entra con el mismo fundido que el aviso, y
+  parpadea si ya había un precio en pantalla. Se funde el contenido, no la tarjeta.
+- **Los diálogos** se abren con un fundido de 120 ms. Todos, incluidos los mensajes de
+  error y las confirmaciones.
+- **El PIN incorrecto** sacude la ventana de acceso. El cajero mira el teclado numérico, no
+  el diálogo: el movimiento se percibe de reojo y un texto en rojo no.
+
+### Qué no se anima, a propósito
+
+- **El total.** Una cifra que cuenta hacia arriba es una cifra que no se puede leer.
+- **El botón de cobrar y el campo de escaneo.** Son los dos puntos fijos de la pantalla.
+- **El cambio de pantalla** (F2, F7, Esc). Es navegación de teclado y tiene que ser inmediata.
+- **El hover de los botones.** La hoja de estilos de Qt no anima, y resolverlo con pintado
+  propio en cada botón no compensa.
+- **Nada al arrancar ni al guardar la configuración.** El menú plegado aparece plegado.
+- **El cierre de los diálogos.** Quien cierra un diálogo quiere volver a la caja, y el foco no
+  espera a un fundido.
+- **La consulta que se limpia sola.** El aviso de espera ocupa el mismo sitio que el precio:
+  fundir uno mientras aparece el otro empujaría el precio hacia arriba al irse.
+- **La tarjeta de subtotal.** Lleva sombra, y un widget de Qt admite un solo efecto: no se le
+  puede poner un fundido, y animar su altura aplasta el contenido en vez de revelarlo. Además
+  aparece con el primer escaneo, que ya trae el destello y el aviso: un tercer movimiento en
+  el mismo instante es ruido.

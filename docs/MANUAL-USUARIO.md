@@ -194,6 +194,7 @@ Pulse **F9**, o la rueda dentada ⚙ de la esquina superior derecha.
 | **Avisar con un sonido al escanear** | El pitido que confirma que el producto entró sin mirar la pantalla. Se puede apagar si molesta. |
 | **Pedir confirmación antes de cobrar** | Si se apaga, **F12** cierra la venta de inmediato. Más rápido, pero sin red de seguridad. |
 | **Mostrar la barra de atajos abajo** | La franja con las teclas al pie de la ventana. |
+| **Animar los cambios en pantalla** | La línea del carrito que acaba de cambiar destella en verde, los avisos, el precio consultado y las ventanas aparecen con un fundido, el menú se recoge en vez de saltar y un PIN equivocado sacude la ventana de acceso. Apáguelo si el equipo va lento o si prefiere que todo sea inmediato. |
 
 El botón **Abrir carpeta de datos** lleva directo a donde están la base de datos, las copias
 de seguridad y los registros. Es lo primero que le van a pedir si llama a soporte.

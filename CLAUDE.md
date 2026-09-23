@@ -88,6 +88,10 @@ De la reunión del 2026-09-13:
   **Dos colores y ninguno más**: **rojo** (el del logotipo) para dónde estoy, dónde está el
   foco y lo que cancela o borra, siempre en lavado o filete; **verde** para lo que salió bien
   y lo que confirma, que es el único que va relleno.
+- **Movimiento breve y con propósito** desde el 2026-09-23 (D-029): destello verde en la línea
+  del carrito que cambia, fundido del aviso de escaneo y plegado animado de la barra lateral.
+  Además: fundido del precio en la consulta y de los diálogos, y sacudida del PIN incorrecto.
+  Se apaga desde F9. Las reglas están en la sección «Movimiento» de `docs/DESIGN.md`.
 - El programa se rotula con el nombre del negocio, **Punto y Fama · Botillería y market**, y
   el ejecutable es `PuntoYFamaCaja.exe`. El nombre de la carpeta de datos (`TiendaPOS`) no
   cambia con ellos: ahí está la base de datos de la tienda.
@@ -191,9 +195,10 @@ src/tienda_pos/
     estilos.py            paletas, radios, sombras y la hoja de estilos entera
     barra_lateral.py      la navegación
     iconos.py             los iconos, dibujados con QPainter
+    movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    258 pruebas
+tests/                    284 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -228,7 +233,7 @@ pip install -r requirements-dev.txt   # requirements.txt son solo las de ejecuci
 
 python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
-pytest                                # pruebas (258, unos 35 s)
+pytest                                # pruebas (284, unos 40 s)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import NOMBRE_COMERCIAL
+from . import movimiento
 
 
 def mostrar_error(padre: QWidget | None, mensaje: str, titulo: str = "No se pudo continuar") -> None:
@@ -29,6 +30,7 @@ def mostrar_error(padre: QWidget | None, mensaje: str, titulo: str = "No se pudo
     caja.setText(mensaje)
     caja.setStandardButtons(QMessageBox.StandardButton.Ok)
     caja.button(QMessageBox.StandardButton.Ok).setText("Entendido")
+    movimiento.aparecer_al_abrir(caja)
     caja.exec()
 
 
@@ -39,6 +41,7 @@ def mostrar_info(padre: QWidget | None, mensaje: str, titulo: str = NOMBRE_COMER
     caja.setText(mensaje)
     caja.setStandardButtons(QMessageBox.StandardButton.Ok)
     caja.button(QMessageBox.StandardButton.Ok).setText("Aceptar")
+    movimiento.aparecer_al_abrir(caja)
     caja.exec()
 
 
@@ -52,6 +55,7 @@ def confirmar(padre: QWidget | None, titulo: str, mensaje: str, texto_si: str = 
     caja.button(QMessageBox.StandardButton.Yes).setText(texto_si)
     caja.button(QMessageBox.StandardButton.No).setText("Cancelar")
     caja.setDefaultButton(QMessageBox.StandardButton.No)
+    movimiento.aparecer_al_abrir(caja)
     return caja.exec() == QMessageBox.StandardButton.Yes
 
 
@@ -68,6 +72,7 @@ class DialogoCodigoNoEncontrado(QDialog):
 
     def __init__(self, codigo: str, padre: QWidget | None = None) -> None:
         super().__init__(padre)
+        movimiento.aparecer_al_abrir(self)
         self.setWindowTitle("Producto no encontrado")
         self.setMinimumWidth(460)
         self.buscar_por_nombre = False
@@ -135,6 +140,7 @@ class DialogoTexto(QDialog):
         from PySide6.QtWidgets import QLineEdit
 
         super().__init__(padre)
+        movimiento.aparecer_al_abrir(self)
         self.setWindowTitle(titulo)
         self.setMinimumWidth(380)
 
@@ -197,6 +203,7 @@ class DialogoDescuento(QDialog):
         from PySide6.QtWidgets import QLineEdit, QRadioButton
 
         super().__init__(padre)
+        movimiento.aparecer_al_abrir(self)
         self.setWindowTitle("Descuento")
         self.setMinimumWidth(430)
         self._subtotal = subtotal_clp

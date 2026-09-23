@@ -29,7 +29,7 @@ from ..red.sesion import Sesion
 from ..services import preferencias as servicio_preferencias
 from ..services.preferencias import Preferencias
 from ..utils import sonido
-from . import dialogos, estilos, iconos
+from . import dialogos, estilos, iconos, movimiento
 from .barra_lateral import BarraLateral
 from .configuracion_dialog import DialogoConfiguracion
 from .consulta_view import ConsultaView
@@ -362,6 +362,7 @@ class VentanaPrincipal(QMainWindow):
         self.preferencias = preferencias
         self.aplicar_tema(preferencias.tema)
         sonido.habilitado = preferencias.sonido
+        movimiento.habilitado = preferencias.animaciones
         self.barra_lateral.plegar(preferencias.barra_lateral_plegada)
         self.vista_venta.preferencias = preferencias
         if self.statusBar() is not None:

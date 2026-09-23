@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from ..domain.models import Producto
 from ..utils.money import formatear_clp
+from . import movimiento
 
 
 class DialogoResultados(QDialog):
@@ -28,6 +29,7 @@ class DialogoResultados(QDialog):
 
     def __init__(self, resultados: list[Producto], padre: QWidget | None = None) -> None:
         super().__init__(padre)
+        movimiento.aparecer_al_abrir(self)
         self.setWindowTitle("Elegir producto")
         self.resize(620, 420)
         self._resultados = resultados

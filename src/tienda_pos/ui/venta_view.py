@@ -11,7 +11,7 @@ import uuid
 
 
 from PySide6.QtCore import QEvent, Qt, QTimer, Signal
-from PySide6.QtGui import QFont, QFontMetrics, QGuiApplication, QKeyEvent
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QGuiApplication, QKeyEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
@@ -21,6 +21,9 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QStackedWidget,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -36,7 +39,7 @@ from ..services.venta import Carrito
 from ..utils import sonido
 from ..utils.money import formatear_clp
 from ..utils.scanner import DetectorLector
-from . import dialogos, estilos, iconos, tablas
+from . import dialogos, estilos, iconos, movimiento, tablas
 
 # Cuánto tiempo permanece visible un mensaje de éxito o de error antes de desvanecerse.
 _MENSAJE_MS = 5000
@@ -79,6 +82,45 @@ _MENOS = "−"
 _MAS = "+"
 
 
+class _DelegadoDestello(QStyledItemDelegate):
+    """Pinta la línea que acaba de cambiar con un lavado verde que se apaga.
+
+    El carrito ya selecciona la línea tocada, pero la selección es un gris casi igual al
+    papel y además se queda: no distingue «acaba de pasar» de «está ahí desde antes». El
+    destello dura 700 ms, en el verde de «salió bien», y responde a lo que el cajero busca al
+    oír el pitido: ¿cuál de todas se movió?
+
+    Se pinta con un delegado y no cambiando el fondo de las celdas porque la selección de la
+    hoja de estilos taparía cualquier fondo. Mientras dura el destello, la fila se dibuja
+    como no seleccionada sobre el color mezclado; al terminar vuelve a su gris.
+    """
+
+    def __init__(self, vista: "VentaView") -> None:
+        super().__init__(vista.tabla)
+        self._vista = vista
+
+    def paint(self, pintor, opcion, indice) -> None:  # noqa: D401 - lo nombra Qt
+        intensidad = self._vista.intensidad_destello(indice.row())
+        if intensidad <= 0:
+            super().paint(pintor, opcion, indice)
+            return
+
+        paleta = estilos.actual
+        seleccionada = bool(opcion.state & QStyle.StateFlag.State_Selected)
+        base = QColor(paleta.seleccion if seleccionada else paleta.superficie)
+        verde = QColor(paleta.exito_suave)
+        mezcla = QColor(
+            round(base.red() + (verde.red() - base.red()) * intensidad),
+            round(base.green() + (verde.green() - base.green()) * intensidad),
+            round(base.blue() + (verde.blue() - base.blue()) * intensidad),
+        )
+        pintor.fillRect(opcion.rect, mezcla)
+
+        sin_seleccion = QStyleOptionViewItem(opcion)
+        sin_seleccion.state &= ~QStyle.StateFlag.State_Selected
+        super().paint(pintor, sin_seleccion, indice)
+
+
 class VentaView(QWidget):
     """Pantalla principal del punto de venta."""
 
@@ -104,6 +146,16 @@ class VentaView(QWidget):
         # Un único temporizador para el aviso, reutilizado en cada mensaje. Ver `_avisar`.
         self._temporizador_mensaje = QTimer(self)
         self._temporizador_mensaje.setSingleShot(True)
+        #: Línea que destella y cuánto le queda, de 1 a 0. Ver `_DelegadoDestello`.
+        self._fila_destello = -1
+        self._intensidad_destello = 0.0
+        self._anim_destello = movimiento.animacion(self, movimiento.DESTELLO_MS)
+        # Se sostiene un instante en el verde lleno y después se apaga desacelerando: si
+        # empezara a apagarse de inmediato, en una fila corta casi no se vería.
+        self._anim_destello.setKeyValueAt(0.0, 1.0)
+        self._anim_destello.setKeyValueAt(0.2, 1.0)
+        self._anim_destello.setKeyValueAt(1.0, 0.0)
+        self._anim_destello.valueChanged.connect(self._pintar_destello)
 
         self._construir()
         self.repintar()
@@ -256,6 +308,7 @@ class VentaView(QWidget):
         # La columna de descuentos solo aparece cuando hay alguno: una columna vacía en cada
         # venta normal sería ruido permanente por un caso ocasional.
         self.tabla.setColumnHidden(COL_DESCUENTO, True)
+        self.tabla.setItemDelegate(_DelegadoDestello(self))
         return self.tabla
 
     def _panel_totales(self) -> QWidget:
@@ -302,7 +355,10 @@ class VentaView(QWidget):
         self.mensaje.setObjectName("mensajeExito")
         self.mensaje.setWordWrap(True)
         self.mensaje.hide()
-        self._temporizador_mensaje.timeout.connect(self.mensaje.hide)
+        # Entra con un fundido corto y se va con otro. Si llega un aviso con el anterior aún
+        # a la vista, no vuelve a entrar: parpadea, que es lo que dice «esto es nuevo».
+        self._fundido_mensaje = movimiento.Fundido(self.mensaje)
+        self._temporizador_mensaje.timeout.connect(self._fundido_mensaje.ocultar)
         return self.mensaje
 
     def _tarjeta_detalle(self) -> QWidget:
@@ -508,6 +564,7 @@ class VentaView(QWidget):
 
         self._refrescar()
         self._seleccionar(producto.codigo_barras)
+        self._destellar(producto.codigo_barras)
         self._avisar(
             f"{producto.nombre} · {formatear_clp(producto.precio_clp)}", exito=True
         )
@@ -633,6 +690,7 @@ class VentaView(QWidget):
 
         self._refrescar()
         self._seleccionar(codigo)
+        self._destellar(codigo)
         self._avisar(f"{linea.nombre}: {linea.cantidad} unidades.", exito=True)
         self.enfocar_escaneo()
 
@@ -818,6 +876,11 @@ class VentaView(QWidget):
 
     def _refrescar(self) -> None:
         """Vuelve a dibujar la tabla y los totales a partir del carrito."""
+        # Un destello en curso apunta a un número de fila, que tras redibujar puede ser de
+        # otro producto. Se corta; quien acaba de agregar algo lo vuelve a encender.
+        self._anim_destello.stop()
+        self._intensidad_destello = 0.0
+        self._fila_destello = -1
         self.tabla.setRowCount(len(self._carrito.lineas))
         hay_descuento_de_linea = any(linea.tiene_descuento for linea in self._carrito.lineas)
         # La columna de descuentos solo aparece cuando hay alguno: una columna vacía en cada
@@ -992,6 +1055,42 @@ class VentaView(QWidget):
                 self.tabla.scrollToItem(self.tabla.item(fila, COL_CODIGO))
                 return
 
+    def _destellar(self, codigo_barras: str) -> None:
+        """Hace destellar la línea de ese producto. Solo al agregar o sumar unidades: quitar
+        no destella, porque el verde dice «entró» y ahí no entró nada."""
+        if not movimiento.activo():
+            return
+        self._pintar_destello(0.0)
+        for fila in range(self.tabla.rowCount()):
+            item = self.tabla.item(fila, COL_CODIGO)
+            if item is not None and item.text() == codigo_barras:
+                self._fila_destello = fila
+                self._anim_destello.stop()
+                self._anim_destello.start()
+                # La animación da su primer valor en el siguiente fotograma; el verde tiene
+                # que estar ya en el repintado que sigue al escaneo, no 16 ms después.
+                self._pintar_destello(1.0)
+                return
+
+    def intensidad_destello(self, fila: int) -> float:
+        """Cuánto verde lleva la fila, de 0 a 1. Lo consulta el delegado al pintar."""
+        return self._intensidad_destello if fila == self._fila_destello else 0.0
+
+    def _pintar_destello(self, valor) -> None:
+        self._intensidad_destello = float(valor)
+        if self._intensidad_destello <= 0:
+            fila, self._fila_destello = self._fila_destello, -1
+        else:
+            fila = self._fila_destello
+        if 0 <= fila < self.tabla.rowCount():
+            # Solo se repinta la franja de esa fila, no la tabla entera: el destello corre
+            # a la vez que el siguiente escaneo, y ahí cada milisegundo cuenta (D-022).
+            modelo = self.tabla.model()
+            rect = self.tabla.visualRect(modelo.index(fila, 0))
+            rect.setLeft(0)
+            rect.setRight(self.tabla.viewport().width())
+            self.tabla.viewport().update(rect)
+
     def _avisar(self, texto: str, exito: bool) -> None:
         """Muestra un mensaje breve en la columna de totales. Ver `_aviso`."""
         sonido.exito() if exito else sonido.error()
@@ -1000,7 +1099,7 @@ class VentaView(QWidget):
         # Qt no reevalúa la hoja de estilos al cambiar el objectName; hay que forzarlo.
         self.mensaje.style().unpolish(self.mensaje)
         self.mensaje.style().polish(self.mensaje)
-        self.mensaje.show()
+        self._fundido_mensaje.mostrar()
         # La cuenta atrás se reinicia, no se acumula. Antes cada aviso programaba un
         # temporizador nuevo sin cancelar el anterior, así que escanear un producto a los
         # 4,8 s del anterior hacía que el temporizador viejo escondiera el mensaje nuevo a

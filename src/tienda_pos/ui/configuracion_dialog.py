@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
 from .. import config
 from ..services.preferencias import TEMA_CLARO, TEMA_OSCURO, Preferencias
 from ..services import preferencias as servicio_preferencias
-from . import dialogos
+from . import dialogos, movimiento
 from .widgets.desplegable import Desplegable
 
 _logger = logging.getLogger(__name__)
@@ -54,6 +54,7 @@ class DialogoConfiguracion(QDialog):
         al_previsualizar_tema: Callable[[str], None] | None = None,
     ) -> None:
         super().__init__(padre)
+        movimiento.aparecer_al_abrir(self)
         self.setWindowTitle("Configuración")
         self.setMinimumWidth(460)
 
@@ -102,6 +103,15 @@ class DialogoConfiguracion(QDialog):
         self.casilla_atajos = QCheckBox("Mostrar la barra de atajos abajo")
         self.casilla_atajos.setChecked(preferencias.mostrar_atajos)
         columna.addWidget(self.casilla_atajos)
+
+        self.casilla_animaciones = QCheckBox("Animar los cambios en pantalla")
+        self.casilla_animaciones.setChecked(preferencias.animaciones)
+        self.casilla_animaciones.setToolTip(
+            "Fundidos cortos en avisos y ventanas, un destello en la línea que cambia y el "
+            "menú que se recoge. Apáguelo si el equipo va lento o si prefiere que todo sea "
+            "inmediato."
+        )
+        columna.addWidget(self.casilla_animaciones)
 
         columna.addWidget(self._tarjeta_sistema())
 
@@ -191,6 +201,7 @@ class DialogoConfiguracion(QDialog):
             sonido=self.casilla_sonido.isChecked(),
             confirmar_cobro=self.casilla_confirmar.isChecked(),
             mostrar_atajos=self.casilla_atajos.isChecked(),
+            animaciones=self.casilla_animaciones.isChecked(),
             # El plegado no se elige aquí, pero se arrastra: si no, guardar cualquier ajuste
             # desplegaría la barra por su cuenta.
             barra_lateral_plegada=self._originales.barra_lateral_plegada,

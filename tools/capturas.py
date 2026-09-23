@@ -33,7 +33,7 @@ from tienda_pos.db.seed import codigo_demo  # noqa: E402
 from tienda_pos.domain.models import Rol, Usuario  # noqa: E402
 from tienda_pos.red.sesion import SesionLocal  # noqa: E402
 from tienda_pos.services import preferencias as servicio_preferencias  # noqa: E402
-from tienda_pos.ui import estilos  # noqa: E402
+from tienda_pos.ui import estilos, movimiento  # noqa: E402
 from tienda_pos.ui.login_dialog import DialogoLogin  # noqa: E402
 from tienda_pos.ui.main_window import VentanaPrincipal  # noqa: E402
 
@@ -68,6 +68,9 @@ def generar(destino: Path) -> list[Path]:
     _silenciar_dialogos()
 
     app = QApplication.instance() or QApplication(sys.argv)
+    # Las capturas enseñan cada pantalla en reposo. Con el movimiento encendido saldrían a
+    # medio fundido: el aviso transparente y la última línea del carrito todavía en verde.
+    movimiento.suprimir()
     estilos.aplicar(app, servicio_preferencias.TEMA_CLARO)
 
     conexion = abrir_base_datos(":memory:", con_datos_demo=True)

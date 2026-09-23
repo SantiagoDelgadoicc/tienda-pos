@@ -7,8 +7,13 @@ en todo momento dónde está uno y qué más hay, que es lo que hace que un prog
 sistema y no una sucesión de ventanas.
 
 Se puede plegar a una tira de iconos (Ctrl+B). En un monitor pequeño, o en una caja donde lo
-único que importa es el carrito, esos 244 píxeles son sitio de tabla. El estado se guarda en
+único que importa es el carrito, esos 232 píxeles son sitio de tabla. El estado se guarda en
 las preferencias del equipo: plegarla una vez debe bastar.
+
+El plegado se anima, en 180 ms (D-029). Los iconos no se mueven en todo el trayecto: el
+margen del botón desplegado y el centrado del plegado los dejan en la misma columna, así que
+lo único que se desplaza es el borde derecho, y el ojo entiende que el menú se recogió hacia
+la izquierda en vez de ver una pantalla que salta.
 
 Las teclas de función siguen funcionando exactamente igual, plegada o desplegada: la barra es
 otra forma de llegar al mismo sitio, no la única.
@@ -28,7 +33,7 @@ from PySide6.QtWidgets import (
 
 from ..config import NOMBRE_COMERCIAL, RUBRO_COMERCIAL
 from ..domain.models import Usuario
-from . import estilos, iconos
+from . import estilos, iconos, movimiento
 
 #: Cada entrada: clave, rótulo, icono y atajo. El orden es el de la barra.
 _PRINCIPALES = (
@@ -50,6 +55,13 @@ _TAMANO_LOGO = 34
 _MARGEN = 14
 #: Ancho útil de la barra plegada: lo que queda para centrar un icono dentro.
 _ANCHO_PLEGADO = estilos.ANCHO_BARRA_LATERAL_PLEGADA - 2 * _MARGEN
+
+
+def _conservar_sitio(widget: QWidget) -> None:
+    """Hace que el widget siga ocupando su sitio en el layout aunque esté oculto."""
+    politica = widget.sizePolicy()
+    politica.setRetainSizeWhenHidden(True)
+    widget.setSizePolicy(politica)
 
 
 class _BotonNav(QPushButton):
@@ -134,6 +146,10 @@ class BarraLateral(QFrame):
         self._construir()
         self.setFixedWidth(estilos.ANCHO_BARRA_LATERAL)
 
+        self._anim_ancho = movimiento.animacion(self, movimiento.BARRA_MS)
+        self._anim_ancho.valueChanged.connect(self.setFixedWidth)
+        self._anim_ancho.finished.connect(self._terminar_plegado)
+
     # ------------------------------------------------------------------ construcción
 
     def _construir(self) -> None:
@@ -208,6 +224,9 @@ class BarraLateral(QFrame):
 
         self._textos_marca = QWidget()
         self._textos_marca.setObjectName("transparente")
+        # El nombre del negocio ocupa dos renglones y el logotipo menos: sin esto, plegar
+        # encogería la cabecera y subiría todo el menú unos píxeles.
+        _conservar_sitio(self._textos_marca)
         textos = QVBoxLayout(self._textos_marca)
         textos.setContentsMargins(0, 0, 0, 0)
         textos.setSpacing(1)
@@ -225,6 +244,9 @@ class BarraLateral(QFrame):
         etiqueta = QLabel(texto)
         etiqueta.setObjectName("navSeccion")
         etiqueta.setContentsMargins(12, 0, 0, 0)
+        # Plegada, el rótulo se esconde pero conserva su alto. Así los iconos quedan a la
+        # misma altura en los dos estados y al plegar solo se mueve el borde de la barra.
+        _conservar_sitio(etiqueta)
         self._secciones.append(etiqueta)
         return etiqueta
 
@@ -268,20 +290,47 @@ class BarraLateral(QFrame):
         return self._plegada
 
     def alternar_plegado(self) -> None:
-        self.plegar(not self._plegada)
+        self.plegar(not self._plegada, animar=True)
         self.plegado_cambiado.emit(self._plegada)
 
-    def plegar(self, plegada: bool) -> None:
+    def plegar(self, plegada: bool, animar: bool = False) -> None:
         """Pasa de columna a tira de iconos, o al revés.
 
-        No se anima. Una transición de 200 ms es agradable en una web y un estorbo en una
-        caja: el cajero pliega la barra para ver más carrito, no para ver cómo se pliega.
+        Solo se anima cuando lo pide el cajero (Ctrl+B o el botón). Al arrancar y al guardar
+        la configuración se aplica de golpe: nadie quiere ver el menú recogerse cada vez que
+        abre el programa.
+
+        El estado cambia en el acto; lo que tarda es el ancho. Al plegar, los textos se van
+        antes de que la barra empiece a estrecharse, porque apretados en una columna que
+        encoge se verían partidos a la mitad. Al desplegar vuelven cuando ya hay sitio. Un
+        Ctrl+B a medio camino da la vuelta desde donde esté, sin esperar.
         """
         self._plegada = plegada
-        self.setFixedWidth(
-            estilos.ANCHO_BARRA_LATERAL_PLEGADA if plegada else estilos.ANCHO_BARRA_LATERAL
-        )
+        destino = estilos.ANCHO_BARRA_LATERAL_PLEGADA if plegada else estilos.ANCHO_BARRA_LATERAL
+        self._anim_ancho.stop()
 
+        # El ancho que cuenta es el mínimo, que es el que fija `setFixedWidth`: `width()` aún
+        # no está al día si la ventana no se ha mostrado.
+        actual = self.minimumWidth()
+        if not (animar and movimiento.activo()) or actual == destino:
+            self.setFixedWidth(destino)
+            self._aplicar_contenido(plegada)
+            return
+
+        # En los dos sentidos la barra viaja dibujada como tira: iconos centrados y sin
+        # textos. Al desplegar, lo desplegado aparece entero al final, no a trozos.
+        self._aplicar_contenido(True)
+        # Desaceleración en los dos sentidos: lo pidió el cajero, así que tiene que empezar a
+        # moverse en el acto. Una curva que arranca despacio se siente como una tecla lenta.
+        self._anim_ancho.setStartValue(actual)
+        self._anim_ancho.setEndValue(destino)
+        self._anim_ancho.start()
+
+    def _terminar_plegado(self) -> None:
+        self._aplicar_contenido(self._plegada)
+
+    def _aplicar_contenido(self, plegada: bool) -> None:
+        """Deja textos, márgenes e iconos como corresponden a la barra plegada o no."""
         self._textos_marca.setVisible(not plegada)
         self._logotipo.setFixedWidth(_ANCHO_PLEGADO if plegada else _TAMANO_LOGO)
 

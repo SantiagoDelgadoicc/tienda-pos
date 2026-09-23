@@ -34,7 +34,7 @@ python main.py
 pytest
 ```
 
-258 pruebas, unos 35 segundos. No necesitan pantalla: las de interfaz usan la plataforma
+284 pruebas, unos 40 segundos. No necesitan pantalla: las de interfaz usan la plataforma
 `offscreen` de Qt, que `tests/conftest.py` activa automáticamente.
 
 ```bash
@@ -198,6 +198,13 @@ fuentes del sistema y todo el texto sale como cajas vacías.
   mitad del alto del control, dibuja las esquinas **rectas**. Las cápsulas usan los tres
   radios de `estilos.py` (`RADIO_PILDORA`, `_ALTA`, `_BAJA`), todos por debajo de la mitad
   del alto del control al que se aplican. Ver D-028.
+- **Las animaciones pasan por `ui/movimiento.py`** y siguen la sección «Movimiento» de
+  `docs/DESIGN.md`. El estado cambia al instante y solo el dibujo se anima, así que la lógica
+  no espera a nadie. Dos trampas de Qt: un widget admite **un solo** `QGraphicsEffect` (las
+  tarjetas ya gastan el suyo en la sombra, así que no se les puede poner un fundido), y un
+  efecto de opacidad quita el ClearType al texto, por eso `Fundido` lo enciende solo mientras
+  dura la animación. Las pruebas corren con `movimiento.suprimir()`; las que miran el
+  movimiento lo encienden con la fixture `con_movimiento`. Ver D-029.
 - **Un aviso que se oculta solo usa un temporizador propio y reiniciable**, nunca
   `QTimer.singleShot`. Con `singleShot`, cada aviso deja vivo el temporizador del anterior y
   el mensaje nuevo se esconde cuando le toca al viejo. Ver `venta_view._avisar`.

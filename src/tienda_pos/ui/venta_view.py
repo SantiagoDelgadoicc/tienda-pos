@@ -11,7 +11,7 @@ import uuid
 
 
 from PySide6.QtCore import QEvent, Qt, QTimer, Signal
-from PySide6.QtGui import QGuiApplication, QKeyEvent
+from PySide6.QtGui import QFont, QFontMetrics, QGuiApplication, QKeyEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
@@ -60,6 +60,19 @@ COL_MAS = 6
 COL_DESCUENTO = 7
 COL_SUBTOTAL = 8
 
+#: Tamaños que puede tomar el total, de mayor a menor. Se usa el primero que quepa entero.
+#: Medidos, no supuestos: a 62 px cabe un total de seis cifras —$480.000— en los 256 px útiles
+#: de la tarjeta de cobro, y a 66 px ya no. Los de abajo son la red para una venta de siete
+#: cifras, que se saldría a cualquier tamaño por encima de 52.
+_TAMANOS_TOTAL = (62, 54, 48, 42)
+
+#: Ancho útil dentro de la tarjeta de cobro: su ancho menos los dos márgenes laterales.
+_ANCHO_TOTAL = 300 - 22 * 2
+
+#: Proporción del interletrado respecto al tamaño. Cuanto más grande es la cifra, más se
+#: aprieta, que es lo que pide la escala tipográfica de `docs/DESIGN.md`.
+_INTERLETRADO_TOTAL = -0.035
+
 #: Símbolos de las celdas de acción.
 _COPIAR = "⧉"
 _MENOS = "−"
@@ -86,6 +99,8 @@ class VentaView(QWidget):
         self._auto = QTimer(self)
         self._auto.setSingleShot(True)
         self._auto.timeout.connect(self._confirmar_automatico)
+        #: Último tamaño aplicado al total. Evita repintar la etiqueta en cada escaneo.
+        self._tamano_total: int | None = None
         # Un único temporizador para el aviso, reutilizado en cada mensaje. Ver `_avisar`.
         self._temporizador_mensaje = QTimer(self)
         self._temporizador_mensaje.setSingleShot(True)
@@ -435,6 +450,9 @@ class VentaView(QWidget):
         self._icono_vacio.setPixmap(
             iconos.pixmap("escanear", 44, estilos.actual.texto_apagado)
         )
+        # El estilo del total lleva su propio color, así que hay que rehacerlo: si no, el
+        # verde del tema anterior se quedaría puesto.
+        self._tamano_total = None
         self._refrescar()
 
     def enfocar_escaneo(self) -> None:
@@ -849,6 +867,7 @@ class VentaView(QWidget):
         )
         self.valor_subtotal.setText(formatear_clp(self._carrito.subtotal_clp))
         self.valor_total.setText(formatear_clp(self._carrito.total_clp))
+        self._ajustar_total()
 
         descuento = self._carrito.descuento_clp
         self.fila_descuento.setVisible(descuento > 0)
@@ -862,6 +881,45 @@ class VentaView(QWidget):
         self.boton_quitar.setEnabled(hay_productos)
         self.boton_descuento.setEnabled(hay_productos)
         self.boton_vaciar.setEnabled(hay_productos)
+
+    def _ajustar_total(self) -> None:
+        """Pinta el total al mayor tamaño que quepa dentro de la tarjeta.
+
+        Es la cifra que el cajero lee de lejos y la que el cliente busca en la pantalla, así
+        que se le da todo el tamaño que admite la tarjeta. El tope son 62 px, que es lo que
+        aguanta un total de seis cifras; una venta de siete baja un escalón en lugar de
+        salirse del borde, que es justo lo que no puede pasar delante de un cliente.
+
+        El tamaño se aplica sobre la etiqueta y no desde la hoja de estilos porque depende
+        del texto, no del tema. Solo se repinta cuando cambia de escalón: una venta corriente
+        no lo toca en ningún escaneo.
+        """
+        texto = self.valor_total.text()
+        # La fuente de medir se arma entera aquí, con el peso y el interletrado que se van a
+        # aplicar. Partir de la que tenga puesta la etiqueta haría que la medida dependiera
+        # del tamaño anterior, y la elección saldría distinta según el orden de los totales.
+        fuente = QFont(self.valor_total.font())
+        fuente.setWeight(QFont.Weight.Bold)
+
+        elegido = _TAMANOS_TOTAL[-1]
+        for tamano in _TAMANOS_TOTAL:
+            fuente.setPixelSize(tamano)
+            fuente.setLetterSpacing(
+                QFont.SpacingType.AbsoluteSpacing, tamano * _INTERLETRADO_TOTAL
+            )
+            if QFontMetrics(fuente).horizontalAdvance(texto) <= _ANCHO_TOTAL:
+                elegido = tamano
+                break
+
+        if elegido == self._tamano_total:
+            return
+        self._tamano_total = elegido
+        self.valor_total.setStyleSheet(
+            f"font-size: {elegido}px;"
+            f" font-weight: 700;"
+            f" letter-spacing: {elegido * _INTERLETRADO_TOTAL:.2f}px;"
+            f" color: {estilos.actual.exito};"
+        )
 
     def _titulo_descuento(self, hay_descuento_de_linea: bool) -> str:
         if not hay_descuento_de_linea:

@@ -119,6 +119,22 @@ class TestDialogoDeConfiguracion:
         assert servicio.cargar().tema == servicio.TEMA_OSCURO
 
 
+class TestTotalTrasCambiarDeTema:
+    def test_el_total_recupera_el_verde_del_tema(self, ventana) -> None:
+        # El total lleva su tamaño y su color en un estilo propio de la etiqueta, no en la
+        # hoja de la aplicación, así que un cambio de tema no lo alcanza solo.
+        from tienda_pos.db.seed import codigo_demo
+
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(codigo_demo(0))
+
+        ventana.aplicar_tema(servicio.TEMA_OSCURO)
+        assert estilos.OSCURO.exito.lower() in vista.valor_total.styleSheet().lower()
+
+        ventana.aplicar_tema(servicio.TEMA_CLARO)
+        assert estilos.CLARO.exito.lower() in vista.valor_total.styleSheet().lower()
+
+
 class TestBarraLateral:
     """Plegarla es un ajuste del equipo, así que tiene que sobrevivir al cierre."""
 

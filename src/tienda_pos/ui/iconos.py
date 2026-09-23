@@ -23,7 +23,7 @@ _GROSOR = 1.7
 
 #: El rojo del logotipo. Vive aquí y no en la paleta porque la marca no cambia con el
 #: tema: el círculo es rojo tanto de día como de noche.
-ROJO_MARCA = "#BE1E2D"
+ROJO_MARCA = "#D10117"
 
 #: Centinela para distinguir "todavía no he mirado" de "miré y no hay archivo".
 _SIN_BUSCAR = object()

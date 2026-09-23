@@ -104,15 +104,25 @@ CLARO = Paleta(
     # bien en una web y se perdía en un mostrador con luz de tubo.
     texto_suave="#57534E",
     texto_apagado="#8C847E",
-    acento="#BE1E2D",
-    acento_fuerte="#9E1824",
-    acento_suave="#FCECEE",
+    # El rojo del logotipo del negocio. Hasta el 2026-09-23 era #BE1E2D, que salió de la guinda
+    # que habíamos dibujado nosotros y era una aproximación; el de la marca, medido sobre el
+    # archivo que entregó el cliente, es #E30119.
+    #
+    # No se usa ese exacto: sobre el lienzo de piedra da 4,27:1, por debajo del 4,5 que exige
+    # AA, y el rojo de este sistema es casi siempre texto o filete —justo donde el contraste
+    # importa— sobre papel claro o sobre su propio lavado. Este tono tiene el **mismo matiz
+    # (353,6°) y la misma saturación** que el logotipo y solo 3,5 puntos menos de luminosidad,
+    # lo que sube el contraste a 4,91:1. Al lado del logotipo no se distinguen; en un mostrador
+    # con luz de tubo, sí se distingue leerlo de no leerlo.
+    acento="#D10117",
+    acento_fuerte="#A70112",
+    acento_suave="#FDECEE",
     exito="#15803D",
     exito_fuerte="#126A33",
     exito_suave="#E7F5EC",
     sobre_exito="#FFFFFF",
-    error="#BE1E2D",
-    error_suave="#FCECEE",
+    error="#D10117",
+    error_suave="#FDECEE",
     seleccion="#F2EFED",
     pulsado="#EBE8E5",
     barra_desplazamiento="#CFCBC7",
@@ -134,14 +144,16 @@ OSCURO = Paleta(
     texto="#FAFAF9",
     texto_suave="#B5AFA9",
     texto_apagado="#857D77",
-    acento="#F0757F",
-    acento_fuerte="#F8A6AC",
+    # Mismo tono que el rojo de la marca (354°), aclarado hasta llegar al contraste mínimo
+    # sobre el fondo casi negro. El suave se queda como estaba: ya era de esta familia.
+    acento="#F4717E",
+    acento_fuerte="#F8A5AD",
     acento_suave="#2E1618",
     exito="#4ADE80",
     exito_fuerte="#6EE7A0",
     exito_suave="#15291D",
     sobre_exito="#062211",
-    error="#F0757F",
+    error="#F4717E",
     error_suave="#2E1618",
     seleccion="#292625",
     pulsado="#332F2D",

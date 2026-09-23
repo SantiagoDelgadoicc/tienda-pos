@@ -726,8 +726,11 @@ que evita confundir el menú con un botón de borrar:
 
 | Color | Qué dice | Cómo se aplica |
 |---|---|---|
-| **Rojo** `#BE1E2D` | dónde estoy, dónde está el foco, y lo que cancela o borra | lavado, filete o texto. **Nunca relleno** |
+| **Rojo** `#D10117` | dónde estoy, dónde está el foco, y lo que cancela o borra | lavado, filete o texto. **Nunca relleno** |
 | **Verde** `#15803D` | salió bien, y adelante | es el único que va relleno: cobrar, guardar, entrar |
+
+*Actualizado el 2026-09-23 por D-030:* el rojo era `#BE1E2D`, sacado de la guinda que habíamos
+dibujado nosotros. Ahora sale del logotipo real del cliente.
 
 *El riesgo, anotado:* un anillo rojo alrededor de un campo de texto es, en casi todo el software,
 la señal de "este dato está mal". Aquí significa "aquí va a caer el disparo de la pistola". Se
@@ -926,3 +929,69 @@ Las duraciones, las curvas y la lista de lo que **no** se anima están en la sec
 
 Nueve pruebas más; la suite pasa de 275 a 284. Ninguna de estas animaciones es un requisito
 del cliente: todo esto es decisión de Santiago (3.2).
+
+
+---
+
+## D-030 — El rojo sale del logotipo real, y no del todo
+
+**Fecha:** 2026-09-23 · **Estado:** aceptada · **Decide:** Santiago
+
+**Contexto.** D-027 fijó el rojo del sistema en `#BE1E2D` diciendo que era "el del logotipo". No
+lo era: el logotipo del cliente no lo teníamos, y ese tono salió de la guinda que habíamos
+dibujado nosotros en `assets/punto_y_fama.png`. El 2026-09-23 el cliente entregó su logotipo de
+verdad —WebP de 2000×1103 con transparencia— y el rojo medido sobre el archivo es **`#E30119`**,
+bastante más brillante. Santiago pidió igualarlos.
+
+**El problema que apareció al medirlo.** `#E30119` no llega al contraste mínimo donde este sistema
+usa el rojo. Medido contra AA (4,5:1):
+
+| Uso | `#E30119` | `#D10117` |
+|---|---|---|
+| Sobre el lienzo de piedra `#F1EFEC` | **4,27:1** ✗ | 4,91:1 ✓ |
+| Sobre su propio lavado | **4,27:1** ✗ | 4,91:1 ✓ |
+| Sobre papel blanco | 4,90:1 ✓ | 5,63:1 ✓ |
+
+No es un detalle académico. D-026 dice que el rojo va "en lavado, filete o texto, **nunca
+relleno**", así que casi siempre es texto fino o un borde de un píxel sobre fondo claro —
+exactamente el caso donde el contraste decide si se lee. Y este programa se mira en un mostrador
+con luz de tubo, no en un monitor calibrado: el mismo motivo por el que `texto_suave` ya está más
+oscuro que el gris que traía el documento de diseño.
+
+**Decisión.** El acento de la interfaz es **`#D10117`**: el **mismo matiz (353,6°) y la misma
+saturación (0,99)** que el logotipo, con **3,5 puntos menos de luminosidad**. Puestos uno al lado
+del otro no se distinguen; en contraste, la diferencia es entre pasar AA y no pasarlo.
+
+El **icono del ejecutable** (`tools/icono.py`) conserva el `#E30119` exacto: es un objeto de marca
+que se ve a 32 px en el escritorio, no texto que haya que leer, y ahí manda la fidelidad.
+
+Los dos tonos derivados se recalculan desde el nuevo acento en vez de elegirse aparte:
+`acento_fuerte` `#A70112` y `acento_suave` `#FDECEE`. En el tema oscuro, `acento` pasa de
+`#F0757F` a `#F4717E`, que es el mismo matiz de la marca aclarado hasta el contraste necesario
+sobre el fondo casi negro.
+
+**El logotipo en sí.** Va en `assets/logo.png`, y el gancho para recogerlo **ya existía**:
+`ui/iconos.py::_archivo_de_logotipo` y `tools/icono.py::_logotipo_del_cliente` buscaban ese
+archivo desde antes. Dejarlo ahí basta; no hubo que tocar código para que aparezca.
+
+Se recorta **solo el disco**, no el logotipo entero, por dos motivos medidos sobre el archivo:
+
+1. **Fuera del disco todo está pintado para fondo negro.** "y Fama" `rgb(237,236,236)`,
+   "COMERCIAL" `rgb(215,215,215)` y el lema `rgb(197,197,197)`. Sobre el lienzo de piedra son
+   invisibles. Dentro del disco, en cambio, el blanco va sobre rojo y se lee en los dos temas.
+2. **El hueco de la barra lateral mide 34 px**, y plegada es lo único que se ve. Un logotipo de
+   2:1 con el trazo entero no entra; el disco es cuadrado y sí.
+
+El nombre del negocio lo sigue poniendo la barra lateral con la tipografía del programa, que es
+lo que ya hacía. Así el conjunto se lee igual en tema claro y en oscuro sin mantener dos archivos.
+
+*Detalle del recorte:* la caja del disco arrastraba un trozo del lema —un "EL P" suelto— porque
+las letras se solapan con ella. Se descarta todo lo que queda fuera del círculo **salvo lo rojo**,
+para que el arranque del trazo que asoma por arriba sobreviva.
+
+**Consecuencias.** Enmienda D-027 en su valor, no en su regla: el rojo sigue significando lo
+mismo y aplicándose igual. La guinda que dibujábamos deja de usarse como marca, aunque
+`ui/iconos.py::marca_dibujada` se conserva como respaldo para cuando no haya archivo. Hay que regenerar el icono con `tools/icono.py` y las capturas con
+`tools/capturas.py`. Y queda escrito el criterio para la próxima vez que un color de marca choque
+con la legibilidad: **se conserva el matiz y se mueve la luminosidad**, que es lo que mantiene el
+parecido y arregla el contraste.

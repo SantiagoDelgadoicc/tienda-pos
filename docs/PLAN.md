@@ -132,6 +132,22 @@ y cobra sin tocar el ratón; y el tema elegido sigue puesto al volver a abrir el
 No confirmado por el cliente: **todo lo de esta fase**. Son decisiones de Santiago, como el
 resto del punto 3.2 de `CLAUDE.md`.
 
+### Fase 7.1 — Movimiento (2026-09-23, D-029)
+
+- [x] Sección «Movimiento» en `docs/DESIGN.md`: duraciones, curvas y qué no se anima
+- [x] Destello verde en la línea del carrito que entra o suma una unidad
+- [x] Fundido de entrada y salida del aviso de escaneo, y parpadeo al renovarse
+- [x] Plegado animado de la barra lateral, sin que los iconos cambien de altura
+- [x] Preferencia *Animar los cambios en pantalla* en F9
+- [x] Segunda tanda: sacudida del PIN incorrecto, fundido del precio en la consulta y de la
+      apertura de los diálogos
+- ~~Despliegue animado de la tarjeta de subtotal~~ *descartado:* ver D-029
+
+**Criterio de aceptación:** ninguna animación retrasa un escaneo ni el foco, todas se
+interrumpen, y con la preferencia apagada la caja se comporta exactamente como antes.
+
+También decisión de Santiago, no del cliente.
+
 ---
 
 ## Segunda etapa — tras la primera reunión con el cliente (2026-09-13)

@@ -36,6 +36,9 @@ class Preferencias:
     #: Barra lateral plegada a tira de iconos. No está en la rueda de configuración: se
     #: cambia con Ctrl+B o con su botón, y se guarda para que no haya que repetirlo.
     barra_lateral_plegada: bool = False
+    #: Animaciones cortas: el aviso de escaneo, la línea que cambia y el plegado del menú.
+    #: Apagadas, todo aparece y desaparece de golpe, como antes de D-029.
+    animaciones: bool = True
 
     def normalizar(self) -> "Preferencias":
         """Corrige valores imposibles en lugar de fallar.
@@ -49,6 +52,7 @@ class Preferencias:
         self.confirmar_cobro = bool(self.confirmar_cobro)
         self.mostrar_atajos = bool(self.mostrar_atajos)
         self.barra_lateral_plegada = bool(self.barra_lateral_plegada)
+        self.animaciones = bool(self.animaciones)
         return self
 
 

@@ -23,6 +23,7 @@ from ..config import NOMBRE_COMERCIAL, PIN_LONGITUD_MAX
 from ..domain.errors import ErrorDominio
 from ..domain.models import Rol, Usuario
 from ..red.sesion import Sesion
+from . import movimiento
 from .widgets.desplegable import Desplegable
 
 
@@ -49,6 +50,7 @@ class DialogoLogin(QDialog):
 
         self._construir(mensaje)
         self._cargar_usuarios()
+        movimiento.aparecer_al_abrir(self)
 
     def _construir(self, mensaje: str) -> None:
         columna = QVBoxLayout(self)
@@ -124,6 +126,7 @@ class DialogoLogin(QDialog):
             self._mostrar_error(str(error))
             self.campo_pin.clear()
             self.campo_pin.setFocus()
+            movimiento.sacudir(self)
             return
 
         if self._solo_admin and not usuario.es_admin:

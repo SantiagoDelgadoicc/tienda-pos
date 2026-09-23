@@ -855,3 +855,74 @@ El fallo del radio estaba desde D-026 y el del temporizador desde la fase 2, o s
 versión de la pantalla de venta. Ninguno lo habría detectado una prueba: el primero es estética y el
 segundo depende de la cadencia con la que se escanee. Los dos aparecieron mirando la pantalla con
 calma, que es el argumento para seguir generando capturas con `tools/capturas.py`.
+
+
+---
+
+## D-029 — Movimiento breve y con propósito
+
+**Fecha:** 2026-09-23 · **Estado:** aceptada · **Decide:** Santiago
+
+**Contexto.** Santiago pidió pulir el diseño con animaciones: cosas que aparecen y desaparecen, y
+una barra lateral que no se pliegue de golpe. Esto **revierte una decisión escrita**: el
+docstring de `BarraLateral.plegar` decía *"No se anima. Una transición de 200 ms es agradable
+en una web y un estorbo en una caja"*. El argumento era bueno y sigue siéndolo a medias: una
+animación que haya que esperar sí es un estorbo. Lo que no lo es es una que acompaña un cambio
+que ya ocurrió.
+
+**Decisión.** Se anima, con tres reglas que resuelven la objeción de antes:
+
+1. **El estado cambia al instante; solo el dibujo tarda.** `esta_plegada`, la visibilidad del
+   aviso y el contenido del carrito son definitivos en el momento de la acción.
+2. **Todo se interrumpe.** Un Ctrl+B a medio plegado da la vuelta desde donde esté; un escaneo
+   durante el fundido de salida del aviso lo cancela.
+3. **Se puede apagar** desde F9 (*Animar los cambios en pantalla*, encendida de fábrica). Es
+   una preferencia más en `preferencias.json` (D-013).
+
+Primera tanda, las tres que explican algo:
+
+| Qué | Cómo | Por qué |
+|---|---|---|
+| Línea del carrito que entra o suma | destello verde de 700 ms | la selección gris no distingue «acaba de pasar» de «ya estaba» |
+| Aviso de escaneo | fundido de entrada y salida; parpadeo si se renueva | dos productos seguidos daban dos avisos idénticos |
+| Barra lateral | ancho animado en 180 ms, desacelerando | que se lea como un cajón que se cierra, no como un salto |
+
+Las duraciones, las curvas y la lista de lo que **no** se anima están en la sección
+«Movimiento» de `docs/DESIGN.md`, que pasa a ser la referencia para cualquier animación nueva.
+
+**Consecuencias.**
+
+- Módulo nuevo, `ui/movimiento.py`, con las duraciones con nombre y un `Fundido` reutilizable.
+- **Un cambio visible de la barra plegada:** los rótulos de sección (*CAJA*, *ADMINISTRACIÓN*) y
+  el nombre del negocio conservan su sitio aunque estén ocultos. Antes, al plegar, los iconos
+  subían unos 25 px porque los rótulos desaparecían del layout; con el ancho animado ese salto
+  vertical habría quedado a la vista. Ahora los iconos están a la misma altura en los dos
+  estados y la tira plegada tiene un hueco donde iban los rótulos.
+- **Dos trampas de Qt** que condicionan lo que se puede animar. Un widget admite **un solo**
+  efecto gráfico, y las tarjetas ya gastan el suyo en la sombra (D-026): no se les puede poner
+  un fundido. Y un efecto de opacidad quita el ClearType al texto; por eso el fundido del aviso
+  lo enciende solo mientras dura la animación.
+- **Rendimiento (D-022).** El destello repinta solo la franja de su fila, no la tabla. El
+  plegado reajusta la tabla del carrito en cada fotograma durante 180 ms; con carritos de
+  decenas de líneas no se nota, y se apaga con la preferencia si en el PC de la tienda sí.
+- **Pruebas.** La suite corre con `movimiento.suprimir()`, igual que el sonido, para no depender
+  del reloj. Diecisiete pruebas nuevas en `tests/test_ui_movimiento.py` lo encienden y
+  comprueban las tres reglas, más que los iconos no cambien de altura al plegar. La suite pasa
+  de 258 a 275.
+
+**Segunda tanda, el mismo día.** Santiago dio por buena la primera y pidió seguir:
+
+- **PIN incorrecto:** la ventana de acceso se sacude (320 ms, 9 px, amortiguada). Se mueve la
+  ventana y no el campo porque el campo vive en un layout que se recoloca al aparecer el
+  mensaje de error. Un segundo error a mitad de sacudida reinicia desde el sitio original.
+- **Consulta de precio:** el resultado entra con fundido y parpadea si ya había otro precio.
+  Limpiar es inmediato.
+- **Diálogos:** todos se abren con un fundido de 120 ms, enganchado ventana a ventana
+  (`movimiento.aparecer_al_abrir`) y no con un filtro sobre toda la aplicación, que vería pasar
+  cada evento del programa. El cierre no se anima.
+- **Descartado: el despliegue de la tarjeta de subtotal.** Tiene sombra y no admite otro
+  efecto; animar su altura aplastaba el contenido; y aparece en el mismo instante que el
+  destello y el aviso. Queda anotado en «Qué no se anima» de `DESIGN.md`.
+
+Nueve pruebas más; la suite pasa de 275 a 284. Ninguna de estas animaciones es un requisito
+del cliente: todo esto es decisión de Santiago (3.2).

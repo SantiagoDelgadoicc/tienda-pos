@@ -31,6 +31,15 @@ from tienda_pos.utils import sonido  # noqa: E402
 sonido.silenciar()
 sonido._emitir = lambda *args, **kwargs: None
 
+# Tampoco deben esperar a que termine un fundido para comprobar si algo se ve. Las pruebas
+# que miran el movimiento en sí lo vuelven a encender con la fixture `con_movimiento`.
+try:
+    from tienda_pos.ui import movimiento  # noqa: E402
+
+    movimiento.suprimir()
+except ImportError:  # pragma: no cover - sin PySide6 no hay interfaz que animar
+    movimiento = None
+
 
 # --------------------------------------------------------------------------- datos
 
@@ -128,6 +137,21 @@ def ventana(app, conexion, monkeypatch, tmp_path):
 
     yield ventana
     ventana.close()
+
+
+@pytest.fixture
+def con_movimiento():
+    """Enciende las animaciones durante una prueba y las vuelve a apagar al terminar."""
+    movimiento.suprimir(False)
+    yield movimiento
+    movimiento.suprimir(True)
+
+
+def esperar(milisegundos: int) -> None:
+    """Deja correr el bucle de eventos de Qt, que es lo que hace avanzar las animaciones."""
+    from PySide6.QtTest import QTest
+
+    QTest.qWait(milisegundos)
 
 
 @pytest.fixture

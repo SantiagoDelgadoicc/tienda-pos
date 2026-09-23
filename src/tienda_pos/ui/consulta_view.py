@@ -25,7 +25,7 @@ from ..domain.errors import ErrorDominio, ProductoNoEncontrado
 from ..red.sesion import Sesion
 from ..utils import sonido
 from ..utils.money import formatear_clp
-from . import estilos
+from . import estilos, movimiento
 
 #: Tiempo que un precio permanece en pantalla antes de volver al estado de espera.
 _LIMPIEZA_MS = 15000
@@ -92,21 +92,32 @@ class ConsultaView(QWidget):
         self.etiqueta_espera.setAlignment(Qt.AlignmentFlag.AlignCenter)
         columna.addWidget(self.etiqueta_espera)
 
+        # Nombre, precio y detalle van juntos en un bloque para fundirse a la vez. Se funde el
+        # contenido y no la tarjeta: el marco es el sitio fijo donde aparece el precio, y si
+        # parpadeara con él la pantalla entera daría la impresión de recargarse.
+        self._resultado = QWidget()
+        self._resultado.setObjectName("transparente")
+        bloque = QVBoxLayout(self._resultado)
+        bloque.setContentsMargins(0, 0, 0, 0)
+        bloque.setSpacing(10)
+        columna.addWidget(self._resultado)
+        self._fundido_resultado = movimiento.Fundido(self._resultado)
+
         self.etiqueta_nombre = QLabel()
         self.etiqueta_nombre.setObjectName("consultaNombre")
         self.etiqueta_nombre.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.etiqueta_nombre.setWordWrap(True)
-        columna.addWidget(self.etiqueta_nombre)
+        bloque.addWidget(self.etiqueta_nombre)
 
         self.etiqueta_precio = QLabel()
         self.etiqueta_precio.setObjectName("consultaPrecio")
         self.etiqueta_precio.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        columna.addWidget(self.etiqueta_precio)
+        bloque.addWidget(self.etiqueta_precio)
 
         self.etiqueta_detalle = QLabel()
         self.etiqueta_detalle.setObjectName("consultaDetalle")
         self.etiqueta_detalle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        columna.addWidget(self.etiqueta_detalle)
+        bloque.addWidget(self.etiqueta_detalle)
 
         columna.addStretch()
         return tarjeta
@@ -149,6 +160,10 @@ class ConsultaView(QWidget):
         )
         self.etiqueta_detalle.setText(f"{producto.codigo_barras}  ·  {disponibilidad}")
         self.etiqueta_detalle.show()
+        # Entra con un fundido; si ya había un precio en pantalla, parpadea. Es lo que dice
+        # al cliente que el número que ve es el del producto que acaba de pasar y no el
+        # anterior, que con dos productos del mismo precio sería imposible de distinguir.
+        self._fundido_resultado.mostrar()
 
         self._temporizador.start(_LIMPIEZA_MS)
         self.enfocar_escaneo()
@@ -168,6 +183,7 @@ class ConsultaView(QWidget):
         self.etiqueta_precio.show()
         self.etiqueta_detalle.setText("Este código no está en el catálogo.")
         self.etiqueta_detalle.show()
+        self._fundido_resultado.mostrar()
         self._temporizador.start(_LIMPIEZA_MS)
         self.enfocar_escaneo()
 
@@ -175,6 +191,7 @@ class ConsultaView(QWidget):
         sonido.error()
         self.etiqueta_espera.setText(mensaje)
         self.etiqueta_espera.show()
+        self._fundido_resultado.ocultar_ya()
         self.etiqueta_nombre.hide()
         self.etiqueta_precio.hide()
         self.etiqueta_detalle.hide()
@@ -186,6 +203,9 @@ class ConsultaView(QWidget):
         self._temporizador.stop()
         self.etiqueta_espera.setText("Esperando un producto…")
         self.etiqueta_espera.show()
+        # De golpe, sin fundido: el aviso de espera ocupa el mismo sitio, y los dos a la vez
+        # durante 200 ms empujarían el precio hacia arriba mientras se va.
+        self._fundido_resultado.ocultar_ya()
         self.etiqueta_nombre.hide()
         self.etiqueta_precio.hide()
         self.etiqueta_precio.setStyleSheet("")

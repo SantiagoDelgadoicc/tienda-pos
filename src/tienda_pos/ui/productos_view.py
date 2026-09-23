@@ -28,7 +28,7 @@ from ..domain.errors import ErrorDominio
 from ..domain.models import Producto, Usuario
 from ..red.sesion import Sesion
 from ..utils.money import formatear_clp, parsear_clp
-from . import dialogos, tablas
+from . import dialogos, movimiento, tablas
 
 _COLUMNAS = ("Código de barras", "Producto", "Precio", "Stock")
 
@@ -42,6 +42,7 @@ class DialogoProducto(QDialog):
 
     def __init__(self, padre: QWidget | None = None, producto: Producto | None = None) -> None:
         super().__init__(padre)
+        movimiento.aparecer_al_abrir(self)
         self._producto = producto
         self.setWindowTitle("Editar producto" if producto else "Nuevo producto")
         self.setMinimumWidth(430)
@@ -134,6 +135,7 @@ class DialogoStock(QDialog):
 
     def __init__(self, producto: Producto, padre: QWidget | None = None) -> None:
         super().__init__(padre)
+        movimiento.aparecer_al_abrir(self)
         self._producto = producto
         self.setWindowTitle("Ajustar stock")
         self.setMinimumWidth(420)

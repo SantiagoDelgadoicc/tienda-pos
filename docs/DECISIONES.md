@@ -107,6 +107,10 @@ correcta, no un descuido.
 
 **Fecha:** 2026-09-09 · **Estado:** aceptada · **Decide:** Santiago
 
+> **Modificada parcialmente el 2026-09-24 por [D-034](#d-034).** Decae "sin medios de pago": la
+> venta registra si fue en efectivo, débito o crédito, porque lo pidió el cliente. Todo lo demás
+> sigue en pie: sin vuelto, sin comprobante impreso y sin boleta electrónica.
+
 **Contexto.** El cliente solo pidió consultar precios. Registrar medios de pago o emitir
 boletas electrónicas abre obligaciones legales y técnicas enormes (certificado digital,
 integración con el SII, responsabilidad tributaria).
@@ -726,8 +730,11 @@ que evita confundir el menú con un botón de borrar:
 
 | Color | Qué dice | Cómo se aplica |
 |---|---|---|
-| **Rojo** `#BE1E2D` | dónde estoy, dónde está el foco, y lo que cancela o borra | lavado, filete o texto. **Nunca relleno** |
+| **Rojo** `#D10117` | dónde estoy, dónde está el foco, y lo que cancela o borra | lavado, filete o texto. **Nunca relleno** |
 | **Verde** `#15803D` | salió bien, y adelante | es el único que va relleno: cobrar, guardar, entrar |
+
+*Actualizado el 2026-09-23 por D-030:* el rojo era `#BE1E2D`, sacado de la guinda que habíamos
+dibujado nosotros. Ahora sale del logotipo real del cliente.
 
 *El riesgo, anotado:* un anillo rojo alrededor de un campo de texto es, en casi todo el software,
 la señal de "este dato está mal". Aquí significa "aquí va a caer el disparo de la pistola". Se
@@ -926,3 +933,323 @@ Las duraciones, las curvas y la lista de lo que **no** se anima están en la sec
 
 Nueve pruebas más; la suite pasa de 275 a 284. Ninguna de estas animaciones es un requisito
 del cliente: todo esto es decisión de Santiago (3.2).
+
+
+---
+
+## D-030 — El rojo sale del logotipo real, y no del todo
+
+**Fecha:** 2026-09-23 · **Estado:** aceptada · **Decide:** Santiago
+
+**Contexto.** D-027 fijó el rojo del sistema en `#BE1E2D` diciendo que era "el del logotipo". No
+lo era: el logotipo del cliente no lo teníamos, y ese tono salió de la guinda que habíamos
+dibujado nosotros en `assets/punto_y_fama.png`. El 2026-09-23 el cliente entregó su logotipo de
+verdad —WebP de 2000×1103 con transparencia— y el rojo medido sobre el archivo es **`#E30119`**,
+bastante más brillante. Santiago pidió igualarlos.
+
+**El problema que apareció al medirlo.** `#E30119` no llega al contraste mínimo donde este sistema
+usa el rojo. Medido contra AA (4,5:1):
+
+| Uso | `#E30119` | `#D10117` |
+|---|---|---|
+| Sobre el lienzo de piedra `#F1EFEC` | **4,27:1** ✗ | 4,91:1 ✓ |
+| Sobre su propio lavado | **4,27:1** ✗ | 4,91:1 ✓ |
+| Sobre papel blanco | 4,90:1 ✓ | 5,63:1 ✓ |
+
+No es un detalle académico. D-026 dice que el rojo va "en lavado, filete o texto, **nunca
+relleno**", así que casi siempre es texto fino o un borde de un píxel sobre fondo claro —
+exactamente el caso donde el contraste decide si se lee. Y este programa se mira en un mostrador
+con luz de tubo, no en un monitor calibrado: el mismo motivo por el que `texto_suave` ya está más
+oscuro que el gris que traía el documento de diseño.
+
+**Decisión.** El acento de la interfaz es **`#D10117`**: el **mismo matiz (353,6°) y la misma
+saturación (0,99)** que el logotipo, con **3,5 puntos menos de luminosidad**. Puestos uno al lado
+del otro no se distinguen; en contraste, la diferencia es entre pasar AA y no pasarlo.
+
+El **icono del ejecutable** (`tools/icono.py`) conserva el `#E30119` exacto: es un objeto de marca
+que se ve a 32 px en el escritorio, no texto que haya que leer, y ahí manda la fidelidad.
+
+Los dos tonos derivados se recalculan desde el nuevo acento en vez de elegirse aparte:
+`acento_fuerte` `#A70112` y `acento_suave` `#FDECEE`. En el tema oscuro, `acento` pasa de
+`#F0757F` a `#F4717E`, que es el mismo matiz de la marca aclarado hasta el contraste necesario
+sobre el fondo casi negro.
+
+**El logotipo en sí.** Va en `assets/logo.png`, y el gancho para recogerlo **ya existía**:
+`ui/iconos.py::_archivo_de_logotipo` y `tools/icono.py::_logotipo_del_cliente` buscaban ese
+archivo desde antes. Dejarlo ahí basta; no hubo que tocar código para que aparezca.
+
+Se recorta **solo el disco**, no el logotipo entero, por dos motivos medidos sobre el archivo:
+
+1. **Fuera del disco todo está pintado para fondo negro.** "y Fama" `rgb(237,236,236)`,
+   "COMERCIAL" `rgb(215,215,215)` y el lema `rgb(197,197,197)`. Sobre el lienzo de piedra son
+   invisibles. Dentro del disco, en cambio, el blanco va sobre rojo y se lee en los dos temas.
+2. **El hueco de la barra lateral mide 34 px**, y plegada es lo único que se ve. Un logotipo de
+   2:1 con el trazo entero no entra; el disco es cuadrado y sí.
+
+El nombre del negocio lo sigue poniendo la barra lateral con la tipografía del programa, que es
+lo que ya hacía. Así el conjunto se lee igual en tema claro y en oscuro sin mantener dos archivos.
+
+*Detalle del recorte:* la caja del disco arrastraba un trozo del lema —un "EL P" suelto— porque
+las letras se solapan con ella. Se descarta todo lo que queda fuera del círculo **salvo lo rojo**,
+para que el arranque del trazo que asoma por arriba sobreviva.
+
+**Consecuencias.** Enmienda D-027 en su valor, no en su regla: el rojo sigue significando lo
+mismo y aplicándose igual. La guinda que dibujábamos deja de usarse como marca, aunque
+`ui/iconos.py::marca_dibujada` se conserva como respaldo para cuando no haya archivo. Hay que regenerar el icono con `tools/icono.py` y las capturas con
+`tools/capturas.py`. Y queda escrito el criterio para la próxima vez que un color de marca choque
+con la legibilidad: **se conserva el matiz y se mueve la luminosidad**, que es lo que mantiene el
+parecido y arregla el contraste.
+
+---
+
+## D-031 — La letra se agranda donde se lee de lejos, y el código de barras cede su sitio
+
+**Fecha:** 2026-09-24 · **Estado:** aceptada · **Decide:** Santiago
+
+**Contexto.** El cliente pidió el 2026-09-23 que "los números y letras sean un poquito más
+grandes". Santiago decidió que fuera un **ajuste de la pantalla F9** con tres tamaños, guardado
+en `preferencias.json` como el tema y el sonido (D-013), y no una subida fija del tamaño base.
+
+**Lo que se vio al probarlo.** La primera versión escalaba todos los `font-size` de la hoja por
+igual. Renderizada a 1600×1000 con "Muy grande" (×1,25):
+
+- la barra lateral, de 232 px fijos, **montaba cada rótulo sobre su atajo** ("Consulta de
+  preF2", "Cambiar usuarF10");
+- en el carrito, código, botones, precio, cantidad y subtotal crecían a la vez y el nombre del
+  producto pasaba de 199 a 137 px: **los ocho productos de la prueba salían cortados**,
+  "Bebida ...", "Leche ...". En una caja eso no se puede vender;
+- la barra de atajos se salía por la derecha y la cabecera "Código" perdía el rabo de la g.
+
+**Decisión.**
+
+1. **Crece lo que se lee de lejos; lo que se usa de cerca no.** Crecen nombres, precios,
+   cantidades, totales, títulos y avisos. No crecen el menú lateral, la barra de atajos, las
+   cabeceras de tabla, el campo de escaneo, el código de barras ni los botones de línea. En la
+   hoja de estilos se marca con `/* fijo */` detrás del tamaño, que el escalador respeta.
+2. **Con letra Grande o Muy grande, la columna del código de barras se oculta** y su ancho pasa
+   al nombre. Es la columna más ancha después del nombre y la que menos lee el cajero, que ya
+   escaneó el producto. Sigue disponible en la ayuda del botón de copiar y en la consulta. La
+   celda no se borra: las acciones de cada línea la usan para identificar el producto.
+3. **Solo escala la letra**, no márgenes ni altura de filas. Caben nueve líneas en el carrito
+   con cualquier tamaño.
+4. El total a pagar no sigue al ajuste: ya ocupa todo el ancho de su tarjeta.
+
+Los factores son 1,00, 1,12 y 1,25. Se guarda el nombre del escalón y no el factor, para poder
+retocar cuánto agranda cada uno sin invalidar los archivos de las cajas.
+
+**Consecuencias.** Resultado medido: cero nombres cortados en los tres tamaños. Queda una prueba
+que protege el criterio sin depender de la fuente del equipo —la plataforma sin pantalla de las
+pruebas no carga las del sistema—: **con la letra agrandada no se puede cortar ningún nombre que
+con la normal se viera entero**. Se comprobó que falla si se deshace la cesión de la columna.
+
+También quedó cubierto un fallo que habría aparecido solo: el tema y la letra viven en la misma
+hoja, y previsualizar un tema en la rueda de configuración devolvía la letra al tamaño normal.
+La ventana ahora recuerda los dos.
+
+*Riesgo anotado:* la tabla solo tiene 638 px a 1600 de ancho. **No sabemos la resolución de los
+PC de la tienda.** Si es 1366×768, que es habitual en equipos de mostrador, todo este margen se
+estrecha. Hay que mirarlo en la próxima visita.
+
+
+---
+
+## D-032 — Un usuario por empleado: PIN generado, sesión obligatoria y rescate del administrador
+
+**Fecha:** 2026-09-24 · **Estado:** aceptada · **Decide:** Santiago · **Absorbe:** la fase 12
+
+**Contexto.** El cliente pidió el 2026-09-18 un usuario por empleado, porque en una misma caja
+venden varios en un día y el cierre tiene que decir quién vendió qué. La lógica de usuarios
+existía desde D-007 pero sin pantalla, los dos PIN de fábrica (`1234` y `1111`) están publicados en
+el manual, y una base sin usuarios dejaba entrar **sin sesión**, con ventas sin autor.
+
+**Decisión.**
+
+1. **El PIN lo genera el sistema**, al dar de alta y al pedir uno nuevo, y se enseña **una sola
+   vez**. Cuatro cifras, como los de hoy (`config.LONGITUD_PIN_GENERADO`), con `secrets` y
+   descartando los de un dígito repetido y las escaleras (`1111`, `1234`, `9876`). Santiago lo
+   prefirió a una pantalla de cambio obligatorio en el primer acceso: no hace falta migración ni
+   pantalla nueva, y nadie acaba con `1234`. Perderlo no es grave: se genera otro.
+2. **Baja lógica, nunca borrado**, y **reactivación con PIN nuevo**. El nombre es único, así que
+   sin reactivar no se podría volver a contratar a quien ya trabajó aquí: el alta daría "ya
+   existe". Ahora el error sugiere reactivar.
+3. **Dos reglas en el servicio, no en la pantalla**: nadie se da de baja a sí mismo, y no se da
+   de baja al último administrador activo. La segunda se comprueba **dentro** de la transacción,
+   así que dos administradores que se dan de baja mutuamente a la vez no dejan la tienda vacía.
+4. **La administración funciona desde las dos cajas**: cinco operaciones nuevas en `Sesion` (de 13
+   a 18) y el protocolo sube a la **versión 2**. Se sube aunque las operaciones viejas no cambien:
+   si no, una caja actualizada conectaría con un servidor viejo y fallaría más tarde con
+   "Operación desconocida" en mitad de la pantalla.
+5. **Nunca se entra sin usuario.** Base vacía en el PC que la guarda → se crea el primer
+   administrador, se enseña su PIN y se pide el acceso con él (así se sabe que quedó anotado).
+   Usuarios pero ninguno activo → se explica el rescate. Caja secundaria y principal sin
+   usuarios → se manda a crearlos allí. Además, cobrar sin usuario se niega en la pantalla.
+6. **`--demo`** para las demostraciones. Sin esa opción, una base vacía **ya no se llena** con el
+   catálogo y los usuarios de ejemplo. Así ningún PIN publicado sirve en una instalación nueva, y
+   de paso se cierra el pendiente de la fase 13: los 65 productos de ejemplo no vuelven a
+   mezclarse con el catálogo real. `--verificar` tampoco siembra nada; lo hacía, y es la
+   explicación más probable de aquella mezcla.
+7. **`--reiniciar-admin`** para cuando nadie recuerda el PIN del único administrador. Con
+   diálogos y no por consola —el plan decía consola, pero el ejecutable se construye sin ella—,
+   solo en el PC que guarda la base, con respaldo previo y **constancia en el registro**, sin el
+   PIN. No pide PIN porque quien lo ejecuta ya tiene el archivo de la base al alcance: no abre
+   nada que no estuviera abierto.
+
+**Lo que no puede pasar por la red, y está probado.** Crear el primer administrador y rescatarlo
+son los únicos caminos para tener un administrador sin haber entrado como uno. **No están en
+`Sesion` ni en `red/servidor.py`**, y una prueba lo comprueba.
+
+**Riesgo anotado, que no es nuevo.** El servidor confía en el usuario que dice ser quien llama
+(`red/servidor.py::_usuario`, documentado como "esto no es autenticación"). Hoy eso ya permitía a
+cualquiera de la red local cambiar precios haciéndose pasar por administrador; con usuarios por
+la red, también podría crear administradores. Es el mismo riesgo aceptado para una red cerrada en
+D-007 y D-015, no uno nuevo. Si la red deja de ser de confianza, ahí va un testigo de sesión
+firmado por el servidor. Del mismo modo, los PIN generados viajan en claro por la red local, igual
+que el que se escribe en `autenticar`.
+
+**Consecuencias.** La tienda instalada conserva `Administrador/1234` y `Cajero/1111` hasta la
+visita de actualización: el procedimiento está en `docs/DESPLIEGUE-TIENDA.md` (nuevo PIN para el
+administrador, baja del cajero genérico). El manual de usuario todavía describe los PIN de fábrica
+y dice que no se pueden crear usuarios; por decisión de Santiago se reescribe al final, en la
+fase 20.
+
+Pruebas: 69 nuevas, incluida la primera suite de red contra un servidor de verdad
+(`tests/test_red.py`), que es donde tienen que ir las pruebas manuales de la fase 13.
+
+
+---
+
+## D-033 — Cada venta sabe en qué caja se hizo, y lo dice la caja, no el servidor
+
+**Fecha:** 2026-09-24 · **Estado:** aceptada · **Decide:** Santiago
+
+**Contexto.** El cliente pidió un cierre diario **por caja**. Hasta aquí ninguna venta sabía de
+cuál venía: `red.json` tenía el modo y la dirección del servidor, pero no un nombre de caja.
+
+**Decisión.**
+
+1. **Migración 4**: columna `venta.caja`, **texto**, no una clave hacia una tabla de cajas. La caja
+   es una propiedad de la instalación, no de la base compartida, y se guarda el nombre que tenía
+   **en el momento de vender**, igual que la línea guarda el nombre del producto (D-005). Una tabla
+   obligaría a registrar cada caja antes de poder vender y a decidir qué pasa al renombrarla.
+2. **Las ventas anteriores quedan sin caja.** No se sabe dónde se hicieron, y rellenarlas sería
+   inventar un dato que el dueño leería como cierto. El cierre las mostrará aparte.
+3. **El nombre sale de `red.json`** (`nombre_caja`), normalizado —espacios de sobra fuera, tope de
+   40 caracteres— porque lo escribe una persona. Sin él, **el nombre del PC**, estable y distinto en
+   cada equipo. **No se deriva del modo**: el modo se puede cambiar editando el archivo, y las
+   ventas de un mismo equipo quedarían partidas bajo dos nombres.
+4. **El nombre viaja en la petición, y el servidor usa ese.** Es la parte delicada: en modo red la
+   venta de la caja secundaria la escribe el servidor, y el servidor no puede saber quién le habla
+   —no guarda estado por conexión, y la IP cambia sola—. Si firmara con su propio nombre, todas las
+   ventas de la secundaria saldrían como de la principal, **sin ningún error que avise**. Por eso:
+   - la `Sesion` lleva el nombre de su caja desde que se construye, y ninguna pantalla sabe de cajas;
+   - `SesionLocal.cerrar_venta` distingue con un centinela "usa el mío" de "no me dijeron caja", y el
+     servidor siempre pasa lo que trae la petición: si no trae nada, la venta queda **sin caja**, no
+     con la del servidor.
+5. **El nombre está siempre a la vista**, en la ficha del usuario al pie de la barra lateral
+   ("Cajero · Caja 1"). Es la defensa contra el riesgo de abajo.
+6. Protocolo a la **versión 3**.
+
+**Riesgo que no se puede detectar desde la base.** Dos PC con el mismo `nombre_caja` fundirían sus
+ventas en un solo grupo del cierre, y las ventas de ambos son legítimas: no hay forma de saberlo
+mirando los datos. Mitigación: el nombre en pantalla, y ponérselo a las dos cajas **con el cliente
+delante** el día de la visita (pregunta H8).
+
+**Consecuencias.** Queda probado contra un servidor de verdad que la venta de la secundaria lleva
+el nombre de la secundaria, que una petición sin caja no hereda la del servidor, y que las dos
+cajas vendiendo a la vez quedan separadas. Se comprobó que esas pruebas fallan si se quita el
+`caja=` del servidor, que es exactamente el cambio que alguien haría sin querer.
+
+
+---
+
+## D-034 — La venta registra con qué se pagó, y cada medio tiene su color
+
+**Fecha:** 2026-09-24 · **Estado:** aceptada · **Decide:** Santiago · **Modifica:** D-006, y
+enmienda D-026 y D-027 en el número de colores
+
+**Contexto.** El cliente pidió el 2026-09-18 que quedara registrado el medio de pago, y el
+2026-09-23 precisó que en el cierre quiere ver **efectivo, débito y crédito por separado**. D-006
+decía "sin medios de pago". En la misma conversación pidió "un poco de color", y Santiago lo
+concedió.
+
+**Decisión.**
+
+1. **Migración 5**: `venta.medio_pago`, texto, con tres valores: `efectivo`, `debito`, `credito`.
+   **Sin `CHECK`**, al contrario que `rol` y `estado`: un `CHECK` añadido con `ALTER TABLE` no se
+   cambia sin reconstruir la tabla, y la lista de medios es lo que el cliente aún puede cambiar
+   (transferencia, fiado). La validación vive en el servicio, que rechaza con un error legible lo
+   que no sea un medio conocido —por la red llega texto—; y la lectura **tolera** un valor
+   desconocido y lo trata como no registrado, en lugar de tumbar el cierre.
+2. **Las ventas anteriores quedan sin registrar**, no en efectivo. Rellenarlas sería inventar un
+   dato que el dueño leería como real, y el cierre de hoy no le cuadraría con su cuaderno.
+3. **Lo marca el cajero**, con tres botones sobre el de cobrar y **F11**, que recorre efectivo,
+   débito y crédito: dos pulsaciones como mucho, y solo cuando no es efectivo. Siempre a la vista,
+   nunca dentro del diálogo de confirmación, que se puede desactivar. Los botones no toman el foco,
+   para no quitarle la entrada a la pistola. El sistema **no habla con la máquina de Mercado Pago**:
+   haría falta internet permanente, y eso es otro proyecto.
+4. **Tras cada venta, y al cancelarla, vuelve a efectivo.** Un selector que se quedara en débito
+   cobraría mal la primera venta de la mañana siguiente.
+5. **El aviso de venta registrada dice el medio de la venta que devolvió la base**, no el marcado:
+   en un reintento el servidor devuelve la venta original, y es eso lo que el cajero tiene que ver.
+6. Protocolo a la **versión 4**. Si una petición no dice el medio, la venta queda sin registrar.
+
+**El color (enmienda de D-026 y D-027).** El sistema tenía dos colores con significado. Pasa a
+tener **uno más por medio de pago**, con la misma regla: **el color significa algo, y lo mismo en
+todas partes**.
+
+| Medio | Tema claro | Tema oscuro | Contraste sobre su lavado |
+|---|---|---|---|
+| Efectivo | sin color | sin color | — |
+| Débito | `#1D4ED8` sobre `#EAF0FD` | `#8DB0F7` sobre `#18243B` | 5,9:1 · 7,2:1 |
+| Crédito | `#6D28D9` sobre `#F2ECFD` | `#C3A6F8` sobre `#261C38` | 6,2:1 · 7,8:1 |
+
+**Efectivo va sin color a propósito**: es lo corriente, y el color marca lo que no es lo de
+siempre. Así, un cobro a punto de salir en débito se nota de reojo. Los tonos no chocan con los que
+ya tenían significado: ni el rojo de "dónde estoy / cancelar" ni el verde de "salió bien". Todas las
+pantallas piden el color a `estilos.color_medio`, para que un medio no cambie de color entre el
+cobro, las ventas del día y el cierre.
+
+**Consecuencias.** `CLAUDE.md` decía en 3.2 "sin medios de pago" y "dos colores y ninguno más", y
+las dos frases quedan corregidas. El manual lo recogerá en la fase 20.
+
+*Riesgo anotado:* separar débito de crédito solo vale lo que valga la disciplina de marcarlo bien.
+Si el cajero le da a cualquiera con prisa, el cierre mentirá con aspecto de precisión. Hay que
+revisarlo con el cliente a las dos semanas de uso; si no se marca bien, se funden en "tarjeta", y
+que la columna vaya sin `CHECK` es justo lo que hace barata esa marcha atrás.
+
+
+---
+
+## D-035 — El cierre diario por caja es un informe que deriva sus totales de las ventas
+
+**Fecha:** 2026-09-24 · **Estado:** aceptada · **la pantalla está pendiente** (fase 18 en curso)
+· **Decide:** Santiago
+
+**Contexto.** El cliente pidió un cierre diario por caja que diga qué empleados vendieron y qué
+ventas fueron, y el 2026-09-23 precisó: efectivo, débito y crédito por separado, y la lista de
+ventas con los productos de cada una. No contestó claro si quiere cuadrar el efectivo del cajón.
+
+**Decisión.**
+
+1. **Es un informe que se calcula al pedirlo, no un registro guardado.** No cierra nada ni bloquea
+   la caja, y lo dice al pie de la pantalla. El dinero del cajón va aparte, en la fase 19, detrás de
+   un interruptor.
+2. **Los totales se derivan de la lista de ventas** que se enseña (`CierreCaja`, en el dominio), y no
+   de consultas `GROUP BY` aparte, como proponía el plan. Así la suma por medio, la suma por
+   empleado y el total coinciden por construcción, y por la red viaja una sola cosa: las ventas con
+   sus líneas. Un día de botillería son unos cientos de ventas; sumarlas en Python no se nota.
+3. **Los tres medios siempre**, aunque sea en cero —"débito $0" también es información—, y "sin
+   registrar" solo si hay ventas de antes de la fase 17.
+4. **El día es un rango con hora de corte** (`config.HORA_CORTE_DIA`, hoy 0), no `date(fecha_hora)`.
+   Responder la pregunta H10 —si la noche del viernes es del viernes— es cambiar ese número. **Las
+   ventas del día usan ya el mismo rango**, para que las dos pantallas no discrepen el día que cambie.
+   Comparar el texto ISO como rango, además, deja usar el índice por fecha.
+5. **Se puede mirar cualquier caja y cualquier día anterior**, desde cualquiera de las dos cajas. El
+   desplegable de caja solo aparece si ese día vendió más de una. `caja` None es el grupo de ventas
+   anteriores a registrar la caja (D-033).
+6. Reservado al administrador en la pantalla, igual que las ventas del día. Quién más debería verlo
+   es la pregunta H4, sin responder.
+
+**Consecuencias.** Protocolo a la versión 5. Queda por hacer, en `docs/PLAN.md` fase 18: las pruebas
+—sobre todo la de que las tres sumas cuadran, los dos empleados en una caja y los bordes del día con
+corte distinto de cero—, conectar la pantalla, y mirarla con letra grande.

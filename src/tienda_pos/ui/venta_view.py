@@ -14,6 +14,7 @@ from PySide6.QtCore import QEvent, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QGuiApplication, QKeyEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QButtonGroup,
     QFrame,
     QHBoxLayout,
     QHeaderView,
@@ -31,7 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..domain.errors import ErrorDominio, ProductoNoEncontrado
-from ..domain.models import Usuario
+from ..domain.models import MedioPago, Usuario
 from ..red.sesion import Sesion
 from ..services import venta as servicio_venta
 from ..services.preferencias import Preferencias
@@ -62,6 +63,15 @@ COL_CANTIDAD = 5
 COL_MAS = 6
 COL_DESCUENTO = 7
 COL_SUBTOTAL = 8
+
+#: Los medios de pago, en el orden en que los recorre F11 y en que aparecen en pantalla.
+#: Efectivo primero: es lo más frecuente y a lo que se vuelve tras cada venta.
+MEDIOS = (MedioPago.EFECTIVO, MedioPago.DEBITO, MedioPago.CREDITO)
+NOMBRE_MEDIO = {
+    MedioPago.EFECTIVO: "Efectivo",
+    MedioPago.DEBITO: "Débito",
+    MedioPago.CREDITO: "Crédito",
+}
 
 #: Tamaños que puede tomar el total, de mayor a menor. Se usa el primero que quepa entero.
 #: Medidos, no supuestos: a 62 px cabe un total de seis cifras —$480.000— en los 256 px útiles
@@ -418,7 +428,10 @@ class VentaView(QWidget):
         self.valor_total = QLabel("$0")
         self.valor_total.setObjectName("valorTotal")
         columna.addWidget(self.valor_total)
-        columna.addSpacing(18)
+        columna.addSpacing(14)
+
+        columna.addLayout(self._selector_de_pago())
+        columna.addSpacing(12)
 
         self.boton_cobrar = QPushButton("Cobrar   ·   F12")
         self.boton_cobrar.setObjectName("botonPrincipal")
@@ -455,6 +468,63 @@ class VentaView(QWidget):
         columna.addWidget(self.boton_vaciar)
 
         return tarjeta
+
+    def _selector_de_pago(self) -> QHBoxLayout:
+        """Efectivo, débito o crédito, sobre el botón de cobrar (fase 17).
+
+        Siempre a la vista y nunca dentro del diálogo de confirmación, porque ese diálogo se
+        puede desactivar y el medio quedaría inalcanzable justo en la caja con más movimiento.
+        Los botones no toman el foco: el campo de escaneo tiene que seguir recibiendo la
+        pistola. Con el teclado, F11 los recorre.
+        """
+        fila = QHBoxLayout()
+        fila.setContentsMargins(0, 0, 0, 0)
+        fila.setSpacing(6)
+        self._grupo_medios = QButtonGroup(self)
+        self._grupo_medios.setExclusive(True)
+        self._botones_medio: dict[MedioPago, QPushButton] = {}
+        for medio in MEDIOS:
+            boton = QPushButton(NOMBRE_MEDIO[medio])
+            boton.setObjectName("segmentoPago")
+            # El color del elegido lo pone la hoja de estilos según el medio (D-034).
+            boton.setProperty("medio", str(medio))
+            boton.setCheckable(True)
+            boton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            boton.setCursor(Qt.CursorShape.PointingHandCursor)
+            boton.setToolTip("Con qué paga el cliente   (F11 cambia)")
+            boton.clicked.connect(lambda _=False, m=medio: self._pulsar_medio(m))
+            self._grupo_medios.addButton(boton)
+            self._botones_medio[medio] = boton
+            fila.addWidget(boton)
+        self._medio = MedioPago.EFECTIVO
+        self._botones_medio[self._medio].setChecked(True)
+        return fila
+
+    @property
+    def medio_pago(self) -> MedioPago:
+        """El medio con que se cobrará la venta en curso."""
+        return self._medio
+
+    def elegir_medio_pago(self, medio: MedioPago) -> None:
+        self._medio = medio
+        self._botones_medio[medio].setChecked(True)
+
+    def alternar_medio_pago(self) -> None:
+        """F11: efectivo, débito, crédito y vuelta a empezar. Dos pulsaciones como mucho."""
+        siguiente = MEDIOS[(MEDIOS.index(self._medio) + 1) % len(MEDIOS)]
+        self.elegir_medio_pago(siguiente)
+
+    def _pulsar_medio(self, medio: MedioPago) -> None:
+        self.elegir_medio_pago(medio)
+        self.enfocar_escaneo()
+
+    def _empezar_venta_nueva(self) -> None:
+        """Deja la pantalla como para el próximo cliente.
+
+        El medio vuelve a efectivo: un selector que se quedara en débito cobraría mal la
+        primera venta de la mañana siguiente, que casi siempre es en efectivo.
+        """
+        self.elegir_medio_pago(MedioPago.EFECTIVO)
 
     @staticmethod
     def _renglon(etiqueta: QLabel, valor: QLabel) -> QHBoxLayout:
@@ -509,6 +579,14 @@ class VentaView(QWidget):
         # El estilo del total lleva su propio color, así que hay que rehacerlo: si no, el
         # verde del tema anterior se quedaría puesto.
         self._tamano_total = None
+        # Con la letra agrandada, el código de barras cede su columna al nombre del producto.
+        # Medido a 1600 px de ancho: la tabla tiene 638 px útiles y, con letra normal, el
+        # nombre ya solo se lleva 199; al agrandar crecen precio, cantidad y subtotal, y el
+        # nombre quedaba en 137 px, con **todos** los productos cortados en "Bebida ...". El
+        # código es lo que menos lee el cajero —ya lo escaneó— y sigue a mano en la ayuda del
+        # botón de copiar y en la consulta de precio. La celda no se borra, solo se oculta:
+        # las acciones de cada línea la usan para saber de qué producto se trata.
+        self.tabla.setColumnHidden(COL_CODIGO, estilos.escala > 1.0)
         self._refrescar()
 
     def enfocar_escaneo(self) -> None:
@@ -821,12 +899,21 @@ class VentaView(QWidget):
             texto_si="Sí, cancelar",
         ):
             self._carrito.vaciar()
+            self._empezar_venta_nueva()
             self._refrescar()
             self._avisar("Venta cancelada.", exito=True)
         self.enfocar_escaneo()
 
     def cobrar(self) -> None:
         """Cierra la venta previa confirmación."""
+        # Red de seguridad: el arranque ya no deja entrar sin usuario, pero una venta sin
+        # autor rompería el cierre por empleado que pidió el cliente, así que tampoco se cobra
+        # sin uno. El servicio sigue aceptando `usuario=None` porque la regla "aquí siempre
+        # hay sesión" es de la aplicación, no del negocio.
+        if self.usuario is None:
+            self._avisar("Inicie sesión antes de cobrar (F10).", exito=False)
+            self.enfocar_escaneo()
+            return
         if self._carrito.esta_vacio:
             self._avisar("No hay productos que cobrar.", exito=False)
             self.enfocar_escaneo()
@@ -839,6 +926,7 @@ class VentaView(QWidget):
             self,
             "Confirmar venta",
             f"Total a cobrar: {total}\n"
+            f"Pago: {NOMBRE_MEDIO[self._medio]}\n"
             f"{self._carrito.cantidad_articulos} artículos en {len(self._carrito.lineas)} "
             f"líneas.\n\n¿Confirma la venta?",
             texto_si="Sí, cobrar",
@@ -855,7 +943,7 @@ class VentaView(QWidget):
 
         try:
             venta = self._sesion.cerrar_venta(
-                self._carrito, self.usuario, self._intento_cobro
+                self._carrito, self.usuario, self._intento_cobro, medio_pago=self._medio
             )
         except ErrorDominio as error:
             dialogos.mostrar_error(self, str(error))
@@ -864,9 +952,14 @@ class VentaView(QWidget):
 
         self._intento_cobro = None
         self._carrito.vaciar()
+        self._empezar_venta_nueva()
         self._refrescar()
+        # El medio del aviso es el de la venta que devolvió la base, no el que está marcado:
+        # en un reintento el servidor devuelve la venta original, con el medio con que se
+        # guardó, y es eso lo que el cajero tiene que ver.
+        medio = f" · {NOMBRE_MEDIO[venta.medio_pago]}" if venta.medio_pago else ""
         self._avisar(
-            f"Venta N° {venta.folio} registrada por {formatear_clp(venta.total_clp)}.",
+            f"Venta N° {venta.folio} registrada por {formatear_clp(venta.total_clp)}{medio}.",
             exito=True,
         )
         self.venta_registrada.emit()
@@ -889,7 +982,9 @@ class VentaView(QWidget):
 
         tope = servicio_venta.CANTIDAD_MAX_POR_LINEA
         for fila, linea in enumerate(self._carrito.lineas):
-            self._celda(fila, COL_CODIGO, linea.codigo_barras)
+            # El código es referencia y no sigue al tamaño de letra: si creciera, le quitaría
+            # ancho al nombre, que es lo que el cajero necesita leer.
+            self._celda(fila, COL_CODIGO, linea.codigo_barras, fija=True)
             self._celda(fila, COL_NOMBRE, linea.nombre)
             self._celda(fila, COL_PRECIO, formatear_clp(linea.precio_unit_clp), derecha=True)
             self._celda(fila, COL_CANTIDAD, str(linea.cantidad), centrada=True, fuerte=True)
@@ -956,6 +1051,10 @@ class VentaView(QWidget):
         El tamaño se aplica sobre la etiqueta y no desde la hoja de estilos porque depende
         del texto, no del tema. Solo se repinta cuando cambia de escalón: una venta corriente
         no lo toca en ningún escaneo.
+
+        Tampoco sigue al ajuste de tamaño de letra de la configuración: ya es el mayor que
+        cabe en la tarjeta, y agrandarlo más solo haría que un total de seis cifras se saliera
+        del borde.
         """
         texto = self.valor_total.text()
         # La fuente de medir se arma entera aquí, con el peso y el interletrado que se van a
@@ -1011,6 +1110,8 @@ class VentaView(QWidget):
             celda.setForeground(QBrush(QColor(paleta.texto_suave)))
             fuente = celda.font()
             fuente.setBold(True)
+            # Son botones, no datos: no siguen al tamaño de letra (ver `estilos.ESCALA_TEXTO`).
+            fuente.setPixelSize(estilos.LETRA_BASE)
             celda.setFont(fuente)
         self.tabla.setItem(fila, columna, celda)
 
@@ -1036,15 +1137,19 @@ class VentaView(QWidget):
         derecha: bool = False,
         centrada: bool = False,
         fuerte: bool = False,
+        fija: bool = False,
     ) -> None:
         celda = QTableWidgetItem(texto)
         if derecha:
             celda.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         elif centrada:
             celda.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        if fuerte:
+        if fuerte or fija:
             fuente = celda.font()
-            fuente.setBold(True)
+            if fuerte:
+                fuente.setBold(True)
+            if fija:
+                fuente.setPixelSize(estilos.LETRA_BASE)
             celda.setFont(fuente)
         self.tabla.setItem(fila, columna, celda)
 

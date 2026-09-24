@@ -178,7 +178,8 @@ class ConsultaView(QWidget):
         # pero no se confunde con un precio. El rojo se lee de la paleta y no se escribe a
         # mano, que es lo que hacía que el tema oscuro no lo alcanzara.
         self.etiqueta_precio.setStyleSheet(
-            f"font-size: 48px; letter-spacing: -2.4px; color: {estilos.actual.error};"
+            f"font-size: {estilos.letra(48)}px; letter-spacing: {-0.05 * estilos.letra(48):.1f}px;"
+            f" color: {estilos.actual.error};"
         )
         self.etiqueta_precio.show()
         self.etiqueta_detalle.setText("Este código no está en el catálogo.")

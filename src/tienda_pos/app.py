@@ -13,6 +13,7 @@ Orden de inicio, y el motivo de cada paso:
 from __future__ import annotations
 
 import logging
+import sqlite3
 import sys
 import time
 
@@ -21,17 +22,19 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from . import config
 from .db.inicio import abrir_base_datos
 from .db.respaldo import cerrar_limpiamente, crear_respaldo
+from .domain.errors import ErrorDominio
 from .red import config_red
 from .red.cliente import ServidorNoDisponible, SesionRemota, VersionIncompatible
 from .red.config_red import Modo
 from .red.sesion import Sesion, SesionLocal
 from .red.servidor import ServidorTienda
+from .services import auth
 from .ui import errores, estilos
 from .ui.main_window import VentanaPrincipal
 
 _logger = logging.getLogger(__name__)
 
-# Centinela para distinguir "canceló el acceso" de "no hay usuarios configurados".
+# Centinela para "se cerró el acceso": se sale sin ruido, sin ventana huérfana.
 _CANCELADO = object()
 
 
@@ -51,22 +54,36 @@ def _crear_aplicacion() -> QApplication:
     app.setOrganizationName(config.NOMBRE_APP)
 
     preferidas = servicio_preferencias.cargar()
-    estilos.aplicar(app, preferidas.tema)
+    estilos.aplicar(app, preferidas.tema, preferidas.tamano_texto)
     sonido.habilitado = preferidas.sonido
     return app
 
 
-def _iniciar_sesion(sesion: Sesion):
-    """Pide el PIN al arrancar.
+def _iniciar_sesion(sesion: Sesion, conexion: sqlite3.Connection | None = None):
+    """Pide el PIN al arrancar. **Nunca deja entrar sin usuario.**
 
-    Si la base no tiene usuarios (una instalación limpia sin datos de ejemplo) se entra sin
-    sesión, para que el sistema no quede inutilizable antes de poder crear el primero.
+    Antes, una base sin usuarios dejaba entrar sin sesión y las ventas quedaban sin autor. El
+    cliente pidió saber qué empleado vendió qué, y eso no se puede con ventas anónimas. Ahora:
+
+    - **Base sin ningún usuario, en este PC** (modo suelto o servidor): se crea el primer
+      administrador, se enseña su PIN y se pide el acceso como a cualquiera. Pedirlo, en vez
+      de entrar directamente, confirma que el PIN quedó anotado.
+    - **Usuarios pero ninguno activo**: no hay forma segura de entrar desde aquí; se explica
+      cómo rescatar al administrador.
+    - **Caja secundaria y la principal sin usuarios**: se explica que se creen allí. Crearlos
+      por la red sería dejar la puerta abierta a cualquiera del mismo cable.
+
+    `conexion` solo llega en los modos que tienen base propia.
     """
     from .ui.login_dialog import DialogoLogin
 
     if not sesion.listar_usuarios():
-        _logger.warning("No hay usuarios configurados: se entra sin sesión")
-        return None
+        if conexion is not None and not auth.hay_usuarios(conexion):
+            if not _crear_primer_administrador(conexion):
+                return _CANCELADO
+        else:
+            _explicar_sin_usuarios(es_caja_secundaria=conexion is None)
+            return _CANCELADO
 
     usuario = DialogoLogin.pedir(sesion)
     if usuario is None:
@@ -74,6 +91,42 @@ def _iniciar_sesion(sesion: Sesion):
 
     _logger.info("Sesión iniciada: %s (%s)", usuario.nombre, usuario.rol)
     return usuario
+
+
+def _crear_primer_administrador(conexion: sqlite3.Connection) -> bool:
+    """Crea el administrador de una instalación nueva y enseña su PIN. False si se canceló."""
+    from .ui.usuarios_view import DialogoPin, DialogoPrimerAdministrador
+
+    dialogo = DialogoPrimerAdministrador()
+    while dialogo.exec():
+        try:
+            usuario, pin = auth.crear_primer_administrador(conexion, dialogo.nombre)
+        except ErrorDominio as error:
+            dialogo.fallar(str(error))
+            continue
+        DialogoPin.mostrar("Primer administrador", usuario, pin)
+        return True
+    return False
+
+
+def _explicar_sin_usuarios(es_caja_secundaria: bool) -> None:
+    if es_caja_secundaria:
+        _logger.warning("La caja principal no tiene usuarios activos")
+        QMessageBox.critical(
+            None,
+            "No hay usuarios",
+            "La caja principal no tiene ningún usuario activo.\n\n"
+            "Ábrala y cree allí los usuarios: esta caja los verá en cuanto existan.",
+        )
+    else:
+        _logger.warning("No hay usuarios activos en la base")
+        QMessageBox.critical(
+            None,
+            "No hay usuarios activos",
+            "Todos los usuarios de esta caja están dados de baja.\n\n"
+            "Para recuperar el acceso, ejecute el programa con la opción "
+            "--reiniciar-admin (ver la documentación técnica).",
+        )
 
 
 def verificar() -> int:
@@ -99,7 +152,11 @@ def verificar() -> int:
         configurar()
         app = _crear_aplicacion()
 
-        conexion = abrir_base_datos()
+        # Sin datos de ejemplo: esta comprobación se ejecuta en el PC de la tienda, y sembrar
+        # ahí el catálogo de muestra es como acabaron mezclados los 65 productos de ejemplo con
+        # el catálogo real. Una base vacía y migrada no molesta: el primer arranque de verdad
+        # pedirá crear al administrador.
+        conexion = abrir_base_datos(con_datos_demo=False)
         from .repositories import productos as repo_productos
 
         lineas.append(f"Productos en el catálogo: {repo_productos.contar(conexion)}")
@@ -123,8 +180,77 @@ def verificar() -> int:
     return codigo
 
 
-def ejecutar() -> int:
-    """Punto de entrada. Devuelve el código de salida del proceso."""
+def reiniciar_admin() -> int:
+    """`PuntoYFamaCaja.exe --reiniciar-admin`: recupera un administrador si nadie recuerda el PIN.
+
+    Sin esto, olvidar el único PIN de administrador dejaría la tienda sin poder crear
+    usuarios, cambiar precios ni ver el cierre, y sin forma de arreglarlo desde el programa. Pasa
+    más fácil que antes, justo porque ya no hay PIN publicados en el manual.
+
+    Funciona con **diálogos y no por consola**: el ejecutable se construye sin consola, así que
+    no habría dónde escribir el nombre ni dónde leer el PIN. Y **solo en el PC que guarda la
+    base**: en la caja secundaria no hay base que tocar, y hacerlo por la red está excluido a
+    propósito. Deja constancia en el registro (`auth.rescatar_administrador`) y hace un respaldo
+    antes de tocar nada.
+    """
+    from PySide6.QtWidgets import QInputDialog
+
+    from .ui.usuarios_view import DialogoPin
+    from .utils.logging_setup import configurar
+
+    config.asegurar_directorios()
+    configurar()
+    _crear_aplicacion()
+    titulo = "Rescate de administrador"
+
+    if config_red.cargar().modo is Modo.CAJA:
+        QMessageBox.warning(
+            None,
+            titulo,
+            "Este equipo es la caja secundaria y no guarda la base de datos.\n\n"
+            "Ejecute --reiniciar-admin en la caja principal.",
+        )
+        return 1
+
+    nombre, aceptado = QInputDialog.getText(
+        None,
+        titulo,
+        "Nombre del administrador que hay que recuperar.\n\n"
+        "Si ya existe, recibirá un PIN nuevo. Si no existe, se creará.",
+        text="Administrador",
+    )
+    if not aceptado:
+        return 0
+
+    crear_respaldo()
+    try:
+        conexion = abrir_base_datos(con_datos_demo=False)
+    except Exception as error:  # noqa: BLE001 - sin base no hay rescate posible
+        _logger.exception("Rescate de administrador: no se pudo abrir la base")
+        QMessageBox.critical(None, titulo, f"No fue posible abrir la base de datos.\n\n{error}")
+        return 1
+
+    try:
+        usuario, pin = auth.rescatar_administrador(conexion, nombre)
+    except ErrorDominio as error:
+        QMessageBox.warning(None, titulo, str(error))
+        return 1
+    finally:
+        conexion.close()
+
+    DialogoPin.mostrar("Administrador recuperado", usuario, pin)
+    return 0
+
+
+def ejecutar(demo: bool = False) -> int:
+    """Punto de entrada. Devuelve el código de salida del proceso.
+
+    Con `demo` (opción `--demo`), una base vacía se llena con el catálogo y los dos usuarios
+    de ejemplo, con sus PIN publicados en el manual. **Solo para demostraciones.** Sin ella, una
+    instalación nueva arranca vacía y pide crear al administrador: así ningún PIN publicado
+    sirve en una tienda de verdad, y los productos de ejemplo no se mezclan con los reales.
+    Sobre una base que ya tiene datos no cambia nada: el ejemplo solo se carga si está vacía.
+    """
     from .utils.logging_setup import configurar
 
     config.asegurar_directorios()
@@ -138,10 +264,12 @@ def ejecutar() -> int:
 
     if red.modo is Modo.CAJA:
         return _ejecutar_como_caja(app, red)
-    return _ejecutar_con_base_local(app, red)
+    return _ejecutar_con_base_local(app, red, demo)
 
 
-def _ejecutar_con_base_local(app: QApplication, red: config_red.ConfiguracionRed) -> int:
+def _ejecutar_con_base_local(
+    app: QApplication, red: config_red.ConfiguracionRed, demo: bool = False
+) -> int:
     """Modo suelto y modo servidor: este PC es dueño de la base de datos.
 
     La única diferencia entre los dos es si además se levanta el servidor para que otra caja
@@ -154,7 +282,9 @@ def _ejecutar_con_base_local(app: QApplication, red: config_red.ConfiguracionRed
     crear_respaldo()
 
     try:
-        conexion = abrir_base_datos(compartida_entre_hilos=red.modo is Modo.SERVIDOR)
+        conexion = abrir_base_datos(
+            con_datos_demo=demo, compartida_entre_hilos=red.modo is Modo.SERVIDOR
+        )
     except Exception as error:  # noqa: BLE001 - aquí sí queremos atrapar cualquier cosa
         # Sin base de datos no hay nada que hacer, pero el usuario merece saber por qué en
         # lugar de ver una ventana que nunca aparece.
@@ -167,7 +297,10 @@ def _ejecutar_con_base_local(app: QApplication, red: config_red.ConfiguracionRed
         )
         return 1
 
-    sesion = SesionLocal(conexion)
+    # La sesión lleva el nombre de esta caja, con el que firma sus ventas (fase 16). Ninguna
+    # pantalla tiene que saber de cajas: el dato se pone aquí una vez y viaja solo.
+    sesion = SesionLocal(conexion, caja=red.caja)
+    _logger.info("Esta caja firma sus ventas como: %s", red.caja)
     servidor: ServidorTienda | None = None
 
     if red.modo is Modo.SERVIDOR:
@@ -190,7 +323,7 @@ def _ejecutar_con_base_local(app: QApplication, red: config_red.ConfiguracionRed
 
     codigo = 0
     try:
-        usuario = _iniciar_sesion(sesion)
+        usuario = _iniciar_sesion(sesion, conexion)
         if usuario is _CANCELADO:
             # Cerró la ventana de acceso: se sale sin ruido, sin ventana huérfana.
             return 0
@@ -324,7 +457,8 @@ def _ejecutar_como_caja(app: QApplication, red: config_red.ConfiguracionRed) -> 
         )
         return 1
 
-    sesion = SesionRemota(red.servidor_host, red.puerto)
+    sesion = SesionRemota(red.servidor_host, red.puerto, caja=red.caja)
+    _logger.info("Esta caja firma sus ventas como: %s", red.caja)
     if not _conectar_reintentando(sesion, red):
         return 1
 

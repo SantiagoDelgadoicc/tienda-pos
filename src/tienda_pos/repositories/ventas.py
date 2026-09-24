@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
 
-from ..domain.models import EstadoVenta, LineaVenta, Venta
+from ..config import HORA_CORTE_DIA
+from ..domain.models import EstadoVenta, LineaVenta, MedioPago, Venta
 
 _FORMATO_FECHA_HORA = "%Y-%m-%d %H:%M:%S"
 
@@ -22,6 +23,8 @@ def _a_venta(fila: sqlite3.Row) -> Venta:
         total_clp=fila["total_clp"],
         estado=EstadoVenta(fila["estado"]),
         intento_id=fila["intento_id"] if "intento_id" in fila.keys() else None,
+        caja=fila["caja"] if "caja" in fila.keys() else None,
+        medio_pago=MedioPago.leer(fila["medio_pago"]) if "medio_pago" in fila.keys() else None,
     )
 
 
@@ -55,7 +58,8 @@ def insertar(conexion: sqlite3.Connection, venta: Venta) -> Venta:
     """Inserta la venta y todas sus líneas. Debe ejecutarse dentro de una transacción."""
     cursor = conexion.execute(
         "INSERT INTO venta (folio, usuario_id, fecha_hora, subtotal_clp, descuento_clp, "
-        "total_clp, estado, intento_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "total_clp, estado, intento_id, caja, medio_pago) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             venta.folio,
             venta.usuario_id,
@@ -65,6 +69,8 @@ def insertar(conexion: sqlite3.Connection, venta: Venta) -> Venta:
             venta.total_clp,
             str(venta.estado),
             venta.intento_id,
+            venta.caja,
+            str(venta.medio_pago) if venta.medio_pago else None,
         ),
     )
     venta.id = int(cursor.lastrowid)
@@ -158,35 +164,84 @@ def lineas_de_varias(
     return agrupadas
 
 
-def del_dia(conexion: sqlite3.Connection, dia: date | None = None) -> list[Venta]:
-    """Ventas de un día, de la más reciente a la más antigua.
+def dia_comercial(ahora: datetime | None = None) -> date:
+    """El día de la tienda en este momento. Con corte a medianoche, el de hoy.
 
-    Se compara solo la parte de fecha del texto ISO, que es exactamente lo que permite
-    guardar las fechas en ese formato: ordenar y filtrar sin conversiones.
+    Con `HORA_CORTE_DIA` en 6, a las 01:30 del sábado todavía es viernes: es la noche que el
+    dueño cuenta como del viernes.
     """
-    dia = dia or date.today()
+    ahora = ahora or datetime.now()
+    return (ahora - timedelta(hours=HORA_CORTE_DIA)).date()
+
+
+def rango_del_dia(dia: date) -> tuple[str, str]:
+    """Desde y hasta —este último excluido— del día de la tienda, en el formato guardado.
+
+    Un rango y no `date(fecha_hora) = ?` por dos motivos: permite que el día no empiece a
+    medianoche (`HORA_CORTE_DIA`, pregunta H10), y compara el texto ISO tal cual, que es lo
+    que deja usar el índice por fecha en lugar de recorrer la tabla entera.
+    """
+    desde = datetime.combine(dia, time(HORA_CORTE_DIA))
+    hasta = desde + timedelta(days=1)
+    return desde.strftime(_FORMATO_FECHA_HORA), hasta.strftime(_FORMATO_FECHA_HORA)
+
+
+def del_dia(conexion: sqlite3.Connection, dia: date | None = None) -> list[Venta]:
+    """Ventas de un día de la tienda, de la más reciente a la más antigua."""
+    desde, hasta = rango_del_dia(dia or dia_comercial())
     filas = conexion.execute(
         "SELECT v.*, u.nombre AS usuario_nombre FROM venta v "
         "LEFT JOIN usuario u ON u.id = v.usuario_id "
-        "WHERE date(v.fecha_hora) = ? ORDER BY v.fecha_hora DESC, v.id DESC",
-        (dia.isoformat(),),
+        "WHERE v.fecha_hora >= ? AND v.fecha_hora < ? ORDER BY v.fecha_hora DESC, v.id DESC",
+        (desde, hasta),
     ).fetchall()
     return [_a_venta(f) for f in filas]
 
 
+def del_dia_de_caja(conexion: sqlite3.Connection, dia: date, caja: str | None) -> list[Venta]:
+    """Ventas completadas de una caja en un día, de la más reciente a la más antigua.
+
+    Es una función aparte y no un parámetro opcional de `del_dia`: con `caja=None` por defecto
+    no se podría distinguir "todas las cajas" de "las ventas sin caja registrada", y ese es uno
+    de los casos reales. `IS ?` compara bien contra NULL con un parámetro, así que la misma
+    consulta sirve para ese grupo.
+    """
+    desde, hasta = rango_del_dia(dia)
+    filas = conexion.execute(
+        "SELECT v.*, u.nombre AS usuario_nombre FROM venta v "
+        "LEFT JOIN usuario u ON u.id = v.usuario_id "
+        "WHERE v.fecha_hora >= ? AND v.fecha_hora < ? AND v.caja IS ? AND v.estado = ? "
+        "ORDER BY v.fecha_hora DESC, v.id DESC",
+        (desde, hasta, caja, str(EstadoVenta.COMPLETADA)),
+    ).fetchall()
+    return [_a_venta(f) for f in filas]
+
+
+def cajas_del_dia(conexion: sqlite3.Connection, dia: date) -> list[str | None]:
+    """Las cajas que vendieron ese día, por nombre; la de las ventas sin caja, al final."""
+    desde, hasta = rango_del_dia(dia)
+    filas = conexion.execute(
+        "SELECT DISTINCT caja FROM venta "
+        "WHERE fecha_hora >= ? AND fecha_hora < ? AND estado = ? "
+        "ORDER BY caja IS NULL, caja",
+        (desde, hasta, str(EstadoVenta.COMPLETADA)),
+    ).fetchall()
+    return [f["caja"] for f in filas]
+
+
 def resumen_del_dia(conexion: sqlite3.Connection, dia: date | None = None) -> dict[str, int]:
     """Número de ventas, total vendido y artículos vendidos en el día."""
-    dia = dia or date.today()
+    desde, hasta = rango_del_dia(dia or dia_comercial())
     fila = conexion.execute(
         "SELECT COUNT(*) AS cantidad, COALESCE(SUM(total_clp), 0) AS total FROM venta "
-        "WHERE date(fecha_hora) = ? AND estado = 'completada'",
-        (dia.isoformat(),),
+        "WHERE fecha_hora >= ? AND fecha_hora < ? AND estado = 'completada'",
+        (desde, hasta),
     ).fetchone()
     articulos = conexion.execute(
         "SELECT COALESCE(SUM(l.cantidad), 0) AS articulos FROM venta_linea l "
         "JOIN venta v ON v.id = l.venta_id "
-        "WHERE date(v.fecha_hora) = ? AND v.estado = 'completada'",
-        (dia.isoformat(),),
+        "WHERE v.fecha_hora >= ? AND v.fecha_hora < ? AND v.estado = 'completada'",
+        (desde, hasta),
     ).fetchone()
     return {
         "cantidad_ventas": int(fila["cantidad"]),

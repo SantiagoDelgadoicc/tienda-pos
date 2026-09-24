@@ -475,3 +475,59 @@ Una duración nueva se añade a esta tabla con su motivo, igual que un radio.
   puede poner un fundido, y animar su altura aplasta el contenido en vez de revelarlo. Además
   aparece con el primer escaneo, que ya trae el destello y el aviso: un tercer movimiento en
   el mismo instante es ruido.
+
+## Tamaño de letra
+
+*Sección propia de Punto y Fama, no de Seline. Decisión D-031. Vive en `ui/estilos.py`
+(`ESCALA_TEXTO`, `letra()`, `LETRA_BASE`) y se elige en la pantalla F9.*
+
+El cliente pidió el 2026-09-23 que "los números y letras sean un poquito más grandes": la
+pantalla se lee desde el otro lado del mostrador. Hay tres escalones y se guardan en
+`preferencias.json`, por equipo.
+
+| Escalón | Factor | Letra corriente |
+|---|---|---|
+| Normal | 1,00 | 15 px |
+| Grande | 1,12 | 17 px |
+| Muy grande | 1,25 | 19 px |
+
+### Regla: crece lo que se lee de lejos, no el andamiaje
+
+- **Crecen** nombres de producto, precios, cantidades, subtotales, títulos y avisos.
+- **No crecen** el menú lateral, la barra de atajos, las cabeceras de tabla, el campo de
+  escaneo, el código de barras y los botones `−` `+` de cada línea. Se usan de cerca o son
+  referencia. En la hoja de estilos llevan `/* fijo */` detrás del tamaño y el escalador los
+  respeta; en el código usan `LETRA_BASE`.
+- **El total a pagar no sigue al ajuste**: ya ocupa el mayor tamaño que cabe en su tarjeta.
+- **Solo escala la letra**, nunca márgenes ni altura de filas. Escalar todo sería un zoom, y
+  con zoom caben menos líneas en el carrito.
+
+### Con letra agrandada, el código de barras cede su columna
+
+A 1600 px de ancho la tabla del carrito tiene 638 px útiles, y con letra normal el nombre
+del producto ya solo se lleva 199. Al agrandar crecen precio, cantidad y subtotal, y el nombre
+quedaba en 137 px: en "Muy grande" **se cortaban los ocho productos** de la prueba. Por eso,
+en Grande y Muy grande, la columna del código se oculta y su ancho pasa al nombre. El código
+sigue en la ayuda del botón de copiar y en la consulta de precio.
+
+Cualquier columna nueva del carrito tiene que pasar la prueba
+`test_agrandar_la_letra_no_corta_ningun_nombre`: con la letra agrandada no se puede cortar
+ningún nombre que con la normal se viera entero.
+
+## Color por medio de pago
+
+*Sección propia de Punto y Fama. Decisión D-034. Vive en `ui/estilos.py` (`color_medio`).*
+
+El cliente pidió "un poco de color". Se concede **con significado**: cada medio de pago tiene su
+color, y es el mismo en el selector del cobro, en las ventas del día y en el cierre.
+
+| Medio | Claro | Oscuro |
+|---|---|---|
+| Efectivo | sin color: es lo corriente | sin color |
+| Débito | `#1D4ED8`, lavado `#EAF0FD` | `#8DB0F7`, lavado `#18243B` |
+| Crédito | `#6D28D9`, lavado `#F2ECFD` | `#C3A6F8`, lavado `#261C38` |
+
+Todos pasan AA con margen sobre su lavado y sobre el papel. **El color marca lo que no es lo de
+siempre**: por eso efectivo no lleva, y un cobro que va a salir en débito se nota de reojo.
+Ninguna pantalla escribe estos códigos: los pide a `estilos.color_medio`.
+

@@ -17,7 +17,15 @@ from typing import Any
 from .. import config
 from ..db.migrations import VERSION_ESQUEMA
 from ..domain.errors import ErrorDominio
-from ..domain.models import CodigoNoEncontrado, Producto, Usuario, Venta
+from ..domain.models import (
+    CierreCaja,
+    CodigoNoEncontrado,
+    MedioPago,
+    Producto,
+    Rol,
+    Usuario,
+    Venta,
+)
 from ..services.venta import Carrito
 from . import protocolo
 from .sesion import Sesion
@@ -65,8 +73,15 @@ class SesionRemota(Sesion):
     sobre una operación que escribe es justamente lo que duplica ventas.
     """
 
-    def __init__(self, host: str, puerto: int | None = None, tiempo_limite: float | None = None) -> None:
+    def __init__(
+        self,
+        host: str,
+        puerto: int | None = None,
+        tiempo_limite: float | None = None,
+        caja: str | None = None,
+    ) -> None:
         self._host = host
+        self._caja = caja
         self._puerto = puerto or config.PUERTO_SERVIDOR
         self._tiempo_limite = tiempo_limite or config.TIEMPO_LIMITE_RED_S
         self._base = f"http://{host}:{self._puerto}"
@@ -209,7 +224,12 @@ class SesionRemota(Sesion):
     # ------------------------------------------------------------------ venta
 
     def cerrar_venta(
-        self, carrito: Carrito, usuario: Usuario | None, intento_id: str | None = None
+        self,
+        carrito: Carrito,
+        usuario: Usuario | None,
+        intento_id: str | None = None,
+        *,
+        medio_pago: MedioPago | None = MedioPago.EFECTIVO,
     ) -> Venta:
         """Cobra.
 
@@ -224,6 +244,10 @@ class SesionRemota(Sesion):
                 "carrito": carrito.a_dict(),
                 "usuario": protocolo.de_usuario(usuario) if usuario else None,
                 "intento_id": intento_id,
+                # Esta caja dice quién es: el servidor no puede saberlo, no guarda estado por
+                # conexión, y la IP cambia sola.
+                "caja": self._caja,
+                "medio_pago": str(medio_pago) if medio_pago else None,
             },
         )
         return protocolo.a_venta(datos)
@@ -236,6 +260,44 @@ class SesionRemota(Sesion):
     def autenticar(self, nombre: str, pin: str) -> Usuario:
         return protocolo.a_usuario(self._llamar("autenticar", {"nombre": nombre, "pin": pin}))
 
+    # ------------------------------------------------------------------ usuarios
+
+    @staticmethod
+    def _admin(admin: Usuario | None) -> dict[str, Any] | None:
+        return protocolo.de_usuario(admin) if admin else None
+
+    def listar_para_administrar(
+        self, admin: Usuario | None, incluir_inactivos: bool = False
+    ) -> list[Usuario]:
+        datos = self._llamar(
+            "listar_para_administrar",
+            {"usuario": self._admin(admin), "incluir_inactivos": incluir_inactivos},
+        )
+        return [protocolo.a_usuario(d) for d in datos]
+
+    def alta_usuario(self, admin: Usuario | None, nombre: str, rol: Rol) -> tuple[Usuario, str]:
+        datos = self._llamar(
+            "alta_usuario", {"usuario": self._admin(admin), "nombre": nombre, "rol": str(rol)}
+        )
+        return protocolo.a_usuario(datos["usuario"]), datos["pin"]
+
+    def reiniciar_pin(self, admin: Usuario | None, usuario_id: int) -> str:
+        datos = self._llamar(
+            "reiniciar_pin", {"usuario": self._admin(admin), "usuario_id": usuario_id}
+        )
+        return datos["pin"]
+
+    def desactivar_usuario(self, admin: Usuario | None, usuario_id: int) -> None:
+        self._llamar(
+            "desactivar_usuario", {"usuario": self._admin(admin), "usuario_id": usuario_id}
+        )
+
+    def reactivar_usuario(self, admin: Usuario | None, usuario_id: int) -> str:
+        datos = self._llamar(
+            "reactivar_usuario", {"usuario": self._admin(admin), "usuario_id": usuario_id}
+        )
+        return datos["pin"]
+
     # ------------------------------------------------------------------ reportes
 
     def resumen_del_dia(self, dia: date | None = None) -> dict[str, int]:
@@ -244,3 +306,9 @@ class SesionRemota(Sesion):
     def ventas_del_dia(self, dia: date | None = None) -> list[Venta]:
         datos = self._llamar("ventas_del_dia", {"dia": protocolo.de_fecha(dia)})
         return [protocolo.a_venta(d) for d in datos]
+
+    def cierre_de_caja(self, dia: date | None, caja: str | None) -> CierreCaja:
+        """Una sola petición con todo: ventas con sus líneas y la lista de cajas del día."""
+        return protocolo.a_cierre(
+            self._llamar("cierre_de_caja", {"dia": protocolo.de_fecha(dia), "caja": caja})
+        )

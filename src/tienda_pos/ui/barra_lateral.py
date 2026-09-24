@@ -43,6 +43,9 @@ _PRINCIPALES = (
 _ADMINISTRACION = (
     ("productos", "Productos", "catalogo", "F7"),
     ("reportes", "Ventas del día", "informe", "F8"),
+    # Sin tecla: F1 a F12 están tomadas, y es una pantalla que se abre cuando entra o se va
+    # alguien, no varias veces al día.
+    ("usuarios", "Usuarios", "usuario", ""),
 )
 _PIE = (
     ("configuracion", "Configuración", "ajustes", "F9"),
@@ -120,6 +123,9 @@ class _BotonNav(QPushButton):
         self._icono.setPixmap(iconos.pixmap(self.icono, _TAMANO_ICONO, color))
 
         peso = 700 if self.isChecked() else 500
+        # Tamaño fijo: el menú se usa de cerca y no sigue al ajuste de tamaño de letra
+        # (ver `estilos.ESCALA_TEXTO`). Con la barra de ancho fijo, crecer lo montaría
+        # sobre el atajo.
         self._rotulo.setStyleSheet(f"color: {color}; font-weight: {peso}; font-size: 15px;")
         self._rotulo.setVisible(not self._plegada)
         self._atajo.setVisible(not self._plegada and not self.isChecked())
@@ -361,7 +367,13 @@ class BarraLateral(QFrame):
             if boton.isCheckable():
                 boton.setChecked(nombre == clave)
 
-    def establecer_usuario(self, usuario: Usuario | None) -> None:
+    def establecer_usuario(self, usuario: Usuario | None, caja: str | None = None) -> None:
+        """Pinta quién opera y **en qué caja**.
+
+        El nombre de la caja va siempre a la vista a propósito: es con el que se firman las
+        ventas del cierre, y si los dos PC se llamaran igual, el cierre mezclaría sus ventas sin
+        ningún aviso. Viéndolo al pie de cada caja, eso se nota el primer día.
+        """
         if usuario is None:
             self.etiqueta_usuario.setText("Sin sesión")
             self.etiqueta_rol.setText("Pulse F10 para entrar")
@@ -369,10 +381,13 @@ class BarraLateral(QFrame):
             return
         rol = "Administrador" if usuario.es_admin else "Cajero"
         # Los usuarios de ejemplo se llaman igual que su rol; repetirlo solo hace ruido.
+        detalle = [rol] if usuario.nombre != rol else []
+        if caja:
+            detalle.append(caja)
         self.etiqueta_usuario.setText(usuario.nombre)
-        self.etiqueta_rol.setText("En caja" if usuario.nombre == rol else rol)
+        self.etiqueta_rol.setText(" · ".join(detalle) or "En caja")
         # Plegada no se ve el nombre, así que la ficha lo dice al pasar el ratón por encima.
-        self._ficha.setToolTip(f"{usuario.nombre} · {rol}")
+        self._ficha.setToolTip(" · ".join([usuario.nombre, rol] + ([caja] if caja else [])))
 
     def repintar(self) -> None:
         """Vuelve a dibujar lo que la hoja de estilos no alcanza: los iconos y la marca."""

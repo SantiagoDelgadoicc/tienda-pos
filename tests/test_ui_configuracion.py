@@ -119,6 +119,102 @@ class TestDialogoDeConfiguracion:
         assert servicio.cargar().tema == servicio.TEMA_OSCURO
 
 
+class TestTamanoDeLetra:
+    """El ajuste de tamaño de letra de la pantalla F9."""
+
+    def test_el_dialogo_devuelve_el_tamano_elegido(self, ventana) -> None:
+        dialogo = DialogoConfiguracion(servicio.Preferencias(), ventana)
+        dialogo.combo_letra.setCurrentIndex(
+            dialogo.combo_letra.findData(servicio.TAMANO_GRANDE)
+        )
+        assert dialogo.preferencias.tamano_texto == servicio.TAMANO_GRANDE
+
+    def test_el_tamano_se_previsualiza_y_cancelar_lo_deshace(self, ventana) -> None:
+        vistos: list[str] = []
+        dialogo = DialogoConfiguracion(
+            servicio.Preferencias(), ventana, al_previsualizar_letra=vistos.append
+        )
+        dialogo.combo_letra.setCurrentIndex(
+            dialogo.combo_letra.findData(servicio.TAMANO_MUY_GRANDE)
+        )
+        dialogo.reject()
+        assert vistos == [servicio.TAMANO_MUY_GRANDE, servicio.TAMANO_NORMAL]
+
+    def test_cambiar_el_tema_no_devuelve_la_letra_al_tamano_normal(self, ventana) -> None:
+        # El tema y la letra viven en la misma hoja de estilos. Previsualizar un tema con la
+        # letra agrandada no puede deshacer la letra: es el fallo que habría aparecido al
+        # abrir la rueda de configuración y tocar solo el tema.
+        ventana.aplicar_tamano_texto(servicio.TAMANO_GRANDE)
+        ventana.aplicar_tema(servicio.TEMA_OSCURO)
+        assert estilos.escala == estilos.ESCALA_TEXTO[servicio.TAMANO_GRANDE]
+        assert estilos.actual is estilos.OSCURO
+
+    def test_cambiar_la_letra_no_toca_el_tema(self, ventana) -> None:
+        ventana.aplicar_tema(servicio.TEMA_OSCURO)
+        ventana.aplicar_tamano_texto(servicio.TAMANO_MUY_GRANDE)
+        assert estilos.actual is estilos.OSCURO
+
+    def test_con_letra_grande_el_codigo_cede_su_columna(self, ventana) -> None:
+        from tienda_pos.ui.venta_view import COL_CODIGO
+
+        tabla = ventana.vista_venta.tabla
+        ventana.aplicar_tamano_texto(servicio.TAMANO_NORMAL)
+        assert not tabla.isColumnHidden(COL_CODIGO)
+        ventana.aplicar_tamano_texto(servicio.TAMANO_GRANDE)
+        assert tabla.isColumnHidden(COL_CODIGO)
+        ventana.aplicar_tamano_texto(servicio.TAMANO_NORMAL)
+        assert not tabla.isColumnHidden(COL_CODIGO)
+
+    def test_las_acciones_de_linea_siguen_funcionando_con_el_codigo_oculto(
+        self, ventana
+    ) -> None:
+        # La celda del código se oculta pero no se borra: las acciones la usan para saber
+        # sobre qué producto actúan.
+        from tienda_pos.db.seed import codigo_demo
+
+        venta = ventana.vista_venta
+        ventana.aplicar_tamano_texto(servicio.TAMANO_MUY_GRANDE)
+        venta.agregar_por_codigo(codigo_demo(0))
+        venta.aumentar_cantidad(codigo_demo(0))
+        assert venta._carrito.lineas[0].cantidad == 2
+
+    def test_agrandar_la_letra_no_corta_ningun_nombre(self, ventana) -> None:
+        # El criterio que decidió el diseño: en una caja, "Bebida ..." no se puede vender.
+        # No se mide contra un ancho absoluto porque depende de la fuente disponible, y la
+        # plataforma sin pantalla de las pruebas no carga las del sistema. Lo que no depende
+        # de nada es esto: con la letra agrandada no se puede cortar ningún nombre que con la
+        # letra normal se viera entero. Antes de ceder la columna del código, con "Muy
+        # grande" se cortaban los ocho.
+        from PySide6.QtGui import QFontMetrics
+        from PySide6.QtWidgets import QApplication
+
+        from tienda_pos.db.seed import codigo_demo
+        from tienda_pos.ui.venta_view import COL_NOMBRE
+
+        ventana.resize(1600, 1000)
+        ventana.show()
+        ventana.mostrar_venta()
+        for indice in (0, 10, 19, 35, 52, 44, 3, 7):
+            ventana.vista_venta.agregar_por_codigo(codigo_demo(indice))
+        tabla = ventana.vista_venta.tabla
+
+        def cortados() -> set[str]:
+            QApplication.processEvents()
+            metricas = QFontMetrics(tabla.font())
+            return {
+                tabla.item(fila, COL_NOMBRE).text()
+                for fila in range(tabla.rowCount())
+                if metricas.horizontalAdvance(tabla.item(fila, COL_NOMBRE).text()) + 16
+                > tabla.columnWidth(COL_NOMBRE)
+            }
+
+        ventana.aplicar_tamano_texto(servicio.TAMANO_NORMAL)
+        con_letra_normal = cortados()
+        for tamano in (servicio.TAMANO_GRANDE, servicio.TAMANO_MUY_GRANDE):
+            ventana.aplicar_tamano_texto(tamano)
+            assert cortados() <= con_letra_normal, tamano
+
+
 class TestTotalTrasCambiarDeTema:
     def test_el_total_recupera_el_verde_del_tema(self, ventana) -> None:
         # El total lleva su tamaño y su color en un estilo propio de la etiqueta, no en la

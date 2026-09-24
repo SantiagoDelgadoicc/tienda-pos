@@ -7,7 +7,7 @@ permite probar la lógica de negocio sin abrir una ventana ni crear una base de 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 
 
@@ -19,6 +19,33 @@ class Rol(StrEnum):
 class EstadoVenta(StrEnum):
     COMPLETADA = "completada"
     ANULADA = "anulada"
+
+
+class MedioPago(StrEnum):
+    """Con qué pagó el cliente (fase 17). Lo marca el cajero al cobrar.
+
+    El cliente los pidió **separados**: efectivo, débito y crédito. Lo que se ve en pantalla
+    ("Débito") vive en la interfaz; aquí solo el valor que se guarda.
+    """
+
+    EFECTIVO = "efectivo"
+    DEBITO = "debito"
+    CREDITO = "credito"
+
+    @classmethod
+    def leer(cls, valor: object) -> "MedioPago | None":
+        """Lo guardado en la base o llegado por la red, **sin fallar** ante lo que no conoce.
+
+        La columna no tiene `CHECK` (migración 5), así que un valor desconocido es posible:
+        escrito a mano o por una versión más nueva. Se lee como no registrado, que es lo que
+        esta versión sabe de él, en lugar de tumbar el cierre del día.
+        """
+        if valor in (None, ""):
+            return None
+        try:
+            return cls(valor)
+        except ValueError:
+            return None
 
 
 @dataclass(slots=True)
@@ -119,6 +146,11 @@ class Venta:
     #: cobro cuyo resultado se perdió por la red sin duplicar la venta (D-024). Las ventas
     #: registradas antes de la migración 3 lo tienen a None.
     intento_id: str | None = None
+    #: Nombre de la caja donde se hizo, tal como se llamaba en ese momento (fase 16). Las
+    #: ventas anteriores a la migración 4 lo tienen a None: no se sabe y no se inventa.
+    caja: str | None = None
+    #: Con qué se pagó (fase 17). None en las ventas anteriores a la migración 5: no registrado.
+    medio_pago: MedioPago | None = None
     lineas: list[LineaVenta] = field(default_factory=list)
 
     @property
@@ -139,3 +171,82 @@ class CodigoNoEncontrado:
     primera_vez: str
     ultima_vez: str
     resuelto: bool = False
+
+
+# --------------------------------------------------------------------------- cierre de caja
+
+
+@dataclass(slots=True)
+class TotalPorMedio:
+    medio_pago: MedioPago | None  # None: ventas de antes de registrar el medio
+    ventas: int
+    total_clp: int
+
+
+@dataclass(slots=True)
+class TotalPorEmpleado:
+    usuario_id: int | None  # None: ventas de antes de que la sesión fuera obligatoria
+    nombre: str | None
+    ventas: int
+    total_clp: int
+    articulos: int
+
+
+@dataclass(slots=True)
+class CierreCaja:
+    """El cierre diario de una caja (fase 18): lo que pidió el cliente.
+
+    Es un informe que se calcula al pedirlo, no un registro guardado: no cierra nada ni
+    bloquea la caja. Los totales **se derivan de `ventas`**, la misma lista que se enseña venta
+    por venta, en lugar de pedirse con consultas aparte. Así la suma por medio, la suma por
+    empleado y el total salen siempre iguales —por construcción, no por cuidado—, y por la red
+    viaja una sola cosa.
+    """
+
+    dia: date
+    #: La caja del informe. None es el grupo de ventas anteriores a registrar la caja.
+    caja: str | None
+    #: Las ventas completadas de esa caja ese día, de la más reciente a la más antigua, con sus
+    #: líneas cargadas: el cliente quiere ver qué productos llevó cada venta.
+    ventas: list[Venta] = field(default_factory=list)
+    #: Las cajas que vendieron ese día, para poder mirar la otra.
+    cajas_del_dia: list[str | None] = field(default_factory=list)
+
+    @property
+    def total_clp(self) -> int:
+        return sum(v.total_clp for v in self.ventas)
+
+    @property
+    def cantidad_ventas(self) -> int:
+        return len(self.ventas)
+
+    @property
+    def articulos(self) -> int:
+        return sum(v.cantidad_articulos for v in self.ventas)
+
+    @property
+    def por_medio(self) -> list[TotalPorMedio]:
+        """Los tres medios siempre, aunque sea en cero: "débito $0" también es información. Las
+        ventas sin medio registrado aparecen al final, y solo si las hay."""
+        filas = {medio: TotalPorMedio(medio, 0, 0) for medio in MedioPago}
+        sin_registrar = TotalPorMedio(None, 0, 0)
+        for venta in self.ventas:
+            fila = filas.get(venta.medio_pago, sin_registrar)
+            fila.ventas += 1
+            fila.total_clp += venta.total_clp
+        return list(filas.values()) + ([sin_registrar] if sin_registrar.ventas else [])
+
+    @property
+    def por_empleado(self) -> list[TotalPorEmpleado]:
+        """Quién vendió cuánto en esta caja, de más a menos."""
+        filas: dict[int | None, TotalPorEmpleado] = {}
+        for venta in self.ventas:
+            fila = filas.setdefault(
+                venta.usuario_id,
+                TotalPorEmpleado(venta.usuario_id, venta.usuario_nombre, 0, 0, 0),
+            )
+            fila.ventas += 1
+            fila.total_clp += venta.total_clp
+            fila.articulos += venta.cantidad_articulos
+        return sorted(filas.values(), key=lambda f: (-f.total_clp, f.nombre or ""))
+

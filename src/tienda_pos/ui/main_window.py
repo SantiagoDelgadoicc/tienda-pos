@@ -35,6 +35,7 @@ from .configuracion_dialog import DialogoConfiguracion
 from .consulta_view import ConsultaView
 from .login_dialog import DialogoLogin
 from .productos_view import ProductosView
+from .usuarios_view import UsuariosView
 from .reportes_view import ReportesView
 from .venta_view import VentaView
 
@@ -44,6 +45,7 @@ _CABECERAS = {
     "consulta": ("Consulta de precio", "Para mirar un precio sin abrir una venta."),
     "productos": ("Productos", "El catálogo completo de la tienda."),
     "reportes": ("Ventas del día", "Lo que se vendió hoy, venta por venta."),
+    "usuarios": ("Usuarios", "Un usuario por empleado, cada uno con su PIN."),
 }
 
 _AYUDA = """<b>Atajos de teclado</b><br><br>
@@ -58,6 +60,7 @@ _AYUDA = """<b>Atajos de teclado</b><br><br>
 <tr><td><b>←</b> o <b>−</b></td><td>Quitar una unidad de la línea seleccionada</td></tr>
 <tr><td><b>Ctrl+C</b></td><td>Copiar el código de la línea seleccionada</td></tr>
 <tr><td><b>F6</b></td><td>Cancelar la venta en curso</td></tr>
+<tr><td><b>F11</b></td><td>Cambiar el medio de pago: efectivo, débito, crédito</td></tr>
 <tr><td><b>F12</b></td><td>Cobrar y registrar la venta</td></tr>
 <tr><td><b>F7</b></td><td>Administrar productos <i>(administrador)</i></td></tr>
 <tr><td><b>F8</b></td><td>Ventas del día <i>(administrador)</i></td></tr>
@@ -82,6 +85,8 @@ class VentanaPrincipal(QMainWindow):
         # Las preferencias se leen antes de construir nada: el tema y la barra de atajos
         # cambian cómo se monta la ventana.
         self.preferencias = servicio_preferencias.cargar()
+        self._tema_aplicado = self.preferencias.tema
+        self._letra_aplicada = self.preferencias.tamano_texto
 
         self.setWindowTitle(f"{NOMBRE_COMERCIAL} · Caja {VERSION}")
         self.resize(1280, 800)
@@ -114,7 +119,7 @@ class VentanaPrincipal(QMainWindow):
         barra.showMessage(
             "F1 ayuda   ·   F2 consulta   ·   F3 buscar   ·   F4 descuento   ·   F5 quitar"
             "   ·   F6 cancelar   ·   F7 productos   ·   F8 ventas del día"
-            "   ·   F9 configuración   ·   F10 cambiar usuario   ·   F12 cobrar"
+            "   ·   F9 configuración   ·   F10 cambiar usuario   ·   F11 pago   ·   F12 cobrar"
             "   ·   Ctrl+B menú"
         )
         self.setStatusBar(barra)
@@ -132,11 +137,13 @@ class VentanaPrincipal(QMainWindow):
         self.vista_consulta = ConsultaView(self._sesion)
         self.vista_productos = ProductosView(self._sesion)
         self.vista_reportes = ReportesView(self._sesion)
+        self.vista_usuarios = UsuariosView(self._sesion)
         for vista in (
             self.vista_venta,
             self.vista_consulta,
             self.vista_productos,
             self.vista_reportes,
+            self.vista_usuarios,
         ):
             self.pantallas.addWidget(vista)
         columna.addWidget(self.pantallas, stretch=1)
@@ -146,6 +153,8 @@ class VentanaPrincipal(QMainWindow):
         self.vista_productos.salir_solicitado.connect(self.mostrar_venta)
         self.vista_productos.resumen_cambiado.connect(self._resumen_de_productos)
         self.vista_reportes.salir_solicitado.connect(self.mostrar_venta)
+        self.vista_usuarios.salir_solicitado.connect(self.mostrar_venta)
+        self.vista_usuarios.resumen_cambiado.connect(self._resumen_de_usuarios)
         return contenido
 
     def _cabecera(self) -> QWidget:
@@ -197,6 +206,8 @@ class VentanaPrincipal(QMainWindow):
         self._atajo(QKeySequence(Qt.Key.Key_F8), self.mostrar_reportes)
         self._atajo(QKeySequence(Qt.Key.Key_F9), self.abrir_configuracion)
         self._atajo(QKeySequence(Qt.Key.Key_F10), self.cambiar_usuario)
+        # F11 recorre efectivo, débito y crédito (fase 17): la tecla libre más cerca de F12.
+        self._atajo(QKeySequence(Qt.Key.Key_F11), self._medio_pago)
         self._atajo(QKeySequence(Qt.Key.Key_F12), self._cobrar)
         self._atajo(QKeySequence(Qt.Key.Key_Escape), self.mostrar_venta)
         self._atajo(QKeySequence("Ctrl+B"), self.barra_lateral.alternar_plegado)
@@ -215,6 +226,7 @@ class VentanaPrincipal(QMainWindow):
             "consulta": self.mostrar_consulta,
             "productos": self.mostrar_productos,
             "reportes": self.mostrar_reportes,
+            "usuarios": self.mostrar_usuarios,
             "configuracion": self.abrir_configuracion,
             "usuario": self.cambiar_usuario,
         }
@@ -224,6 +236,10 @@ class VentanaPrincipal(QMainWindow):
         """Refleja en la cabecera cuántos productos hay, mientras se esté mirando esa
         pantalla. Filtrar el catálogo cambia el subtítulo en vivo."""
         if self.pantallas.currentWidget() is self.vista_productos:
+            self.subtitulo_pantalla.setText(texto)
+
+    def _resumen_de_usuarios(self, texto: str) -> None:
+        if self.pantallas.currentWidget() is self.vista_usuarios:
             self.subtitulo_pantalla.setText(texto)
 
     def _ir_a(self, clave: str, vista: QWidget) -> None:
@@ -267,6 +283,15 @@ class VentanaPrincipal(QMainWindow):
         self._ir_a("reportes", self.vista_reportes)
         self.vista_reportes.recargar()
 
+    def mostrar_usuarios(self) -> None:
+        """Usuarios de la tienda. Si quien opera no es administrador, se le pide el PIN de uno."""
+        administrador = self._asegurar_admin("administrar los usuarios")
+        if administrador is None:
+            return
+        self.vista_usuarios.usuario = administrador
+        self._ir_a("usuarios", self.vista_usuarios)
+        self.vista_usuarios.recargar()
+
     def _asegurar_admin(self, accion: str):
         """Devuelve un usuario administrador, pidiendo su PIN si hace falta.
 
@@ -308,6 +333,7 @@ class VentanaPrincipal(QMainWindow):
             return
 
         self.vista_venta.carrito.vaciar()
+        self.vista_venta._empezar_venta_nueva()
         self.vista_venta._refrescar()
         self.establecer_usuario(usuario)
         self.mostrar_venta()
@@ -328,6 +354,10 @@ class VentanaPrincipal(QMainWindow):
     def _descuento(self) -> None:
         if self._en_venta():
             self.vista_venta.aplicar_descuento()
+
+    def _medio_pago(self) -> None:
+        if self._en_venta():
+            self.vista_venta.alternar_medio_pago()
 
     def _quitar_linea(self) -> None:
         if self._en_venta():
@@ -351,7 +381,10 @@ class VentanaPrincipal(QMainWindow):
     def abrir_configuracion(self) -> None:
         """Abre la rueda de configuración y aplica lo que se elija."""
         elegidas = DialogoConfiguracion.abrir(
-            self.preferencias, self, al_previsualizar_tema=self.aplicar_tema
+            self.preferencias,
+            self,
+            al_previsualizar_tema=self.aplicar_tema,
+            al_previsualizar_letra=self.aplicar_tamano_texto,
         )
         if elegidas is not None:
             self.aplicar_preferencias(elegidas)
@@ -360,7 +393,7 @@ class VentanaPrincipal(QMainWindow):
     def aplicar_preferencias(self, preferencias: Preferencias) -> None:
         """Deja la aplicación en el estado que describen las preferencias."""
         self.preferencias = preferencias
-        self.aplicar_tema(preferencias.tema)
+        self._aplicar_apariencia(preferencias.tema, preferencias.tamano_texto)
         sonido.habilitado = preferencias.sonido
         movimiento.habilitado = preferencias.animaciones
         self.barra_lateral.plegar(preferencias.barra_lateral_plegada)
@@ -380,27 +413,44 @@ class VentanaPrincipal(QMainWindow):
         servicio_preferencias.guardar(self.preferencias)
 
     def aplicar_tema(self, tema: str) -> None:
-        """Repinta toda la aplicación con el tema indicado, sin reiniciar.
+        """Repinta toda la aplicación con el tema indicado, sin tocar el tamaño de letra."""
+        self._aplicar_apariencia(tema, self._letra_aplicada)
+
+    def aplicar_tamano_texto(self, tamano: str) -> None:
+        """Repinta toda la aplicación con el tamaño de letra indicado, sin tocar el tema."""
+        self._aplicar_apariencia(self._tema_aplicado, tamano)
+
+    def _aplicar_apariencia(self, tema: str, tamano_texto: str) -> None:
+        """Repinta toda la aplicación con un tema y un tamaño de letra, sin reiniciar.
+
+        Los dos van juntos porque viven en la misma hoja de estilos: aplicar solo el tema
+        devolvería la letra al tamaño de fábrica, y al revés. Por eso la ventana recuerda lo
+        que está aplicado, que durante la previsualización del diálogo de configuración no
+        coincide con lo guardado en `self.preferencias`.
 
         Se aplica sobre la QApplication y no sobre esta ventana porque los diálogos son
         ventanas aparte: si el estilo viviera aquí, seguirían saliendo con el tema anterior.
         """
+        self._tema_aplicado = tema
+        self._letra_aplicada = tamano_texto
         app = QApplication.instance()
         if app is not None:
-            estilos.aplicar(app, tema)
+            estilos.aplicar(app, tema, tamano_texto)
         # Lo que la hoja de estilos no alcanza: los iconos, que son mapas de píxeles ya
         # pintados, y los colores que las pantallas fijan celda a celda.
         self.barra_lateral.repintar()
         self._actualizar_reloj()
         self.vista_venta.repintar()
         self.vista_productos.repintar()
+        self.vista_usuarios.repintar()
+        self.vista_reportes.repintar()
 
     # ------------------------------------------------------------------ sesión
 
     def establecer_usuario(self, usuario: Usuario | None) -> None:
         self.usuario = usuario
         self.vista_venta.usuario = usuario
-        self.barra_lateral.establecer_usuario(usuario)
+        self.barra_lateral.establecer_usuario(usuario, self._sesion.caja)
 
     def _actualizar_reloj(self) -> None:
         self._icono_reloj.setPixmap(iconos.pixmap("reloj", 16, estilos.actual.texto_apagado))

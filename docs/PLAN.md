@@ -294,16 +294,20 @@ avisará el día que alguien los rompa. Si no se cumplen, se arregla antes de ce
 
 ---
 
-## Fase 12 — Gestión de usuarios
+## Fase 12 — Gestión de usuarios · *absorbida por la fase 15 el 2026-09-24*
+
+> Se hizo dentro de la fase 15 (D-032), cuando el cliente pidió un usuario por empleado. La
+> segunda casilla cambió de forma: en lugar de obligar a cambiar el PIN de fábrica, el PIN lo
+> genera el sistema. La tercera pasa a la fase 18, que es el cierre por empleado.
 
 Es el hueco que ya estaba pendiente antes de esta reunión. La lógica existe y está probada
 (`services/auth.py::cambiar_pin`), pero no está conectada a ninguna pantalla. Con dos cajas y dos
 personas atendiendo deja de ser opcional: hay que saber quién vendió qué, y los PIN de hoy están
 publicados en el manual.
 
-- [ ] Pantalla de usuarios: crear, cambiar el PIN, dar de baja
-- [ ] Obligar a cambiar el PIN de fábrica la primera vez
-- [ ] Ventas del día por cajero
+- [x] Pantalla de usuarios: crear, cambiar el PIN, dar de baja *(fase 15)*
+- [x] ~~Obligar a cambiar el PIN de fábrica la primera vez~~ → el PIN lo genera el sistema *(D-032)*
+- [ ] Ventas del día por cajero → *fase 18*
 
 **Criterio de aceptación:** se puede poner el sistema en una tienda sin que ningún PIN publicado en
 la documentación sirva para entrar.
@@ -350,10 +354,13 @@ la documentación sirva para entrar.
       condición 2 de D-015 que falta: el tiempo límite ya está, pero el cajero todavía no ve el
       estado hasta que una operación falla.
 - [ ] **Llevar las pruebas manuales a `tests/`** como pruebas de pytest, y añadirlas a la suite.
+      *(2026-09-24: ya existe `tests/test_red.py`, con un servidor real, para las operaciones de
+      usuarios de la fase 15. Las de concurrencia siguen siendo manuales.)*
 - [x] **Probar en los dos PC reales.** Instalado y funcionando en la tienda desde el 2026-09-15:
       dos equipos unidos por cable directo, catálogo único, verificado incluido el reinicio de
       ambos. Ver `docs/DESPLIEGUE-TIENDA.md`.
-- [ ] Desactivar la carga de datos demo en instalaciones reales
+- [x] Desactivar la carga de datos demo en instalaciones reales *(2026-09-24, D-032: ahora solo
+      con `--demo`, y `--verificar` tampoco siembra ya nada)*
       (`abrir_base_datos(con_datos_demo=False)`). En la tienda los 65 productos de ejemplo se
       mezclaron con el catálogo real y hubo que separarlos a mano.
 
@@ -374,6 +381,215 @@ apagada.
 
 **Criterio de aceptación:** dos PC quedan funcionando ejecutando un instalador en cada uno y
 respondiendo preguntas, sin copiar carpetas a mano ni editar archivos de configuración.
+
+---
+
+## Tercera etapa — lo que pidió el cliente el 2026-09-18
+
+El 2026-09-18 el cliente pidió un usuario por empleado, un cierre diario por caja y registrar el
+medio de pago. El 2026-09-23 contestó por WhatsApp: el cierre con efectivo, débito y crédito por
+separado y la lista de ventas con sus productos; letra más grande, color y su logotipo. No contestó
+claro si quiere cuadrar el efectivo del cajón. Ver 3.1 en `CLAUDE.md`.
+
+Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro proyecto, explicado en
+`docs/BOLETA-ELECTRONICA-SII.md`. Las preguntas pendientes están en
+`docs/PREGUNTAS-CIERRE-Y-USUARIOS.md`.
+
+| Fase | Qué | Estado |
+|---|---|---|
+| — | Rojo y logotipo de la marca (D-030) · tamaño de letra ajustable (D-031) | ✅ 2026-09-24 |
+| 15 | Usuarios por empleado y sesión obligatoria (D-032) | ✅ 2026-09-24 |
+| 16 | Identidad de caja (D-033) | ✅ 2026-09-24 |
+| 17 | Medio de pago: efectivo, débito y crédito (D-034) | ✅ 2026-09-24 |
+| 18 | Informe de cierre diario por caja (D-035) | **en curso**: backend hecho, sin pruebas; pantalla en borrador |
+| 19 | Modo arqueo, activable | pendiente |
+| 20 | Documentación y manual | pendiente |
+
+### Cómo retomar (estado al 2026-09-24)
+
+**Dónde está todo:** rama `diseño`. 429 pruebas en verde. Esquema de la base en la versión 5 y
+protocolo entre cajas en la 5. El `.exe` del escritorio está construido en la fase 15: hay que
+reconstruirlo (`python tools/construir.py`) para ver las fases 16 y 17.
+
+**Lo siguiente es terminar la fase 18**, que quedó a medias: su lista de pendientes está abajo, en
+orden. Después la 19 y la 20.
+
+**Pendiente del cliente** (detalle en `docs/PREGUNTAS-CIERRE-Y-USUARIOS.md`):
+
+- **H10, la medianoche.** Si venden pasada la medianoche, ¿de qué día son esas ventas? Responderla
+  es cambiar `config.HORA_CORTE_DIA`. Es la que puede salir cara si se olvida.
+- **H8, cómo se llaman las cajas.** Se escribe en `red.json` de cada PC el día de la visita.
+- Si los retiros "se anotan" (sí) o "si se anotan" (condicional), y los detalles del arqueo (H1c,
+  H1d): condicionan la fase 19.
+- H3 (otros medios, fiado), H11 (anular ventas), H9, H4 (quién ve el cierre), H5 (imprimirlo),
+  D1 (quién cambia precios), y si quiere que se calcule el vuelto.
+- A las dos semanas de uso: ¿se marcan bien débito y crédito? Si no, se funden en "tarjeta".
+
+**Pendiente en la tienda** (una sola visita, con las dos cajas paradas; procedimiento en
+`docs/DESPLIEGUE-TIENDA.md`, "Actualizar a la versión con un usuario por empleado"): actualizar los
+dos PC a la vez, crear los usuarios de los empleados, PIN nuevo para `Administrador`, baja de
+`Cajero`, `nombre_caja` distinto en el `red.json` de cada PC, y comprobar la resolución de pantalla
+de los equipos (D-031: todo el margen del carrito se midió a 1600 de ancho).
+
+**Pendiente de Santiago:** abrir el PR de `diseño` a `main` (`gh` no está autenticado en este
+equipo), y la boleta electrónica, que es otro proyecto y espera a que el cliente conteste qué hace
+hoy con sus boletas (`docs/BOLETA-ELECTRONICA-SII.md`).
+
+
+---
+
+## Fase 15 — Usuarios por empleado y sesión obligatoria (D-032) ✅
+
+Absorbe la fase 12.
+
+- [x] Pantalla de usuarios: alta, PIN nuevo, dar de baja, reactivar; desde las dos cajas
+- [x] El PIN lo genera el sistema y se enseña una sola vez; nunca sale `1111` ni `1234`
+- [x] No darse de baja a uno mismo ni al último administrador; reactivar a quien vuelve
+- [x] Nunca se entra sin usuario: primer administrador en una base vacía; cobrar sin usuario se niega
+- [x] `--demo` para demostraciones; sin él, una base vacía no se llena con datos de ejemplo
+- [x] `--reiniciar-admin` para rescatar al administrador, solo en el PC de la base
+- [x] Protocolo entre cajas a la versión 2
+- [x] Nombre de usuario repetido: error legible en lugar del de SQLite
+- [ ] **En la tienda:** nuevo PIN para `Administrador` y baja de `Cajero` (`DESPLIEGUE-TIENDA.md`)
+
+**Criterio de aceptación:** no existe forma de llegar a la pantalla de venta sin usuario
+identificado, ningún PIN publicado en la documentación sirve en una instalación nueva, y un
+administrador que olvida su PIN puede recuperar la tienda sin llamar a nadie. **Cumplido**, salvo
+la tienda ya instalada, que conserva los PIN de fábrica hasta la visita.
+
+---
+
+## Fase 16 — Identidad de caja (D-033) ✅
+
+- [x] Migración 4: `venta.caja`, texto; las ventas anteriores quedan sin caja
+- [x] El nombre sale de `red.json` (`nombre_caja`) o, sin él, del nombre del PC; nunca del modo
+- [x] Viaja en la petición y el servidor usa ese: probado contra un servidor real
+- [x] Siempre a la vista en la ficha del usuario; protocolo a la versión 3
+- [ ] **En la tienda:** escribir `nombre_caja` en el `red.json` de cada PC (pregunta H8)
+
+**Criterio de aceptación:** una venta hecha en la caja secundaria queda registrada como de la
+caja secundaria, aunque la haya escrito el servidor. **Cumplido.**
+
+Cada venta guarda en qué caja se hizo. Hoy no lo sabe nadie: `red.json` no tiene nombre de caja.
+El dato **viaja en la petición** de la secundaria: si el servidor pusiera el suyo, todas las ventas
+de la caja 2 saldrían como de la 1. Las ventas anteriores quedan sin caja, no se inventa.
+Migración de esquema. Pendiente de la pregunta H8: cómo se llaman las cajas.
+
+## Fase 17 — Medio de pago (D-034) ✅
+
+- [x] Migración 5: `venta.medio_pago`, sin `CHECK`; las ventas anteriores, sin registrar
+- [x] Tres botones sobre el de cobrar y F11 que los recorre; vuelve a efectivo tras cada venta
+- [x] Un color por medio, el mismo en el cobro y en las ventas del día; efectivo sin color
+- [x] Columna "Medio" en las ventas del día; protocolo a la versión 4
+- [ ] **Con el cliente, a las dos semanas:** ¿se marcan bien débito y crédito?
+
+**Criterio de aceptación:** el cajero registra una venta con tarjeta sin tocar el ratón. **Cumplido.**
+
+Efectivo, débito y crédito, separados como pidió el cliente. Lo marca el cajero con una tecla que
+cicla, siempre visible y sin estorbar el cobro con F12. Vuelve a efectivo tras cada venta.
+Modifica D-006. Revisar con el cliente a las dos semanas si débito y crédito se marcan bien.
+
+## Fase 18 — Informe de cierre diario por caja (D-035) · **EN CURSO**
+
+*Cortada el 2026-09-24 a pedido de Santiago, a mitad de camino.* El backend está hecho y la suite
+pasa, pero **no tiene pruebas propias** y la pantalla es un borrador sin conectar. No se da por
+terminada hasta cumplir lo de abajo.
+
+**Hecho:**
+
+- [x] `domain/models.py`: `CierreCaja`, `TotalPorMedio`, `TotalPorEmpleado`. Los totales **se
+      derivan de la lista de ventas** (propiedades), así que suma por medio = suma por empleado =
+      total por construcción, y por la red viaja una sola cosa.
+- [x] `config.HORA_CORTE_DIA = 0` y `repositories/ventas.py::rango_del_dia` / `dia_comercial`: el
+      día de la tienda es un rango con hora de corte. **"Ventas del día" usa ya el mismo rango**, así
+      que al responder H10 se cambia un número y cambian las dos pantallas a la vez.
+- [x] `repositories/ventas.py`: `del_dia_de_caja(dia, caja)` —con `caja IS ?`, que sirve para el
+      grupo sin caja— y `cajas_del_dia(dia)`.
+- [x] `services/reportes.py::cierre_de_caja(dia, caja)`: ventas con sus líneas y lista de cajas, en
+      tres consultas.
+- [x] Operación `cierre_de_caja` en `Sesion` (19 operaciones), `SesionRemota` y el servidor;
+      `protocolo.de_cierre` / `a_cierre`. **Protocolo a la versión 5.**
+- [x] `ui/cierre_view.py`: **borrador**. Día seleccionable, caja (desplegable solo si ese día vendió
+      más de una), tarjetas de total y de cada medio con su color, árbol de ventas desplegables con
+      sus productos, tabla por empleado, y el pie de "no cierra nada". Importa; nada más probado.
+
+**Pendiente, en este orden:**
+
+- [ ] **Pruebas del backend** (`tests/test_cierre.py`): caja sin ventas → ceros y sin error; dos
+      cajas el mismo día → cada cierre ve solo lo suyo y la suma de ambos es el total del día;
+      ventas sin caja → solo en el grupo "sin caja"; ventas sin usuario → "sin usuario" y el total
+      cuadra; **dos empleados en la misma caja**, que es el caso literal del cliente; anuladas
+      excluidas; **suma por medio = suma por empleado = total**; bordes del día (00:00 y 23:59
+      dentro, el día anterior fuera) y **con `HORA_CORTE_DIA` distinto de 0**; `dia_comercial` a
+      las 01:30 con corte 6 → el día anterior; ida y vuelta por el protocolo; por la red contra un
+      servidor real, pidiendo desde la secundaria el cierre de la principal.
+- [ ] **Conectar la pantalla**: entrada "Cierre de caja" en `barra_lateral.py::_ADMINISTRACION`
+      (icono `caja`, sin tecla), `_CABECERAS["cierre"]`, `vista_cierre` en `main_window.py`,
+      `mostrar_cierre()` con `_asegurar_admin("ver el cierre de caja")` que llama a
+      `vista_cierre.al_entrar()`, su `resumen_cambiado` a la cabecera, y `repintar()` al cambiar de
+      tema.
+- [ ] Un botón **"Cierre de caja"** en la cabecera de "Ventas del día", que es donde el dueño lo va a
+      buscar.
+- [ ] `ui/reportes_view.py::recargar` usa `date.today()`: pasar a `reportes.dia_comercial()`.
+- [ ] **Pruebas de la pantalla**: el desplegable de caja no aparece con una sola; la tarjeta "Sin
+      registrar" solo si hay ventas así; cada tarjeta de medio con su color; las ventas plegadas al
+      abrir y el botón que las despliega todas; elegir otro día y otra caja recarga; un día sin
+      ventas enseña el aviso; un cajero sin autorización no entra.
+- [ ] Mirarla renderizada a 1600×1000 y con **letra "Muy grande"** (D-031): con cinco tarjetas y
+      dos paneles puede no caber. Añadir la captura `14-cierre.png` a `tools/capturas.py`.
+- [ ] Decisión D-035 al día, `CLAUDE.md` (árbol y recuento), manual en la fase 20.
+
+**Criterio de aceptación:** el dueño ve, en una pantalla, cuánto se vendió en esa caja en efectivo,
+en débito y en crédito, qué empleado vendió cuánto, y los productos de cada venta.
+
+## Fase 19 — Modo arqueo, activable · pendiente
+
+El dinero del cajón **detrás de un interruptor**, porque el cliente no contestó claro si quiere
+cuadrar el efectivo (dijo que cuentan la plata en un cuaderno, y que "si se anotan todos los retiros
+en efectivo", que puede ser un sí o un condicional). Decidido por Santiago el 2026-09-23.
+
+**El interruptor no ahorra trabajo, lo aumenta:** hay que construir el arqueo entero igual, más el
+modo, más probar y documentar los dos caminos.
+
+- **Desactivado** (por defecto): el cierre es el de la fase 18, sin nada del cajón.
+- **Activado**: apertura con fondo inicial, conteo al cerrar, diferencia, registro guardado de
+  quién cerró, y **pantalla de entradas y salidas de efectivo** (retiros para pagar a un
+  proveedor, sencillo que se agrega). Sin esa pantalla el arqueo muestra diferencia todos los días
+  y se deja de mirar a las dos semanas.
+
+Diseño ya pensado:
+
+- **El interruptor va en la tabla `meta`, no en `preferencias.json`.** Es configuración del
+  negocio y arrastra datos que comparten las dos cajas; si una lo tuviera activado y la otra no, los
+  datos quedarían a medias. `meta` ya existe y no necesita migración. Solo administrador, con
+  confirmación, en la pantalla F9.
+- **Activarlo exige un punto de partida**: abre directamente la apertura de caja (cuánto efectivo
+  hay ahora). **Desactivarlo no borra nada**; si se reactiva, el informe tiene que decir que hubo un
+  hueco sin declarar, en vez de fingir continuidad.
+- Tablas nuevas (migración 6): aperturas/cierres de caja con fondo, conteo, diferencia, quién y
+  cuándo; y movimientos de efectivo con monto, motivo, quién y caja.
+- El efectivo esperado = fondo inicial + ventas en efectivo − retiros + ingresos. **El vuelto no
+  entra en la cuenta**: sale del mismo cajón y el neto es el total de la venta.
+- Las dos cajas leen siempre el mismo valor del interruptor, servido por el servidor.
+
+Pendiente del cliente: quién cuenta el dinero y qué se hace hoy si no cuadra (H1d); si el fondo
+inicial es fijo o se arrastra (H1c); si cada caja se cuenta por separado.
+
+## Fase 20 — Documentación y manual · pendiente
+
+Decidido: **un solo manual**, el que ya existe, **escrito al final** con todo hecho. Lo que hay que
+tocar en `docs/MANUAL-USUARIO.md`:
+
+- Sección 1: publica `1111` y `1234`. Sacarlos a un recuadro "solo para la demostración (`--demo`)".
+- Sección 12: dice "No permite crear usuarios ni cambiar los PIN", que ya es falso.
+- Vender: el medio de pago y F11. Atajos: F11.
+- Apartados nuevos: Usuarios (alta, PIN que se enseña una vez, PIN nuevo, baja y reactivar, que la
+  baja no borra sus ventas); Cierre del día (qué es cada número, y que no cierra nada); el tamaño de
+  letra en F9.
+- Nota: cada caja firma con su nombre, y dos nombres iguales mezclan el cierre.
+
+También: `docs/GUION-DEMO.md` (arrancar con `--demo`), `README.md`, y revisar que las capturas de
+`docs/img/` estén al día.
 
 ---
 

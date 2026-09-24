@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import sys
+
 from .app import ejecutar
 
 if __name__ == "__main__":
-    raise SystemExit(ejecutar())
+    raise SystemExit(ejecutar(demo="--demo" in sys.argv))

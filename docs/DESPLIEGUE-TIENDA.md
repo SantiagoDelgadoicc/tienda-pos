@@ -1,9 +1,3 @@
-> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
 # Despliegue en la tienda
 
 **Cómo está montado el sistema en el local del cliente, por qué está montado así, y cómo
@@ -23,13 +17,13 @@ Complementa a los otros documentos, no los repite:
 
 ---
 
-#> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
+> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
 > `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
 > tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
 > PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
 > (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
 
-# 1. Ficha de la instalación
+## 1. Ficha de la instalación
 
 ```
 PC 1  (principal)      192.168.50.1     tiene la base de datos y hace de servidor
@@ -54,13 +48,7 @@ carpeta de Inicio de Windows.
 
 ---
 
-#> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# 2. De dónde viene esta instalación
+## 2. De dónde viene esta instalación
 
 El cliente pidió originalmente **una sola cosa**: *"quiero un sistema de tienda que lea el
 código de barras de un producto y despliegue su precio"*. Todo lo demás son decisiones
@@ -81,13 +69,7 @@ Ese último punto explica la forma del producto entregado: **pago único, sin su
 internet, y el sistema sigue funcionando aunque el desarrollador desaparezca.** Es lo que
 LocalShop no le podía dar.
 
-##> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# Lo que el cliente retiró
+### Lo que el cliente retiró
 
 El **2026-09-14** comunicó que la **familia** y el **precio de compra** de los productos no
 le interesan, pese a haber dicho el día anterior que su sistema anterior los guardaba. Las
@@ -98,13 +80,7 @@ recuperarlo más adelante significa teclear el catálogo entero otra vez.
 
 ---
 
-#> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# 3. Cómo funciona el montaje
+## 3. Cómo funciona el montaje
 
 ```
         PC 1  (principal)                      PC 2  (secundaria)
@@ -142,13 +118,7 @@ por tanto una única transacción, y no un trozo de consulta que podría quedars
 
 ---
 
-#> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# 4. Por qué cable y no wifi
+## 4. Por qué cable y no wifi
 
 Los dos equipos tienen wifi por un adaptador USB, así que el wifi era posible. Se eligió
 cable directo, y las razones ordenadas por peso:
@@ -178,13 +148,7 @@ obliga a reservar la dirección en el router.
 
 ---
 
-#> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# 5. El kit del pendrive
+## 5. El kit del pendrive
 
 Todo el despliegue y el mantenimiento se hacen **desde un pendrive, con doble clic**. No
 hace falta Python, ni consola, ni saber nada del proyecto. Esta fue la parte que mejor
@@ -217,13 +181,7 @@ y después copiar `dist\TiendaPOS\` y el contenido de `INSTALACION\` a la raíz 
 En Windows conviene usar `robocopy` en vez de `cp`, que falla al escribir archivos grandes
 en unidades extraíbles.
 
-##> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# Principios con los que están escritos
+### Principios con los que están escritos
 
 Estos scripts tocan la única cosa irreemplazable que tiene el cliente, así que siguen reglas
 estrictas:
@@ -241,21 +199,9 @@ estrictas:
 
 ---
 
-#> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
+## 6. Instalar o actualizar desde el pendrive
 
-# 6. Instalar o actualizar desde el pendrive
-
-##> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# Actualizar el programa (lo habitual)
+### Actualizar el programa (lo habitual)
 
 Es la operación más frecuente y la más segura. En cada equipo:
 
@@ -271,13 +217,58 @@ sola en el primer arranque del PC 1.
 > niega a trabajar si no coincide (condición 3 de `D-015`). Es deliberado: trabajar contra un
 > servidor de otra versión es la forma silenciosa de corromper datos.
 
-##> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
+### Actualizar a la versión con un usuario por empleado (fase 15)
 
-# Instalación desde cero
+*Añadido el 2026-09-24.* Es la primera actualización que cambia cómo se entra, así que no basta
+con los cuatro pasos de arriba. Hacerla con el dueño delante: es él quien tiene que crear los
+usuarios de sus empleados.
+
+**Antes de ir.** Tener decididos con el cliente los nombres de las personas que atienden.
+
+**En la tienda, con las dos cajas paradas:**
+
+1. **Actualizar los dos PC en la misma visita.** Cambian el protocolo entre cajas y el esquema
+   de la base: la secundaria se niega a trabajar contra una principal sin actualizar, y lo dice al
+   arrancar. La base se migra sola en el primer arranque del PC 1 (hacer antes un respaldo).
+2. Abrir el PC 1 y entrar como **`Administrador`** con el PIN de siempre.
+3. Ir a **Usuarios** (barra lateral, sección Administración) y, con **Nuevo usuario**, dar de alta
+   a cada empleado. El sistema genera cada PIN y lo enseña **una sola vez**: que cada uno lo
+   anote en el momento.
+4. Seleccionar a **`Administrador`** y pulsar **PIN nuevo**. El suyo está publicado en el manual
+   desde el principio, y mientras siga valiendo cualquiera puede entrar como administrador.
+5. Seleccionar a **`Cajero`**, el usuario genérico, y pulsar **Dar de baja**. Sus ventas siguen a
+   su nombre en los informes; lo único que cambia es que ya no se puede entrar con él.
+6. **Poner nombre a cada caja** (fase 16). En la carpeta de datos de cada PC, abrir `red.json`
+   con el Bloc de notas y añadir la línea `"nombre_caja": "Caja 1"` —o el nombre que diga el
+   cliente, pregunta H8—, con **nombres distintos** en los dos PC. Es el nombre con que cada caja
+   firma sus ventas en el cierre: si los dos se llamaran igual, sus ventas se mezclarían sin
+   aviso. Sin esa línea se usa el nombre del PC, que funciona pero no se lee bien.
+7. Comprobar en el PC 2 que cada empleado entra con su PIN, y que **al pie de la barra lateral**
+   de cada caja aparece su nombre (por ejemplo "Cajero · Caja 2").
+
+**Lo que no hay que hacer:**
+
+- **No poner `--demo` en ningún acceso directo de la tienda.** Esa opción es para demostraciones:
+  en una base vacía carga los productos de ejemplo y los dos usuarios con PIN publicados. Sobre
+  la base de la tienda, que no está vacía, no haría nada; pero en una instalación desde cero sí,
+  y es exactamente como se mezclaron los 65 productos de ejemplo la primera vez.
+- No borrar usuarios de la base a mano. La baja es lógica a propósito: las ventas los referencian.
+
+**Si alguien olvida el PIN:** lo arregla el administrador desde Usuarios, con **PIN nuevo**.
+
+**Si el que olvida el PIN es el único administrador:** en el **PC 1**, abrir una ventana de
+comandos en la carpeta del programa y ejecutar
+
+```
+PuntoYFamaCaja.exe --reiniciar-admin
+```
+
+Pide el nombre del administrador, le genera un PIN nuevo (lo crea si no existe) y lo enseña.
+Hace un respaldo antes de tocar nada y deja constancia en el registro. **En el PC 2 no funciona
+a propósito**: la base está en el PC 1, y rescatar un administrador por la red sería dejar la
+puerta abierta a cualquiera del mismo cable.
+
+### Instalación desde cero
 
 **En el PC 1:**
 
@@ -303,13 +294,7 @@ Dejar el programa abierto y pasar al otro equipo.
 **En el PC 2 no se copia ningún `tienda.db`.** Si se le pone uno, se acaba con dos catálogos
 distintos, que es justo lo que este montaje evita.
 
-##> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# Reponer el catálogo en el PC 1
+### Reponer el catálogo en el PC 1
 
 Solo si hiciera falta restaurar. **Con el programa cerrado:**
 
@@ -325,13 +310,7 @@ restos.
 
 ---
 
-#> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# 7. El día a día
+## 7. El día a día
 
 ```
 PC 1:  se enciende → Tienda POS se abre solo → pide el PIN
@@ -345,26 +324,14 @@ puede cancelar. Solo si se agota esa espera aparece un diálogo con un botón de
 Lo único manual es escribir el PIN, y no se puede quitar: es lo que permite saber quién
 vendió qué.
 
-##> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# Reglas para quien atiende
+### Reglas para quien atiende
 
 - **El PC 1 tiene que estar encendido** para que el PC 2 pueda vender. No es un fallo.
 - Si el PC 2 dice que no hay conexión, lo primero es mirar si el PC 1 está encendido y con
   el programa abierto.
 - **No desenchufar el cable** que une las dos máquinas.
 
-##> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# Condiciones del equipo principal
+### Condiciones del equipo principal
 
 - **Suspensión desactivada.** Si el PC 1 se duerme, la caja 2 deja de vender.
 - Si Windows pide contraseña al encender, **el arranque automático no se dispara hasta que
@@ -372,13 +339,7 @@ vendió qué.
 
 ---
 
-#> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# 8. Cuando algo falla
+## 8. Cuando algo falla
 
 | Síntoma | Qué ejecutar |
 |---|---|
@@ -387,13 +348,7 @@ vendió qué.
 | El cable dejó de funcionar | `PLAN-B-WIFI.bat` en los dos |
 | Cualquier otra cosa | `DIAGNOSTICO.bat` en ambos, y revisar los registros |
 
-##> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# La comprobación que hay que hacer siempre primero
+### La comprobación que hay que hacer siempre primero
 
 Desde el navegador del PC 2:
 
@@ -412,13 +367,7 @@ herramientas.
 > arriba responde, **está todo bien**. Por eso `PROBAR-CONEXION.bat` prueba las dos cosas y
 > avisa de que la que importa es la segunda.
 
-##> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# Ver productos de ejemplo en el PC 2
+### Ver productos de ejemplo en el PC 2
 
 Significa una cosa concreta: **ese equipo no está leyendo `red.json`**, así que arranca en
 modo suelto, se crea su propia base y carga el catálogo demo. Se arregla volviendo a
@@ -426,13 +375,7 @@ ejecutar `PASO-4-PC2-SECUNDARIA.bat`.
 
 ---
 
-#> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# 9. Respaldos, y el asunto del WAL
+## 9. Respaldos, y el asunto del WAL
 
 El programa copia la base **al abrir y al cerrar**, y conserva las 7 últimas en
 `%LOCALAPPDATA%\TiendaPOS\backups\`.
@@ -445,13 +388,7 @@ copias de ese trabajo**.
 > **Estos respaldos están en el mismo disco.** No sirven si el disco se rompe. Conviene copiar
 > esa carpeta a un pendrive cada cierto tiempo.
 
-##> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# Copiar la base de datos a mano
+### Copiar la base de datos a mano
 
 **Cerrar el programa primero. Siempre.**
 
@@ -472,13 +409,7 @@ archivos juntos**: `.db`, `-wal` y `-shm`. Es lo que hace `PASO-1-RESPALDAR.bat`
 
 ---
 
-#> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# 10. Lo que NO está entregado
+## 10. Lo que NO está entregado
 
 Importante que esté escrito, porque es fácil darlo por incluido:
 
@@ -501,13 +432,7 @@ instante**: no hay nada que sincronizar.
 
 ---
 
-#> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# 11. Lo que salió mal durante el despliegue
+## 11. Lo que salió mal durante el despliegue
 
 Se deja por escrito porque ninguno de estos problemas era visible desde el escritorio, y
 volverían a aparecer en la siguiente instalación.
@@ -542,13 +467,7 @@ verificar el número de archivos en origen y destino después de copiar.
 
 ---
 
-#> **Aviso del 2026-09-17.** Este documento describe la instalación hecha con
-> `TiendaPOS.exe`. Desde D-027 el ejecutable se llama **`PuntoYFamaCaja.exe`**. Actualizar la
-> tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
-> PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
-> (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
-
-# 12. Tiempo del despliegue
+## 12. Tiempo del despliegue
 
 Dos visitas, en días distintos:
 

@@ -15,10 +15,12 @@ from typing import Any
 
 from ..domain import errors
 from ..domain.models import (
+    CierreCaja,
     CodigoNoEncontrado,
     EstadoVenta,
     LineaVenta,
     Producto,
+    MedioPago,
     Rol,
     Usuario,
     Venta,
@@ -29,7 +31,16 @@ _FORMATO_FECHA_HORA = "%Y-%m-%d %H:%M:%S"
 #: Versión del protocolo. Sube cuando cambia la forma de los mensajes, que no es lo mismo que
 #: la versión del esquema de la base: dos programas pueden entenderse hablando y aun así tener
 #: bases incompatibles, y al revés. Se comprueban las dos al conectar.
-VERSION_PROTOCOLO = 1
+#:
+#: Sube también cuando se **añaden** operaciones, aunque las viejas no cambien. Sin eso, una caja
+#: actualizada conectaría con un servidor viejo y fallaría más tarde, en la pantalla que usa la
+#: operación nueva y con un "Operación desconocida" delante del dueño. Subiéndola, la
+#: actualización a medias se detecta al arrancar, con el aviso de `VersionIncompatible`.
+#:
+#: Historia: 1, dos cajas (fase 13) · 2, administración de usuarios (fase 15) · 3, cada venta
+#: dice de qué caja viene (fase 16) · 4, y con qué se pagó (fase 17) · 5, el cierre por caja
+#: (fase 18).
+VERSION_PROTOCOLO = 5
 
 
 # --------------------------------------------------------------------------- dominio → JSON
@@ -80,6 +91,8 @@ def de_venta(v: Venta) -> dict[str, Any]:
         "usuario_nombre": v.usuario_nombre,
         "estado": str(v.estado),
         "intento_id": v.intento_id,
+        "caja": v.caja,
+        "medio_pago": str(v.medio_pago) if v.medio_pago else None,
         "lineas": [de_linea_venta(linea) for linea in v.lineas],
     }
 
@@ -140,6 +153,8 @@ def a_venta(d: dict[str, Any]) -> Venta:
         usuario_nombre=d.get("usuario_nombre"),
         estado=EstadoVenta(d["estado"]),
         intento_id=d.get("intento_id"),
+        caja=d.get("caja"),
+        medio_pago=MedioPago.leer(d.get("medio_pago")),
         lineas=[a_linea_venta(x) for x in d.get("lineas", [])],
     )
 
@@ -210,3 +225,27 @@ def _construir(clase: type[errors.ErrorDominio], mensaje: str) -> errors.ErrorDo
     exc = clase.__new__(clase)
     errors.ErrorDominio.__init__(exc, mensaje)
     return exc
+
+
+# --------------------------------------------------------------------------- cierre de caja
+
+
+def de_cierre(c: CierreCaja) -> dict[str, Any]:
+    """Solo lo que no se puede derivar: los totales los recalcula `CierreCaja` al otro lado,
+    de las mismas ventas, así que no hay dos versiones de la cifra que puedan discrepar."""
+    return {
+        "dia": de_fecha(c.dia),
+        "caja": c.caja,
+        "ventas": [de_venta(v) for v in c.ventas],
+        "cajas_del_dia": list(c.cajas_del_dia),
+    }
+
+
+def a_cierre(d: dict[str, Any]) -> CierreCaja:
+    return CierreCaja(
+        dia=a_fecha(d["dia"]),
+        caja=d.get("caja"),
+        ventas=[a_venta(v) for v in d.get("ventas", [])],
+        cajas_del_dia=list(d.get("cajas_del_dia", [])),
+    )
+

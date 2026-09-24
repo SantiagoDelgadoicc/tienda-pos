@@ -24,19 +24,35 @@ from collections.abc import Callable
 from datetime import date
 from typing import Any, TypeVar
 
-from ..domain.models import CodigoNoEncontrado, Producto, Usuario, Venta
+from ..domain.models import (
+    CierreCaja,
+    CodigoNoEncontrado,
+    MedioPago,
+    Producto,
+    Rol,
+    Usuario,
+    Venta,
+)
 from ..services import auth, catalogo, reportes
 from ..services import venta as servicio_venta
 from ..services.venta import Carrito
 
 
 class Sesion(ABC):
-    """Las 13 operaciones que la interfaz necesita. Nada más.
+    """Las 19 operaciones que la interfaz necesita. Nada más.
 
     Es deliberadamente corta: cada método que se añada aquí es un método que habrá que
     implementar dos veces y hacer viajar por la red. Si algo se puede calcular en la caja con
     los datos que ya tiene, se calcula en la caja.
     """
+
+    #: Nombre de esta caja, con el que firma sus ventas (fase 16). Lo fija quien construye la
+    #: sesión, desde `red.json`: ninguna pantalla tiene que saber de cajas.
+    _caja: str | None = None
+
+    @property
+    def caja(self) -> str | None:
+        return self._caja
 
     # ------------------------------------------------------------------ estado
 
@@ -85,7 +101,12 @@ class Sesion(ABC):
 
     @abstractmethod
     def cerrar_venta(
-        self, carrito: Carrito, usuario: Usuario | None, intento_id: str | None = None
+        self,
+        carrito: Carrito,
+        usuario: Usuario | None,
+        intento_id: str | None = None,
+        *,
+        medio_pago: MedioPago | None = MedioPago.EFECTIVO,
     ) -> Venta: ...
 
     # ------------------------------------------------------------------ acceso
@@ -96,6 +117,32 @@ class Sesion(ABC):
     @abstractmethod
     def autenticar(self, nombre: str, pin: str) -> Usuario: ...
 
+    # ------------------------------------------------------------------ usuarios
+    #
+    # Las que devuelven un PIN lo hacen **en claro y una sola vez**, para que la pantalla lo
+    # muestre. Viaja por la red local igual que el PIN de `autenticar`: ni más ni menos
+    # protegido que lo que ya había (D-007, D-015). Crear el primer administrador y rescatarlo
+    # **no están aquí a propósito**: no deben poder pedirse por la red.
+
+    @abstractmethod
+    def listar_para_administrar(
+        self, admin: Usuario | None, incluir_inactivos: bool = False
+    ) -> list[Usuario]: ...
+
+    @abstractmethod
+    def alta_usuario(
+        self, admin: Usuario | None, nombre: str, rol: Rol
+    ) -> tuple[Usuario, str]: ...
+
+    @abstractmethod
+    def reiniciar_pin(self, admin: Usuario | None, usuario_id: int) -> str: ...
+
+    @abstractmethod
+    def desactivar_usuario(self, admin: Usuario | None, usuario_id: int) -> None: ...
+
+    @abstractmethod
+    def reactivar_usuario(self, admin: Usuario | None, usuario_id: int) -> str: ...
+
     # ------------------------------------------------------------------ reportes
 
     @abstractmethod
@@ -104,8 +151,17 @@ class Sesion(ABC):
     @abstractmethod
     def ventas_del_dia(self, dia: date | None = None) -> list[Venta]: ...
 
+    @abstractmethod
+    def cierre_de_caja(self, dia: date | None, caja: str | None) -> CierreCaja:
+        """El cierre de una caja. `caja` None: las ventas anteriores a registrar la caja."""
+
 
 _R = TypeVar("_R")
+
+#: Centinela de `SesionLocal.cerrar_venta`: "la caja es la de esta sesión". No sirve None para
+#: eso, porque None es un valor legítimo —una petición que no dijo de qué caja venía— y en ese
+#: caso la venta tiene que quedar sin caja, no con la del servidor.
+_DE_ESTA_CAJA: Any = object()
 
 
 def _serializado(metodo: Callable[..., _R]) -> Callable[..., _R]:
@@ -137,8 +193,9 @@ class SesionLocal(Sesion):
     valga: siempre está conectada.
     """
 
-    def __init__(self, conexion: sqlite3.Connection) -> None:
+    def __init__(self, conexion: sqlite3.Connection, caja: str | None = None) -> None:
         self._conexion = conexion
+        self._caja = caja
         # Reentrante porque una operación puede llamar a otra de la misma sesión.
         self._cerrojo = threading.RLock()
 
@@ -203,9 +260,28 @@ class SesionLocal(Sesion):
 
     @_serializado
     def cerrar_venta(
-        self, carrito: Carrito, usuario: Usuario | None, intento_id: str | None = None
+        self,
+        carrito: Carrito,
+        usuario: Usuario | None,
+        intento_id: str | None = None,
+        *,
+        medio_pago: MedioPago | None = MedioPago.EFECTIVO,
+        caja: str | None = _DE_ESTA_CAJA,
     ) -> Venta:
-        return servicio_venta.cerrar_venta(self._conexion, carrito, usuario, intento_id)
+        """Cobra. Sin `caja`, la venta lleva la de esta sesión; con ella, la que se diga.
+
+        El segundo caso es el del servidor atendiendo a la caja secundaria: la venta la escribe
+        este proceso, pero la hizo la otra caja, y es su nombre el que tiene que quedar.
+        """
+        caja_de_la_venta = self._caja if caja is _DE_ESTA_CAJA else caja
+        return servicio_venta.cerrar_venta(
+            self._conexion,
+            carrito,
+            usuario,
+            intento_id,
+            caja=caja_de_la_venta,
+            medio_pago=medio_pago,
+        )
 
     # ------------------------------------------------------------------ acceso
 
@@ -217,6 +293,30 @@ class SesionLocal(Sesion):
     def autenticar(self, nombre: str, pin: str) -> Usuario:
         return auth.autenticar(self._conexion, nombre, pin)
 
+    # ------------------------------------------------------------------ usuarios
+
+    @_serializado
+    def listar_para_administrar(
+        self, admin: Usuario | None, incluir_inactivos: bool = False
+    ) -> list[Usuario]:
+        return auth.listar_para_administrar(self._conexion, admin, incluir_inactivos)
+
+    @_serializado
+    def alta_usuario(self, admin: Usuario | None, nombre: str, rol: Rol) -> tuple[Usuario, str]:
+        return auth.alta_usuario(self._conexion, admin, nombre, rol)
+
+    @_serializado
+    def reiniciar_pin(self, admin: Usuario | None, usuario_id: int) -> str:
+        return auth.reiniciar_pin(self._conexion, admin, usuario_id)
+
+    @_serializado
+    def desactivar_usuario(self, admin: Usuario | None, usuario_id: int) -> None:
+        auth.desactivar_usuario(self._conexion, admin, usuario_id)
+
+    @_serializado
+    def reactivar_usuario(self, admin: Usuario | None, usuario_id: int) -> str:
+        return auth.reactivar_usuario(self._conexion, admin, usuario_id)
+
     # ------------------------------------------------------------------ reportes
 
     @_serializado
@@ -226,3 +326,7 @@ class SesionLocal(Sesion):
     @_serializado
     def ventas_del_dia(self, dia: date | None = None) -> list[Venta]:
         return reportes.ventas_del_dia(self._conexion, dia)
+
+    @_serializado
+    def cierre_de_caja(self, dia: date | None, caja: str | None) -> CierreCaja:
+        return reportes.cierre_de_caja(self._conexion, dia, caja)

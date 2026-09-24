@@ -17,7 +17,7 @@ from ..domain.errors import (
     DescuentoInvalido,
     StockInsuficiente,
 )
-from ..domain.models import LineaCarrito, LineaVenta, Producto, Usuario, Venta
+from ..domain.models import LineaCarrito, LineaVenta, MedioPago, Producto, Usuario, Venta
 from ..repositories import productos as repo_productos
 from ..repositories import ventas as repo_ventas
 from ..utils.money import porcentaje_de
@@ -282,6 +282,9 @@ def cerrar_venta(
     carrito: Carrito,
     usuario: Usuario | None = None,
     intento_id: str | None = None,
+    *,
+    caja: str | None = None,
+    medio_pago: MedioPago | str | None = MedioPago.EFECTIVO,
 ) -> Venta:
     """Registra la venta y descuenta el stock, todo dentro de una única transacción.
 
@@ -298,12 +301,20 @@ def cerrar_venta(
             existe una venta con ese identificador, se devuelve **esa** en lugar de crear
             una nueva. Es lo que permite reintentar un cobro cuya respuesta se perdió por la
             red sin cobrarle dos veces al cliente (D-024). En monopuesto se puede omitir.
+        caja: nombre de la caja que cobra (fase 16). Lo decide quien llama, no este servicio:
+            en modo red la venta la escribe el servidor, pero la hizo la caja secundaria, y es
+            su nombre el que tiene que quedar. Solo palabra clave, para que ninguna llamada
+            posicional existente cambie de significado.
+        medio_pago: con qué pagó el cliente (fase 17). Por defecto efectivo, que es el caso
+            dominante. Se acepta el texto porque por la red llega texto; uno que no sea un medio
+            conocido se rechaza. None deja la venta con el medio sin registrar.
 
     Raises:
         CarritoVacio, StockInsuficiente, DatosInvalidos
     """
     if carrito.esta_vacio:
         raise CarritoVacio()
+    medio = _validar_medio(medio_pago)
 
     # Fuera de la transacción a propósito: es una lectura, y el caso normal —que no sea un
     # reintento— no debe pagar el coste de tomar el bloqueo de escritura. El caso de carrera
@@ -318,7 +329,9 @@ def cerrar_venta(
     total = subtotal - descuento
 
     try:
-        venta = _registrar(conexion, carrito, usuario, intento_id, subtotal, descuento, total)
+        venta = _registrar(
+            conexion, carrito, usuario, intento_id, subtotal, descuento, total, caja, medio
+        )
     except sqlite3.IntegrityError:
         # Dos cobros con el mismo intento llegaron a la vez y este perdió la carrera contra el
         # índice UNIQUE. No es un fallo: la venta que la caja quería existe. La transacción ya
@@ -332,6 +345,20 @@ def cerrar_venta(
     return venta
 
 
+def _validar_medio(valor: MedioPago | str | None) -> MedioPago | None:
+    """El medio de pago como enumerado, o un error legible si no es uno conocido.
+
+    Hace falta porque por la red llega texto arbitrario, y sin esto un "cheque" acabaría
+    guardado y saldría como "sin registrar" en el cierre, sin que nadie supiera por qué.
+    """
+    if valor is None:
+        return None
+    try:
+        return MedioPago(valor)
+    except ValueError:
+        raise DatosInvalidos(f"Medio de pago desconocido: {valor}.") from None
+
+
 def _registrar(
     conexion: sqlite3.Connection,
     carrito: Carrito,
@@ -340,6 +367,8 @@ def _registrar(
     subtotal: int,
     descuento: int,
     total: int,
+    caja: str | None = None,
+    medio_pago: MedioPago | None = None,
 ) -> Venta:
     """Cuerpo transaccional de `cerrar_venta`. Separado solo para que el manejo del reintento
     duplicado quede legible y fuera de la transacción."""
@@ -362,6 +391,8 @@ def _registrar(
             usuario_id=usuario.id if usuario else None,
             usuario_nombre=usuario.nombre if usuario else None,
             intento_id=intento_id,
+            caja=caja,
+            medio_pago=medio_pago,
             lineas=[
                 LineaVenta(
                     producto_id=linea.producto_id,

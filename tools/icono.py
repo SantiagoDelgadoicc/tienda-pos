@@ -32,7 +32,10 @@ TAMANOS = (16, 32, 48, 64, 128, 256)
 
 #: El rojo del logotipo. No se lee de la paleta de la interfaz porque la marca no cambia con
 #: el tema: el círculo es rojo tanto de día como de noche.
-_ROJO = "#BE1E2D"
+# El rojo exacto de la marca. El icono del ejecutable es un objeto de marca que se ve a 32 px
+# sobre el escritorio, no texto que haya que leer, así que aquí no se aplica el ajuste de
+# contraste que sí lleva el acento de la interfaz (ver `ui/estilos.py`).
+_ROJO = "#E30119"
 _FONDO = "#FFFFFF"
 
 

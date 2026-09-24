@@ -23,7 +23,7 @@ from typing import Any
 from .. import config
 from ..db.migrations import VERSION_ESQUEMA
 from ..domain.errors import ErrorDominio
-from ..domain.models import Usuario
+from ..domain.models import Rol, Usuario
 from ..services.venta import Carrito
 from . import protocolo
 from .sesion import SesionLocal
@@ -193,7 +193,19 @@ def _codigos_pendientes(sesion: SesionLocal, a: dict[str, Any]) -> list[dict[str
 
 def _cerrar_venta(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
     carrito = Carrito.desde_dict(a["carrito"])
-    venta = sesion.cerrar_venta(carrito, _usuario(a), a.get("intento_id"))
+    # **La caja es la de la petición, no la de este servidor.** Es el error más fácil de cometer
+    # al tocar esto: sin `caja=`, `SesionLocal` firmaría la venta con el nombre del servidor y
+    # todas las ventas de la caja secundaria saldrían en el cierre como hechas en la principal,
+    # sin ningún error que avise. Si la petición no trae caja, la venta queda sin caja.
+    venta = sesion.cerrar_venta(
+        carrito,
+        _usuario(a),
+        a.get("intento_id"),
+        caja=a.get("caja"),
+        # Lo que diga la caja. Si no dice nada, queda sin registrar: poner efectivo sería
+        # inventarlo. El servicio rechaza lo que no sea un medio conocido.
+        medio_pago=a.get("medio_pago"),
+    )
     return protocolo.de_venta(venta)
 
 
@@ -205,6 +217,29 @@ def _autenticar(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
     return protocolo.de_usuario(sesion.autenticar(a["nombre"], a["pin"]))
 
 
+def _listar_para_administrar(sesion: SesionLocal, a: dict[str, Any]) -> list[dict[str, Any]]:
+    usuarios = sesion.listar_para_administrar(_usuario(a), a.get("incluir_inactivos", False))
+    return [protocolo.de_usuario(u) for u in usuarios]
+
+
+def _alta_usuario(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
+    usuario, pin = sesion.alta_usuario(_usuario(a), a["nombre"], Rol(a["rol"]))
+    return {"usuario": protocolo.de_usuario(usuario), "pin": pin}
+
+
+def _reiniciar_pin(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, str]:
+    return {"pin": sesion.reiniciar_pin(_usuario(a), a["usuario_id"])}
+
+
+def _desactivar_usuario(sesion: SesionLocal, a: dict[str, Any]) -> None:
+    sesion.desactivar_usuario(_usuario(a), a["usuario_id"])
+    return None
+
+
+def _reactivar_usuario(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, str]:
+    return {"pin": sesion.reactivar_usuario(_usuario(a), a["usuario_id"])}
+
+
 def _resumen_del_dia(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, int]:
     return sesion.resumen_del_dia(protocolo.a_fecha(a.get("dia")))
 
@@ -212,6 +247,13 @@ def _resumen_del_dia(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, int]:
 def _ventas_del_dia(sesion: SesionLocal, a: dict[str, Any]) -> list[dict[str, Any]]:
     ventas = sesion.ventas_del_dia(protocolo.a_fecha(a.get("dia")))
     return [protocolo.de_venta(v) for v in ventas]
+
+
+def _cierre_de_caja(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
+    # La caja es la que pide quien llama, que puede ser cualquiera de las dos: el dueño quiere
+    # poder mirar la otra desde donde esté.
+    cierre = sesion.cierre_de_caja(protocolo.a_fecha(a.get("dia")), a.get("caja"))
+    return protocolo.de_cierre(cierre)
 
 
 #: El contrato, en un solo sitio. Lo que no esté aquí no se puede pedir por la red.
@@ -226,8 +268,14 @@ _OPERACIONES = {
     "cerrar_venta": _cerrar_venta,
     "listar_usuarios": _listar_usuarios,
     "autenticar": _autenticar,
+    "listar_para_administrar": _listar_para_administrar,
+    "alta_usuario": _alta_usuario,
+    "reiniciar_pin": _reiniciar_pin,
+    "desactivar_usuario": _desactivar_usuario,
+    "reactivar_usuario": _reactivar_usuario,
     "resumen_del_dia": _resumen_del_dia,
     "ventas_del_dia": _ventas_del_dia,
+    "cierre_de_caja": _cierre_de_caja,
 }
 
 

@@ -31,6 +31,20 @@ RESPALDOS_A_CONSERVAR = 7
 PIN_LONGITUD_MIN = 4
 PIN_LONGITUD_MAX = 8
 
+#: Hora a la que empieza el "día" de la tienda en los informes: ventas del día y cierre.
+#: **Pendiente de la pregunta H10.** En una botillería se vende pasada la medianoche, y si el
+#: dueño cuenta la noche del viernes como del viernes, un corte a las 00:00 le parte la noche en
+#: dos cierres y nunca le cuadrará con su cuaderno. Con 6, por ejemplo, el día iría de 06:00 a
+#: 06:00. Es lo único que hay que cambiar: las consultas y el día que se muestra por defecto lo
+#: leen de aquí.
+HORA_CORTE_DIA = 0
+
+#: Largo del PIN que genera el sistema al dar de alta a un empleado o al darle uno nuevo.
+#: Cuatro cifras, como los que la tienda usa hoy: el cliente pidió una clave por empleado, no
+#: una clave difícil, y un PIN que no se recuerda acaba escrito en un papel pegado a la caja.
+#: Lo que sí aporta el sistema es que no sea `1234`.
+LONGITUD_PIN_GENERADO = 4
+
 #: Si es False, una venta que dejaría el stock en negativo se rechaza.
 #: Se deja como constante y no como opción de interfaz porque cambiarlo es una decisión
 #: de negocio del cliente, no del cajero. Ver D-009 en docs/DECISIONES.md.

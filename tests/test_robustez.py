@@ -244,7 +244,9 @@ class TestAutocomprobacion:
         assert codigo == 0
         informe = (tmp_path / "datos" / "autocomprobacion.txt").read_text(encoding="utf-8")
         assert "RESULTADO: CORRECTO" in informe
-        assert "Productos en el catálogo: 65" in informe
+        # Sin datos de ejemplo: la comprobación se ejecuta en el PC de la tienda, y sembrar ahí
+        # el catálogo de muestra es como se mezcló con el real.
+        assert "Productos en el catálogo: 0" in informe
 
     def test_informa_del_fallo_en_lugar_de_reventar(self, app, tmp_path, monkeypatch) -> None:
         from tienda_pos import app as modulo_app

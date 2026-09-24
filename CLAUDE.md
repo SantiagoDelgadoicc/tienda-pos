@@ -10,6 +10,12 @@ El prototipo ya se presentó y la conversación siguió. Desde el 2026-09-13 hay
 con requisitos que sí vienen del cliente: rendimiento, dos cajas, migrar su catálogo antiguo e
 instalador. Ver las fases 8 a 14 de `docs/PLAN.md`.
 
+Desde el 2026-09-18 hay una **tercera etapa**, también pedida por el cliente: un usuario por
+empleado, cierre diario por caja y medio de pago. Son las fases 15 a 20 de `docs/PLAN.md`, que
+empiezan con un apartado **"Cómo retomar"**: qué está hecho, qué falta y qué espera al cliente.
+**La fase 18 quedó a medias el 2026-09-24** —backend hecho y sin pruebas, pantalla en borrador— y
+es lo siguiente.
+
 ## 2. Contexto del cliente
 
 ### Lo que dijo al principio, literalmente
@@ -63,6 +69,29 @@ De la reunión del 2026-09-13:
 - El sistema debe funcionar en dos PC (D-015).
 - La instalación debe ser mejor que copiar una carpeta (D-020).
 
+De la conversación del 2026-09-18:
+
+- **Un usuario por empleado, con su propia clave.** En una misma caja pueden vender varios
+  empleados el mismo día.
+- **Cierre diario por caja**, donde se vea qué empleados vendieron en esa caja y qué ventas fueron.
+- **Registrar el medio de pago** de cada venta.
+- Mencionó boletería, el SII, sus impresoras y un cajón de dinero que se abría solo al cobrar.
+  **No se comprometió nada de eso**: es otro proyecto y está explicado en
+  `docs/BOLETA-ELECTRONICA-SII.md`.
+
+De sus respuestas por WhatsApp del 2026-09-23:
+
+- En el cierre quiere ver **ventas en efectivo y ventas en débito y crédito, por separado**, y
+  **la lista de las ventas con los productos de cada una**.
+- **"Que los números y letras sean un poquito más grandes."** → Tamaño de letra ajustable (D-031).
+- **"Mi logo sería ideal"**, y entregó el archivo. → Logotipo y rojo de la marca (D-030).
+- **"Ponerle un poco de color y recuadros."** Santiago concede el color y descarta los recuadros.
+- Sobre los retiros de efectivo escribió *"Si se anotan todos los retiros en efectivo"*. Sin
+  tilde puede ser "sí, se anotan" o un condicional. **Se lee como un sí, pero no está
+  confirmado**, y de ello depende que el arqueo sirva: ver el modo arqueo en el plan.
+- **No contestó con claridad si quiere cuadrar el efectivo del cajón.** Por eso Santiago decidió
+  que el arqueo sea un modo que se activa o se desactiva, y no un requisito.
+
 ### 3.2 Decidido por Santiago (dueño del proyecto)
 
 - Alcance: POS con venta e inventario mínimo, no solo consulta de precios.
@@ -70,10 +99,15 @@ De la reunión del 2026-09-13:
 - Aplicación de **escritorio Windows**. Explícitamente **no web**: el cliente abre un acceso
   directo y el programa arranca. Sin navegador ni `localhost`.
 - Entrada manual del código además de la pistola lectora.
-- La venta se cierra con total y queda registrada. Sin medios de pago, sin vuelto, sin
-  comprobante impreso y sin boleta electrónica.
+- La venta se cierra con su total, **el medio de pago** —efectivo, débito o crédito, que lo
+  marca el cajero— y **la caja donde se hizo**, y queda registrada (D-033, D-034; los dos,
+  pedidos por el cliente). Sigue sin vuelto, sin comprobante impreso y sin boleta electrónica
+  (D-006).
 - Stack: Python + PySide6 (Qt) + SQLite.
-- Acceso con PIN de cajero y modo administrador.
+- Acceso con PIN de cajero y modo administrador. **Desde el 2026-09-24, un usuario por empleado**
+  (pedido del cliente, ver 3.1): el PIN lo genera el sistema y se enseña una vez, **nunca se entra
+  sin usuario**, y el administrador olvidado se rescata con `--reiniciar-admin` (D-032). Los datos
+  de ejemplo solo se cargan con `--demo`.
 - Funcionamiento **sin internet**. *(Lo que decía antes esta línea —"local en un solo PC, sin red"—
   queda superado por D-015: sigue sin internet, pero ahora hay una red local entre las dos cajas.)*
 - Venta solo por unidad (nada a granel ni por peso).
@@ -81,13 +115,17 @@ De la reunión del 2026-09-13:
 - Reportes mínimos: ventas del día.
 - Descuento manual aplicable a la venta entera o a un producto concreto.
 - Tema claro y tema oscuro, elegibles desde una pantalla de configuración (F9), junto con el
-  sonido, la confirmación de cobro y la barra de atajos. Se guardan en `preferencias.json`,
-  dentro de la carpeta de datos.
+  sonido, la confirmación de cobro, la barra de atajos y el **tamaño de letra** (este último,
+  pedido por el cliente: ver 3.1 y D-031). Se guardan en `preferencias.json`, dentro de la
+  carpeta de datos.
 - **La apariencia sigue el sistema visual de `docs/DESIGN.md`** desde el 2026-09-17 (D-026 y
   D-027): navegación en barra lateral plegable, lienzo de piedra cálida y tarjetas blancas.
-  **Dos colores y ninguno más**: **rojo** (el del logotipo) para dónde estoy, dónde está el
-  foco y lo que cancela o borra, siempre en lavado o filete; **verde** para lo que salió bien
-  y lo que confirma, que es el único que va relleno.
+  **Cada color significa algo, y lo mismo en todas partes**: **rojo** (el del logotipo, D-030)
+  para dónde estoy, dónde está el foco y lo que cancela o borra, siempre en lavado o filete;
+  **verde** para lo que salió bien y lo que confirma, que es el único que va relleno; y desde el
+  2026-09-24, **un color por medio de pago** —azul débito, violeta crédito, efectivo sin
+  color—, el mismo en el cobro y en los informes (D-034). El cliente pidió color; los recuadros
+  que pidió con él se descartaron.
 - **Movimiento breve y con propósito** desde el 2026-09-23 (D-029): destello verde en la línea
   del carrito que cambia, fundido del aviso de escaneo y plegado animado de la barra lateral.
   Además: fundido del precio en la consulta y de los diálogos, y sacudida del PIN incorrecto.
@@ -182,7 +220,7 @@ de abajo es justamente lo que hace viable ese cambio.
 Las dependencias van en una sola dirección: `ui → services → repositories → db`.
 
 ```
-main.py                   punto de entrada del ejecutable (y de --verificar)
+main.py                   punto de entrada del ejecutable (y de --verificar, --demo, --reiniciar-admin)
 src/tienda_pos/
   app.py                  arranque: registro, errores, respaldo, base, sesión, ventana
   __main__.py             permite `python -m tienda_pos`
@@ -194,11 +232,13 @@ src/tienda_pos/
   ui/                     todo lo que sabe de Qt
     estilos.py            paletas, radios, sombras y la hoja de estilos entera
     barra_lateral.py      la navegación
+    usuarios_view.py      usuarios por empleado y el PIN generado (D-032)
+    cierre_view.py        cierre diario por caja (D-035). BORRADOR sin conectar ni probar
     iconos.py             los iconos, dibujados con QPainter
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    284 pruebas
+tests/                    429 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -233,7 +273,9 @@ pip install -r requirements-dev.txt   # requirements.txt son solo las de ejecuci
 
 python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
-pytest                                # pruebas (284, unos 40 s)
+python main.py --demo                 # con el catálogo y los usuarios de ejemplo, en una base vacía
+python main.py --reiniciar-admin      # recuperar un administrador; solo en el PC de la base
+pytest                                # pruebas (429, un minuto)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

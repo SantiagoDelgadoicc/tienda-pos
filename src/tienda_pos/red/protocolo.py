@@ -35,8 +35,9 @@ _FORMATO_FECHA_HORA = "%Y-%m-%d %H:%M:%S"
 #: operación nueva y con un "Operación desconocida" delante del dueño. Subiéndola, la
 #: actualización a medias se detecta al arrancar, con el aviso de `VersionIncompatible`.
 #:
-#: Historia: 1, dos cajas (fase 13) · 2, administración de usuarios (fase 15).
-VERSION_PROTOCOLO = 2
+#: Historia: 1, dos cajas (fase 13) · 2, administración de usuarios (fase 15) · 3, cada venta
+#: dice de qué caja viene (fase 16).
+VERSION_PROTOCOLO = 3
 
 
 # --------------------------------------------------------------------------- dominio → JSON
@@ -87,6 +88,7 @@ def de_venta(v: Venta) -> dict[str, Any]:
         "usuario_nombre": v.usuario_nombre,
         "estado": str(v.estado),
         "intento_id": v.intento_id,
+        "caja": v.caja,
         "lineas": [de_linea_venta(linea) for linea in v.lineas],
     }
 
@@ -147,6 +149,7 @@ def a_venta(d: dict[str, Any]) -> Venta:
         usuario_nombre=d.get("usuario_nombre"),
         estado=EstadoVenta(d["estado"]),
         intento_id=d.get("intento_id"),
+        caja=d.get("caja"),
         lineas=[a_linea_venta(x) for x in d.get("lineas", [])],
     )
 

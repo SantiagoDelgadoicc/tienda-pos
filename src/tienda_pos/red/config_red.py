@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import platform
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -27,16 +28,43 @@ class Modo(StrEnum):
     CAJA = "caja"
 
 
+#: Tope del nombre de una caja. Lo escribe una persona en `red.json`, a mano o en el instalador.
+LARGO_MAX_NOMBRE_CAJA = 40
+
+
+def normalizar_nombre_caja(texto: object) -> str:
+    """Espacios de sobra fuera y un tope de largo. Nunca falla: es un dato de informe."""
+    return " ".join(str(texto or "").split())[:LARGO_MAX_NOMBRE_CAJA]
+
+
 @dataclass(slots=True)
 class ConfiguracionRed:
     modo: Modo = Modo.SUELTO
     #: Solo se usa en modo CAJA: dónde está el servidor.
     servidor_host: str = ""
     puerto: int = config.PUERTO_SERVIDOR
+    #: Cómo se llama esta caja en el cierre: "Caja 1", "Mostrador". Lo decide el cliente y se
+    #: escribe el día de la instalación. Vacío, se usa el nombre del PC.
+    nombre_caja: str = ""
 
     @property
     def usa_red(self) -> bool:
         return self.modo is not Modo.SUELTO
+
+    @property
+    def caja(self) -> str:
+        """El nombre con que esta caja firma sus ventas. Nunca vacío.
+
+        Si no se configuró, el nombre del PC, que es estable y distinto en cada equipo de la
+        red local. **No se deriva del modo** ("principal", "secundaria"): el modo se puede
+        cambiar editando este archivo, y entonces las ventas de un mismo equipo aparecerían
+        en el cierre bajo dos cajas distintas.
+        """
+        return (
+            normalizar_nombre_caja(self.nombre_caja)
+            or normalizar_nombre_caja(platform.node())
+            or "Caja"
+        )
 
 
 def cargar(ruta: Path | None = None) -> ConfiguracionRed:
@@ -56,6 +84,7 @@ def cargar(ruta: Path | None = None) -> ConfiguracionRed:
             modo=Modo(datos.get("modo", Modo.SUELTO)),
             servidor_host=str(datos.get("servidor_host", "")).strip(),
             puerto=int(datos.get("puerto", config.PUERTO_SERVIDOR)),
+            nombre_caja=normalizar_nombre_caja(datos.get("nombre_caja")),
         )
     except (OSError, ValueError, TypeError):
         _logger.exception("red.json ilegible; se arranca en modo suelto")
@@ -73,6 +102,7 @@ def guardar(configuracion: ConfiguracionRed, ruta: Path | None = None) -> bool:
                     "modo": str(configuracion.modo),
                     "servidor_host": configuracion.servidor_host,
                     "puerto": configuracion.puerto,
+                    "nombre_caja": configuracion.nombre_caja,
                 },
                 indent=2,
                 ensure_ascii=False,

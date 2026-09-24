@@ -297,7 +297,10 @@ def _ejecutar_con_base_local(
         )
         return 1
 
-    sesion = SesionLocal(conexion)
+    # La sesión lleva el nombre de esta caja, con el que firma sus ventas (fase 16). Ninguna
+    # pantalla tiene que saber de cajas: el dato se pone aquí una vez y viaja solo.
+    sesion = SesionLocal(conexion, caja=red.caja)
+    _logger.info("Esta caja firma sus ventas como: %s", red.caja)
     servidor: ServidorTienda | None = None
 
     if red.modo is Modo.SERVIDOR:
@@ -454,7 +457,8 @@ def _ejecutar_como_caja(app: QApplication, red: config_red.ConfiguracionRed) -> 
         )
         return 1
 
-    sesion = SesionRemota(red.servidor_host, red.puerto)
+    sesion = SesionRemota(red.servidor_host, red.puerto, caja=red.caja)
+    _logger.info("Esta caja firma sus ventas como: %s", red.caja)
     if not _conectar_reintentando(sesion, red):
         return 1
 

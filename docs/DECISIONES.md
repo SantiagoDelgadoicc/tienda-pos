@@ -1110,3 +1110,47 @@ fase 20.
 
 Pruebas: 69 nuevas, incluida la primera suite de red contra un servidor de verdad
 (`tests/test_red.py`), que es donde tienen que ir las pruebas manuales de la fase 13.
+
+
+---
+
+## D-033 — Cada venta sabe en qué caja se hizo, y lo dice la caja, no el servidor
+
+**Fecha:** 2026-09-24 · **Estado:** aceptada · **Decide:** Santiago
+
+**Contexto.** El cliente pidió un cierre diario **por caja**. Hasta aquí ninguna venta sabía de
+cuál venía: `red.json` tenía el modo y la dirección del servidor, pero no un nombre de caja.
+
+**Decisión.**
+
+1. **Migración 4**: columna `venta.caja`, **texto**, no una clave hacia una tabla de cajas. La caja
+   es una propiedad de la instalación, no de la base compartida, y se guarda el nombre que tenía
+   **en el momento de vender**, igual que la línea guarda el nombre del producto (D-005). Una tabla
+   obligaría a registrar cada caja antes de poder vender y a decidir qué pasa al renombrarla.
+2. **Las ventas anteriores quedan sin caja.** No se sabe dónde se hicieron, y rellenarlas sería
+   inventar un dato que el dueño leería como cierto. El cierre las mostrará aparte.
+3. **El nombre sale de `red.json`** (`nombre_caja`), normalizado —espacios de sobra fuera, tope de
+   40 caracteres— porque lo escribe una persona. Sin él, **el nombre del PC**, estable y distinto en
+   cada equipo. **No se deriva del modo**: el modo se puede cambiar editando el archivo, y las
+   ventas de un mismo equipo quedarían partidas bajo dos nombres.
+4. **El nombre viaja en la petición, y el servidor usa ese.** Es la parte delicada: en modo red la
+   venta de la caja secundaria la escribe el servidor, y el servidor no puede saber quién le habla
+   —no guarda estado por conexión, y la IP cambia sola—. Si firmara con su propio nombre, todas las
+   ventas de la secundaria saldrían como de la principal, **sin ningún error que avise**. Por eso:
+   - la `Sesion` lleva el nombre de su caja desde que se construye, y ninguna pantalla sabe de cajas;
+   - `SesionLocal.cerrar_venta` distingue con un centinela "usa el mío" de "no me dijeron caja", y el
+     servidor siempre pasa lo que trae la petición: si no trae nada, la venta queda **sin caja**, no
+     con la del servidor.
+5. **El nombre está siempre a la vista**, en la ficha del usuario al pie de la barra lateral
+   ("Cajero · Caja 1"). Es la defensa contra el riesgo de abajo.
+6. Protocolo a la **versión 3**.
+
+**Riesgo que no se puede detectar desde la base.** Dos PC con el mismo `nombre_caja` fundirían sus
+ventas en un solo grupo del cierre, y las ventas de ambos son legítimas: no hay forma de saberlo
+mirando los datos. Mitigación: el nombre en pantalla, y ponérselo a las dos cajas **con el cliente
+delante** el día de la visita (pregunta H8).
+
+**Consecuencias.** Queda probado contra un servidor de verdad que la venta de la secundaria lleva
+el nombre de la secundaria, que una petición sin caja no hereda la del servidor, y que las dos
+cajas vendiendo a la vez quedan separadas. Se comprobó que esas pruebas fallan si se quita el
+`caja=` del servidor, que es exactamente el cambio que alguien haría sin querer.

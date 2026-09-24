@@ -22,6 +22,7 @@ def _a_venta(fila: sqlite3.Row) -> Venta:
         total_clp=fila["total_clp"],
         estado=EstadoVenta(fila["estado"]),
         intento_id=fila["intento_id"] if "intento_id" in fila.keys() else None,
+        caja=fila["caja"] if "caja" in fila.keys() else None,
     )
 
 
@@ -55,7 +56,7 @@ def insertar(conexion: sqlite3.Connection, venta: Venta) -> Venta:
     """Inserta la venta y todas sus líneas. Debe ejecutarse dentro de una transacción."""
     cursor = conexion.execute(
         "INSERT INTO venta (folio, usuario_id, fecha_hora, subtotal_clp, descuento_clp, "
-        "total_clp, estado, intento_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "total_clp, estado, intento_id, caja) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             venta.folio,
             venta.usuario_id,
@@ -65,6 +66,7 @@ def insertar(conexion: sqlite3.Connection, venta: Venta) -> Venta:
             venta.total_clp,
             str(venta.estado),
             venta.intento_id,
+            venta.caja,
         ),
     )
     venta.id = int(cursor.lastrowid)

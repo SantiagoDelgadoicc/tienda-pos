@@ -399,7 +399,7 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 |---|---|---|
 | — | Rojo y logotipo de la marca (D-030) · tamaño de letra ajustable (D-031) | ✅ 2026-09-24 |
 | 15 | Usuarios por empleado y sesión obligatoria (D-032) | ✅ 2026-09-24 |
-| 16 | Identidad de caja | pendiente |
+| 16 | Identidad de caja (D-033) | ✅ 2026-09-24 |
 | 17 | Medio de pago: efectivo, débito y crédito | pendiente |
 | 18 | Informe de cierre diario por caja | pendiente |
 | 19 | Modo arqueo, activable | pendiente |
@@ -428,7 +428,16 @@ la tienda ya instalada, que conserva los PIN de fábrica hasta la visita.
 
 ---
 
-## Fase 16 — Identidad de caja
+## Fase 16 — Identidad de caja (D-033) ✅
+
+- [x] Migración 4: `venta.caja`, texto; las ventas anteriores quedan sin caja
+- [x] El nombre sale de `red.json` (`nombre_caja`) o, sin él, del nombre del PC; nunca del modo
+- [x] Viaja en la petición y el servidor usa ese: probado contra un servidor real
+- [x] Siempre a la vista en la ficha del usuario; protocolo a la versión 3
+- [ ] **En la tienda:** escribir `nombre_caja` en el `red.json` de cada PC (pregunta H8)
+
+**Criterio de aceptación:** una venta hecha en la caja secundaria queda registrada como de la
+caja secundaria, aunque la haya escrito el servidor. **Cumplido.**
 
 Cada venta guarda en qué caja se hizo. Hoy no lo sabe nadie: `red.json` no tiene nombre de caja.
 El dato **viaja en la petición** de la secundaria: si el servidor pusiera el suyo, todas las ventas

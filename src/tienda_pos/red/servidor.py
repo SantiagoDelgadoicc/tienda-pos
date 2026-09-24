@@ -193,7 +193,11 @@ def _codigos_pendientes(sesion: SesionLocal, a: dict[str, Any]) -> list[dict[str
 
 def _cerrar_venta(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
     carrito = Carrito.desde_dict(a["carrito"])
-    venta = sesion.cerrar_venta(carrito, _usuario(a), a.get("intento_id"))
+    # **La caja es la de la petición, no la de este servidor.** Es el error más fácil de cometer
+    # al tocar esto: sin `caja=`, `SesionLocal` firmaría la venta con el nombre del servidor y
+    # todas las ventas de la caja secundaria saldrían en el cierre como hechas en la principal,
+    # sin ningún error que avise. Si la petición no trae caja, la venta queda sin caja.
+    venta = sesion.cerrar_venta(carrito, _usuario(a), a.get("intento_id"), caja=a.get("caja"))
     return protocolo.de_venta(venta)
 
 

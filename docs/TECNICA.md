@@ -158,8 +158,9 @@ Sin `--demo`, una instalación nueva arranca vacía y pide crear al administrado
 sin usuario**. `--reiniciar-admin` funciona con diálogos y no por consola porque el ejecutable se
 construye sin ella.
 
-**Protocolo entre cajas.** Versión 1, dos cajas (fase 13) · **versión 2**, administración de
-usuarios (fase 15). Sube también cuando solo se añaden operaciones: así una actualización a medias
+**Protocolo entre cajas.** Versión 1, dos cajas (fase 13) · 2, administración de usuarios
+(fase 15) · **3**, cada venta dice de qué caja viene (fase 16). **Esquema de la base: 4**
+(`venta.caja`). Sube también cuando solo se añaden operaciones: así una actualización a medias
 se detecta al arrancar y no en mitad de una pantalla. Hay que actualizar las dos cajas a la vez.
 
 **Antivirus:** algunos marcan como sospechosos los ejecutables de PyInstaller. Conviene

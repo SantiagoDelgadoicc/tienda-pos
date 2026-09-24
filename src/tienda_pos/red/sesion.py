@@ -38,6 +38,14 @@ class Sesion(ABC):
     los datos que ya tiene, se calcula en la caja.
     """
 
+    #: Nombre de esta caja, con el que firma sus ventas (fase 16). Lo fija quien construye la
+    #: sesión, desde `red.json`: ninguna pantalla tiene que saber de cajas.
+    _caja: str | None = None
+
+    @property
+    def caja(self) -> str | None:
+        return self._caja
+
     # ------------------------------------------------------------------ estado
 
     @abstractmethod
@@ -133,6 +141,11 @@ class Sesion(ABC):
 
 _R = TypeVar("_R")
 
+#: Centinela de `SesionLocal.cerrar_venta`: "la caja es la de esta sesión". No sirve None para
+#: eso, porque None es un valor legítimo —una petición que no dijo de qué caja venía— y en ese
+#: caso la venta tiene que quedar sin caja, no con la del servidor.
+_DE_ESTA_CAJA: Any = object()
+
 
 def _serializado(metodo: Callable[..., _R]) -> Callable[..., _R]:
     """Toma el cerrojo de la sesión durante toda la operación.
@@ -163,8 +176,9 @@ class SesionLocal(Sesion):
     valga: siempre está conectada.
     """
 
-    def __init__(self, conexion: sqlite3.Connection) -> None:
+    def __init__(self, conexion: sqlite3.Connection, caja: str | None = None) -> None:
         self._conexion = conexion
+        self._caja = caja
         # Reentrante porque una operación puede llamar a otra de la misma sesión.
         self._cerrojo = threading.RLock()
 
@@ -229,9 +243,22 @@ class SesionLocal(Sesion):
 
     @_serializado
     def cerrar_venta(
-        self, carrito: Carrito, usuario: Usuario | None, intento_id: str | None = None
+        self,
+        carrito: Carrito,
+        usuario: Usuario | None,
+        intento_id: str | None = None,
+        *,
+        caja: str | None = _DE_ESTA_CAJA,
     ) -> Venta:
-        return servicio_venta.cerrar_venta(self._conexion, carrito, usuario, intento_id)
+        """Cobra. Sin `caja`, la venta lleva la de esta sesión; con ella, la que se diga.
+
+        El segundo caso es el del servidor atendiendo a la caja secundaria: la venta la escribe
+        este proceso, pero la hizo la otra caja, y es su nombre el que tiene que quedar.
+        """
+        caja_de_la_venta = self._caja if caja is _DE_ESTA_CAJA else caja
+        return servicio_venta.cerrar_venta(
+            self._conexion, carrito, usuario, intento_id, caja=caja_de_la_venta
+        )
 
     # ------------------------------------------------------------------ acceso
 

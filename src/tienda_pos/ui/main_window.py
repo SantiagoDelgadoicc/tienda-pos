@@ -441,7 +441,7 @@ class VentanaPrincipal(QMainWindow):
     def establecer_usuario(self, usuario: Usuario | None) -> None:
         self.usuario = usuario
         self.vista_venta.usuario = usuario
-        self.barra_lateral.establecer_usuario(usuario)
+        self.barra_lateral.establecer_usuario(usuario, self._sesion.caja)
 
     def _actualizar_reloj(self) -> None:
         self._icono_reloj.setPixmap(iconos.pixmap("reloj", 16, estilos.actual.texto_apagado))

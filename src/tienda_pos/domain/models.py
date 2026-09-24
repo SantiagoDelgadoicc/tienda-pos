@@ -119,6 +119,9 @@ class Venta:
     #: cobro cuyo resultado se perdió por la red sin duplicar la venta (D-024). Las ventas
     #: registradas antes de la migración 3 lo tienen a None.
     intento_id: str | None = None
+    #: Nombre de la caja donde se hizo, tal como se llamaba en ese momento (fase 16). Las
+    #: ventas anteriores a la migración 4 lo tienen a None: no se sabe y no se inventa.
+    caja: str | None = None
     lineas: list[LineaVenta] = field(default_factory=list)
 
     @property

@@ -282,6 +282,8 @@ def cerrar_venta(
     carrito: Carrito,
     usuario: Usuario | None = None,
     intento_id: str | None = None,
+    *,
+    caja: str | None = None,
 ) -> Venta:
     """Registra la venta y descuenta el stock, todo dentro de una única transacción.
 
@@ -298,6 +300,10 @@ def cerrar_venta(
             existe una venta con ese identificador, se devuelve **esa** en lugar de crear
             una nueva. Es lo que permite reintentar un cobro cuya respuesta se perdió por la
             red sin cobrarle dos veces al cliente (D-024). En monopuesto se puede omitir.
+        caja: nombre de la caja que cobra (fase 16). Lo decide quien llama, no este servicio:
+            en modo red la venta la escribe el servidor, pero la hizo la caja secundaria, y es
+            su nombre el que tiene que quedar. Solo palabra clave, para que ninguna llamada
+            posicional existente cambie de significado.
 
     Raises:
         CarritoVacio, StockInsuficiente, DatosInvalidos
@@ -318,7 +324,9 @@ def cerrar_venta(
     total = subtotal - descuento
 
     try:
-        venta = _registrar(conexion, carrito, usuario, intento_id, subtotal, descuento, total)
+        venta = _registrar(
+            conexion, carrito, usuario, intento_id, subtotal, descuento, total, caja
+        )
     except sqlite3.IntegrityError:
         # Dos cobros con el mismo intento llegaron a la vez y este perdió la carrera contra el
         # índice UNIQUE. No es un fallo: la venta que la caja quería existe. La transacción ya
@@ -340,6 +348,7 @@ def _registrar(
     subtotal: int,
     descuento: int,
     total: int,
+    caja: str | None = None,
 ) -> Venta:
     """Cuerpo transaccional de `cerrar_venta`. Separado solo para que el manejo del reintento
     duplicado quede legible y fuera de la transacción."""
@@ -362,6 +371,7 @@ def _registrar(
             usuario_id=usuario.id if usuario else None,
             usuario_nombre=usuario.nombre if usuario else None,
             intento_id=intento_id,
+            caja=caja,
             lineas=[
                 LineaVenta(
                     producto_id=linea.producto_id,

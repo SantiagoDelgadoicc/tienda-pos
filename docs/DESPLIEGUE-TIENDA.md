@@ -237,7 +237,13 @@ usuarios de sus empleados.
    desde el principio, y mientras siga valiendo cualquiera puede entrar como administrador.
 5. Seleccionar a **`Cajero`**, el usuario genérico, y pulsar **Dar de baja**. Sus ventas siguen a
    su nombre en los informes; lo único que cambia es que ya no se puede entrar con él.
-6. Comprobar en el PC 2 que cada empleado entra con su PIN.
+6. **Poner nombre a cada caja** (fase 16). En la carpeta de datos de cada PC, abrir `red.json`
+   con el Bloc de notas y añadir la línea `"nombre_caja": "Caja 1"` —o el nombre que diga el
+   cliente, pregunta H8—, con **nombres distintos** en los dos PC. Es el nombre con que cada caja
+   firma sus ventas en el cierre: si los dos se llamaran igual, sus ventas se mezclarían sin
+   aviso. Sin esa línea se usa el nombre del PC, que funciona pero no se lee bien.
+7. Comprobar en el PC 2 que cada empleado entra con su PIN, y que **al pie de la barra lateral**
+   de cada caja aparece su nombre (por ejemplo "Cajero · Caja 2").
 
 **Lo que no hay que hacer:**
 

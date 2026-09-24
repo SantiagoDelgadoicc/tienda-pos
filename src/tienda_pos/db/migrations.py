@@ -15,7 +15,7 @@ import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 
-VERSION_ESQUEMA = 3
+VERSION_ESQUEMA = 4
 
 _RUTA_ESQUEMA = Path(__file__).with_name("schema.sql")
 
@@ -90,11 +90,29 @@ def _intento_de_cobro(conexion: sqlite3.Connection) -> None:
     )
 
 
+def _caja_de_la_venta(conexion: sqlite3.Connection) -> None:
+    """Añade en qué caja se hizo cada venta (fase 16).
+
+    El cliente pidió un cierre diario **por caja**, y hasta aquí ninguna venta sabía de cuál
+    venía. Es texto y no una clave hacia una tabla de cajas: la caja es una propiedad de la
+    instalación, no de la base compartida, y se guarda el nombre que la caja tenía **en el
+    momento de vender**, igual que la línea guarda el nombre del producto (D-005).
+
+    Las ventas anteriores se quedan en NULL. No sabemos dónde se hicieron, y rellenarlas sería
+    inventar un dato que el dueño leería como cierto: el informe las muestra aparte, como
+    "sin caja registrada". El índice empieza por la fecha porque el cierre siempre filtra por
+    día, y el texto ISO permite comparar su prefijo.
+    """
+    conexion.execute("ALTER TABLE venta ADD COLUMN caja TEXT")
+    conexion.execute("CREATE INDEX IF NOT EXISTS idx_venta_dia_caja ON venta (fecha_hora, caja)")
+
+
 # Versión de destino -> función que lleva la base desde la versión anterior hasta ella.
 _MIGRACIONES: dict[int, Callable[[sqlite3.Connection], None]] = {
     1: _crear_esquema_inicial,
     2: _descuento_por_linea,
     3: _intento_de_cobro,
+    4: _caja_de_la_venta,
 }
 
 

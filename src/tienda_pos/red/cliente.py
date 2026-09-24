@@ -65,8 +65,15 @@ class SesionRemota(Sesion):
     sobre una operación que escribe es justamente lo que duplica ventas.
     """
 
-    def __init__(self, host: str, puerto: int | None = None, tiempo_limite: float | None = None) -> None:
+    def __init__(
+        self,
+        host: str,
+        puerto: int | None = None,
+        tiempo_limite: float | None = None,
+        caja: str | None = None,
+    ) -> None:
         self._host = host
+        self._caja = caja
         self._puerto = puerto or config.PUERTO_SERVIDOR
         self._tiempo_limite = tiempo_limite or config.TIEMPO_LIMITE_RED_S
         self._base = f"http://{host}:{self._puerto}"
@@ -224,6 +231,9 @@ class SesionRemota(Sesion):
                 "carrito": carrito.a_dict(),
                 "usuario": protocolo.de_usuario(usuario) if usuario else None,
                 "intento_id": intento_id,
+                # Esta caja dice quién es: el servidor no puede saberlo, no guarda estado por
+                # conexión, y la IP cambia sola.
+                "caja": self._caja,
             },
         )
         return protocolo.a_venta(datos)

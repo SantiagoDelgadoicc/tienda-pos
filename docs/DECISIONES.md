@@ -1216,3 +1216,40 @@ las dos frases quedan corregidas. El manual lo recogerá en la fase 20.
 Si el cajero le da a cualquiera con prisa, el cierre mentirá con aspecto de precisión. Hay que
 revisarlo con el cliente a las dos semanas de uso; si no se marca bien, se funden en "tarjeta", y
 que la columna vaya sin `CHECK` es justo lo que hace barata esa marcha atrás.
+
+
+---
+
+## D-035 — El cierre diario por caja es un informe que deriva sus totales de las ventas
+
+**Fecha:** 2026-09-24 · **Estado:** aceptada · **la pantalla está pendiente** (fase 18 en curso)
+· **Decide:** Santiago
+
+**Contexto.** El cliente pidió un cierre diario por caja que diga qué empleados vendieron y qué
+ventas fueron, y el 2026-09-23 precisó: efectivo, débito y crédito por separado, y la lista de
+ventas con los productos de cada una. No contestó claro si quiere cuadrar el efectivo del cajón.
+
+**Decisión.**
+
+1. **Es un informe que se calcula al pedirlo, no un registro guardado.** No cierra nada ni bloquea
+   la caja, y lo dice al pie de la pantalla. El dinero del cajón va aparte, en la fase 19, detrás de
+   un interruptor.
+2. **Los totales se derivan de la lista de ventas** que se enseña (`CierreCaja`, en el dominio), y no
+   de consultas `GROUP BY` aparte, como proponía el plan. Así la suma por medio, la suma por
+   empleado y el total coinciden por construcción, y por la red viaja una sola cosa: las ventas con
+   sus líneas. Un día de botillería son unos cientos de ventas; sumarlas en Python no se nota.
+3. **Los tres medios siempre**, aunque sea en cero —"débito $0" también es información—, y "sin
+   registrar" solo si hay ventas de antes de la fase 17.
+4. **El día es un rango con hora de corte** (`config.HORA_CORTE_DIA`, hoy 0), no `date(fecha_hora)`.
+   Responder la pregunta H10 —si la noche del viernes es del viernes— es cambiar ese número. **Las
+   ventas del día usan ya el mismo rango**, para que las dos pantallas no discrepen el día que cambie.
+   Comparar el texto ISO como rango, además, deja usar el índice por fecha.
+5. **Se puede mirar cualquier caja y cualquier día anterior**, desde cualquiera de las dos cajas. El
+   desplegable de caja solo aparece si ese día vendió más de una. `caja` None es el grupo de ventas
+   anteriores a registrar la caja (D-033).
+6. Reservado al administrador en la pantalla, igual que las ventas del día. Quién más debería verlo
+   es la pregunta H4, sin responder.
+
+**Consecuencias.** Protocolo a la versión 5. Queda por hacer, en `docs/PLAN.md` fase 18: las pruebas
+—sobre todo la de que las tres sumas cuadran, los dos empleados en una caja y los bordes del día con
+corte distinto de cero—, conectar la pantalla, y mirarla con letra grande.

@@ -10,6 +10,12 @@ El prototipo ya se presentó y la conversación siguió. Desde el 2026-09-13 hay
 con requisitos que sí vienen del cliente: rendimiento, dos cajas, migrar su catálogo antiguo e
 instalador. Ver las fases 8 a 14 de `docs/PLAN.md`.
 
+Desde el 2026-09-18 hay una **tercera etapa**, también pedida por el cliente: un usuario por
+empleado, cierre diario por caja y medio de pago. Son las fases 15 a 20 de `docs/PLAN.md`, que
+empiezan con un apartado **"Cómo retomar"**: qué está hecho, qué falta y qué espera al cliente.
+**La fase 18 quedó a medias el 2026-09-24** —backend hecho y sin pruebas, pantalla en borrador— y
+es lo siguiente.
+
 ## 2. Contexto del cliente
 
 ### Lo que dijo al principio, literalmente
@@ -227,6 +233,7 @@ src/tienda_pos/
     estilos.py            paletas, radios, sombras y la hoja de estilos entera
     barra_lateral.py      la navegación
     usuarios_view.py      usuarios por empleado y el PIN generado (D-032)
+    cierre_view.py        cierre diario por caja (D-035). BORRADOR sin conectar ni probar
     iconos.py             los iconos, dibujados con QPainter
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro

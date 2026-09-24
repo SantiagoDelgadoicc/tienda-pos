@@ -249,6 +249,13 @@ def _ventas_del_dia(sesion: SesionLocal, a: dict[str, Any]) -> list[dict[str, An
     return [protocolo.de_venta(v) for v in ventas]
 
 
+def _cierre_de_caja(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
+    # La caja es la que pide quien llama, que puede ser cualquiera de las dos: el dueño quiere
+    # poder mirar la otra desde donde esté.
+    cierre = sesion.cierre_de_caja(protocolo.a_fecha(a.get("dia")), a.get("caja"))
+    return protocolo.de_cierre(cierre)
+
+
 #: El contrato, en un solo sitio. Lo que no esté aquí no se puede pedir por la red.
 _OPERACIONES = {
     "consultar_por_codigo": _consultar_por_codigo,
@@ -268,6 +275,7 @@ _OPERACIONES = {
     "reactivar_usuario": _reactivar_usuario,
     "resumen_del_dia": _resumen_del_dia,
     "ventas_del_dia": _ventas_del_dia,
+    "cierre_de_caja": _cierre_de_caja,
 }
 
 

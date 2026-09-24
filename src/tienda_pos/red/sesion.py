@@ -24,14 +24,22 @@ from collections.abc import Callable
 from datetime import date
 from typing import Any, TypeVar
 
-from ..domain.models import CodigoNoEncontrado, MedioPago, Producto, Rol, Usuario, Venta
+from ..domain.models import (
+    CierreCaja,
+    CodigoNoEncontrado,
+    MedioPago,
+    Producto,
+    Rol,
+    Usuario,
+    Venta,
+)
 from ..services import auth, catalogo, reportes
 from ..services import venta as servicio_venta
 from ..services.venta import Carrito
 
 
 class Sesion(ABC):
-    """Las 18 operaciones que la interfaz necesita. Nada más.
+    """Las 19 operaciones que la interfaz necesita. Nada más.
 
     Es deliberadamente corta: cada método que se añada aquí es un método que habrá que
     implementar dos veces y hacer viajar por la red. Si algo se puede calcular en la caja con
@@ -142,6 +150,10 @@ class Sesion(ABC):
 
     @abstractmethod
     def ventas_del_dia(self, dia: date | None = None) -> list[Venta]: ...
+
+    @abstractmethod
+    def cierre_de_caja(self, dia: date | None, caja: str | None) -> CierreCaja:
+        """El cierre de una caja. `caja` None: las ventas anteriores a registrar la caja."""
 
 
 _R = TypeVar("_R")
@@ -314,3 +326,7 @@ class SesionLocal(Sesion):
     @_serializado
     def ventas_del_dia(self, dia: date | None = None) -> list[Venta]:
         return reportes.ventas_del_dia(self._conexion, dia)
+
+    @_serializado
+    def cierre_de_caja(self, dia: date | None, caja: str | None) -> CierreCaja:
+        return reportes.cierre_de_caja(self._conexion, dia, caja)

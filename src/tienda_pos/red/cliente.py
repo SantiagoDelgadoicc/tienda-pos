@@ -17,7 +17,15 @@ from typing import Any
 from .. import config
 from ..db.migrations import VERSION_ESQUEMA
 from ..domain.errors import ErrorDominio
-from ..domain.models import CodigoNoEncontrado, MedioPago, Producto, Rol, Usuario, Venta
+from ..domain.models import (
+    CierreCaja,
+    CodigoNoEncontrado,
+    MedioPago,
+    Producto,
+    Rol,
+    Usuario,
+    Venta,
+)
 from ..services.venta import Carrito
 from . import protocolo
 from .sesion import Sesion
@@ -298,3 +306,9 @@ class SesionRemota(Sesion):
     def ventas_del_dia(self, dia: date | None = None) -> list[Venta]:
         datos = self._llamar("ventas_del_dia", {"dia": protocolo.de_fecha(dia)})
         return [protocolo.a_venta(d) for d in datos]
+
+    def cierre_de_caja(self, dia: date | None, caja: str | None) -> CierreCaja:
+        """Una sola petición con todo: ventas con sus líneas y la lista de cajas del día."""
+        return protocolo.a_cierre(
+            self._llamar("cierre_de_caja", {"dia": protocolo.de_fecha(dia), "caja": caja})
+        )

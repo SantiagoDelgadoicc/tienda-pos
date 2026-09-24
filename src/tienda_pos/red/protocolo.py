@@ -15,6 +15,7 @@ from typing import Any
 
 from ..domain import errors
 from ..domain.models import (
+    CierreCaja,
     CodigoNoEncontrado,
     EstadoVenta,
     LineaVenta,
@@ -37,8 +38,9 @@ _FORMATO_FECHA_HORA = "%Y-%m-%d %H:%M:%S"
 #: actualización a medias se detecta al arrancar, con el aviso de `VersionIncompatible`.
 #:
 #: Historia: 1, dos cajas (fase 13) · 2, administración de usuarios (fase 15) · 3, cada venta
-#: dice de qué caja viene (fase 16) · 4, y con qué se pagó (fase 17).
-VERSION_PROTOCOLO = 4
+#: dice de qué caja viene (fase 16) · 4, y con qué se pagó (fase 17) · 5, el cierre por caja
+#: (fase 18).
+VERSION_PROTOCOLO = 5
 
 
 # --------------------------------------------------------------------------- dominio → JSON
@@ -223,3 +225,27 @@ def _construir(clase: type[errors.ErrorDominio], mensaje: str) -> errors.ErrorDo
     exc = clase.__new__(clase)
     errors.ErrorDominio.__init__(exc, mensaje)
     return exc
+
+
+# --------------------------------------------------------------------------- cierre de caja
+
+
+def de_cierre(c: CierreCaja) -> dict[str, Any]:
+    """Solo lo que no se puede derivar: los totales los recalcula `CierreCaja` al otro lado,
+    de las mismas ventas, así que no hay dos versiones de la cifra que puedan discrepar."""
+    return {
+        "dia": de_fecha(c.dia),
+        "caja": c.caja,
+        "ventas": [de_venta(v) for v in c.ventas],
+        "cajas_del_dia": list(c.cajas_del_dia),
+    }
+
+
+def a_cierre(d: dict[str, Any]) -> CierreCaja:
+    return CierreCaja(
+        dia=a_fecha(d["dia"]),
+        caja=d.get("caja"),
+        ventas=[a_venta(v) for v in d.get("ventas", [])],
+        cajas_del_dia=list(d.get("cajas_del_dia", [])),
+    )
+

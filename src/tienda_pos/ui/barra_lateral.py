@@ -120,6 +120,9 @@ class _BotonNav(QPushButton):
         self._icono.setPixmap(iconos.pixmap(self.icono, _TAMANO_ICONO, color))
 
         peso = 700 if self.isChecked() else 500
+        # Tamaño fijo: el menú se usa de cerca y no sigue al ajuste de tamaño de letra
+        # (ver `estilos.ESCALA_TEXTO`). Con la barra de ancho fijo, crecer lo montaría
+        # sobre el atajo.
         self._rotulo.setStyleSheet(f"color: {color}; font-weight: {peso}; font-size: 15px;")
         self._rotulo.setVisible(not self._plegada)
         self._atajo.setVisible(not self._plegada and not self.isChecked())

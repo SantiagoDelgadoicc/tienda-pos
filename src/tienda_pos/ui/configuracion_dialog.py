@@ -5,8 +5,8 @@ Todo lo que afecte al dinero o a los datos (permitir stock negativo, precios, us
 queda fuera a propósito: son decisiones del dueño de la tienda, no del turno de caja, y una
 casilla en un diálogo es demasiado fácil de marcar sin querer.
 
-El tema se aplica en cuanto se elige, sin esperar a Aceptar, porque un color hay que verlo
-para decidirlo. Si se cancela, se devuelve el que había.
+El tema y el tamaño de letra se aplican en cuanto se eligen, sin esperar a Aceptar, porque un
+color o un tamaño hay que verlos para decidirlos. Si se cancela, se devuelve lo que había.
 """
 
 from __future__ import annotations
@@ -29,7 +29,14 @@ from PySide6.QtWidgets import (
 )
 
 from .. import config
-from ..services.preferencias import TEMA_CLARO, TEMA_OSCURO, Preferencias
+from ..services.preferencias import (
+    TAMANO_GRANDE,
+    TAMANO_MUY_GRANDE,
+    TAMANO_NORMAL,
+    TEMA_CLARO,
+    TEMA_OSCURO,
+    Preferencias,
+)
 from ..services import preferencias as servicio_preferencias
 from . import dialogos, movimiento
 from .widgets.desplegable import Desplegable
@@ -37,14 +44,19 @@ from .widgets.desplegable import Desplegable
 _logger = logging.getLogger(__name__)
 
 _NOMBRE_TEMA = {TEMA_CLARO: "Claro", TEMA_OSCURO: "Oscuro"}
+_NOMBRE_TAMANO = {
+    TAMANO_NORMAL: "Normal",
+    TAMANO_GRANDE: "Grande",
+    TAMANO_MUY_GRANDE: "Muy grande",
+}
 
 
 class DialogoConfiguracion(QDialog):
     """Ajustes de la instalación.
 
-    Recibe `al_previsualizar_tema` para poder pintar el tema mientras se elige. El diálogo
-    no guarda nada por su cuenta: devuelve las preferencias elegidas y quien lo abrió decide
-    qué hacer con ellas.
+    Recibe `al_previsualizar_tema` y `al_previsualizar_letra` para poder pintar el tema y el
+    tamaño de letra mientras se eligen. El diálogo no guarda nada por su cuenta: devuelve las
+    preferencias elegidas y quien lo abrió decide qué hacer con ellas.
     """
 
     def __init__(
@@ -52,6 +64,7 @@ class DialogoConfiguracion(QDialog):
         preferencias: Preferencias,
         padre: QWidget | None = None,
         al_previsualizar_tema: Callable[[str], None] | None = None,
+        al_previsualizar_letra: Callable[[str], None] | None = None,
     ) -> None:
         super().__init__(padre)
         movimiento.aparecer_al_abrir(self)
@@ -60,6 +73,7 @@ class DialogoConfiguracion(QDialog):
 
         self._originales = Preferencias(**vars_de(preferencias))
         self._previsualizar = al_previsualizar_tema
+        self._previsualizar_letra = al_previsualizar_letra
 
         columna = QVBoxLayout(self)
         columna.setContentsMargins(26, 24, 26, 20)
@@ -82,6 +96,17 @@ class DialogoConfiguracion(QDialog):
         self.combo_tema.setCurrentIndex(self.combo_tema.findData(preferencias.tema))
         self.combo_tema.currentIndexChanged.connect(self._cambiar_tema)
         formulario.addRow("Tema", self.combo_tema)
+
+        self.combo_letra = Desplegable()
+        for clave in (TAMANO_NORMAL, TAMANO_GRANDE, TAMANO_MUY_GRANDE):
+            self.combo_letra.addItem(_NOMBRE_TAMANO[clave], clave)
+        self.combo_letra.setCurrentIndex(self.combo_letra.findData(preferencias.tamano_texto))
+        self.combo_letra.setToolTip(
+            "Agranda letras y números en todo el programa, para leer la pantalla desde el "
+            "otro lado del mostrador."
+        )
+        self.combo_letra.currentIndexChanged.connect(self._cambiar_letra)
+        formulario.addRow("Tamaño de letra", self.combo_letra)
 
         columna.addLayout(formulario)
 
@@ -159,6 +184,10 @@ class DialogoConfiguracion(QDialog):
         if self._previsualizar is not None:
             self._previsualizar(self.tema)
 
+    def _cambiar_letra(self) -> None:
+        if self._previsualizar_letra is not None:
+            self._previsualizar_letra(self.tamano_texto)
+
     def _abrir_carpeta(self) -> None:
         """Abre la carpeta de datos en el explorador de archivos.
 
@@ -181,10 +210,15 @@ class DialogoConfiguracion(QDialog):
             )
 
     def reject(self) -> None:
-        # Cancelar debe deshacer también la previsualización del tema; si no, el ajuste
-        # quedaría aplicado pero sin guardar, y volvería al reiniciar sin explicación.
+        # Cancelar debe deshacer también la previsualización del tema y de la letra; si no,
+        # el ajuste quedaría aplicado pero sin guardar, y volvería al reiniciar sin explicación.
         if self._previsualizar is not None and self.tema != self._originales.tema:
             self._previsualizar(self._originales.tema)
+        if (
+            self._previsualizar_letra is not None
+            and self.tamano_texto != self._originales.tamano_texto
+        ):
+            self._previsualizar_letra(self._originales.tamano_texto)
         super().reject()
 
     # ------------------------------------------------------------------ resultado
@@ -192,6 +226,10 @@ class DialogoConfiguracion(QDialog):
     @property
     def tema(self) -> str:
         return self.combo_tema.currentData()
+
+    @property
+    def tamano_texto(self) -> str:
+        return self.combo_letra.currentData()
 
     @property
     def preferencias(self) -> Preferencias:
@@ -202,6 +240,7 @@ class DialogoConfiguracion(QDialog):
             confirmar_cobro=self.casilla_confirmar.isChecked(),
             mostrar_atajos=self.casilla_atajos.isChecked(),
             animaciones=self.casilla_animaciones.isChecked(),
+            tamano_texto=self.tamano_texto,
             # El plegado no se elige aquí, pero se arrastra: si no, guardar cualquier ajuste
             # desplegaría la barra por su cuenta.
             barra_lateral_plegada=self._originales.barra_lateral_plegada,
@@ -214,9 +253,12 @@ class DialogoConfiguracion(QDialog):
         preferencias: Preferencias,
         padre: QWidget | None = None,
         al_previsualizar_tema: Callable[[str], None] | None = None,
+        al_previsualizar_letra: Callable[[str], None] | None = None,
     ) -> Preferencias | None:
         """Muestra el diálogo y guarda el resultado. Devuelve None si se canceló."""
-        dialogo = DialogoConfiguracion(preferencias, padre, al_previsualizar_tema)
+        dialogo = DialogoConfiguracion(
+            preferencias, padre, al_previsualizar_tema, al_previsualizar_letra
+        )
         if not dialogo.exec():
             return None
 

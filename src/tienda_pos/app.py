@@ -51,7 +51,7 @@ def _crear_aplicacion() -> QApplication:
     app.setOrganizationName(config.NOMBRE_APP)
 
     preferidas = servicio_preferencias.cargar()
-    estilos.aplicar(app, preferidas.tema)
+    estilos.aplicar(app, preferidas.tema, preferidas.tamano_texto)
     sonido.habilitado = preferidas.sonido
     return app
 

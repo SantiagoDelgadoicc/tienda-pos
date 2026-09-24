@@ -82,6 +82,8 @@ class VentanaPrincipal(QMainWindow):
         # Las preferencias se leen antes de construir nada: el tema y la barra de atajos
         # cambian cómo se monta la ventana.
         self.preferencias = servicio_preferencias.cargar()
+        self._tema_aplicado = self.preferencias.tema
+        self._letra_aplicada = self.preferencias.tamano_texto
 
         self.setWindowTitle(f"{NOMBRE_COMERCIAL} · Caja {VERSION}")
         self.resize(1280, 800)
@@ -351,7 +353,10 @@ class VentanaPrincipal(QMainWindow):
     def abrir_configuracion(self) -> None:
         """Abre la rueda de configuración y aplica lo que se elija."""
         elegidas = DialogoConfiguracion.abrir(
-            self.preferencias, self, al_previsualizar_tema=self.aplicar_tema
+            self.preferencias,
+            self,
+            al_previsualizar_tema=self.aplicar_tema,
+            al_previsualizar_letra=self.aplicar_tamano_texto,
         )
         if elegidas is not None:
             self.aplicar_preferencias(elegidas)
@@ -360,7 +365,7 @@ class VentanaPrincipal(QMainWindow):
     def aplicar_preferencias(self, preferencias: Preferencias) -> None:
         """Deja la aplicación en el estado que describen las preferencias."""
         self.preferencias = preferencias
-        self.aplicar_tema(preferencias.tema)
+        self._aplicar_apariencia(preferencias.tema, preferencias.tamano_texto)
         sonido.habilitado = preferencias.sonido
         movimiento.habilitado = preferencias.animaciones
         self.barra_lateral.plegar(preferencias.barra_lateral_plegada)
@@ -380,14 +385,29 @@ class VentanaPrincipal(QMainWindow):
         servicio_preferencias.guardar(self.preferencias)
 
     def aplicar_tema(self, tema: str) -> None:
-        """Repinta toda la aplicación con el tema indicado, sin reiniciar.
+        """Repinta toda la aplicación con el tema indicado, sin tocar el tamaño de letra."""
+        self._aplicar_apariencia(tema, self._letra_aplicada)
+
+    def aplicar_tamano_texto(self, tamano: str) -> None:
+        """Repinta toda la aplicación con el tamaño de letra indicado, sin tocar el tema."""
+        self._aplicar_apariencia(self._tema_aplicado, tamano)
+
+    def _aplicar_apariencia(self, tema: str, tamano_texto: str) -> None:
+        """Repinta toda la aplicación con un tema y un tamaño de letra, sin reiniciar.
+
+        Los dos van juntos porque viven en la misma hoja de estilos: aplicar solo el tema
+        devolvería la letra al tamaño de fábrica, y al revés. Por eso la ventana recuerda lo
+        que está aplicado, que durante la previsualización del diálogo de configuración no
+        coincide con lo guardado en `self.preferencias`.
 
         Se aplica sobre la QApplication y no sobre esta ventana porque los diálogos son
         ventanas aparte: si el estilo viviera aquí, seguirían saliendo con el tema anterior.
         """
+        self._tema_aplicado = tema
+        self._letra_aplicada = tamano_texto
         app = QApplication.instance()
         if app is not None:
-            estilos.aplicar(app, tema)
+            estilos.aplicar(app, tema, tamano_texto)
         # Lo que la hoja de estilos no alcanza: los iconos, que son mapas de píxeles ya
         # pintados, y los colores que las pantallas fijan celda a celda.
         self.barra_lateral.repintar()

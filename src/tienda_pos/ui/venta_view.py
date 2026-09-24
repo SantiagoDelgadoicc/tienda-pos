@@ -509,6 +509,14 @@ class VentaView(QWidget):
         # El estilo del total lleva su propio color, así que hay que rehacerlo: si no, el
         # verde del tema anterior se quedaría puesto.
         self._tamano_total = None
+        # Con la letra agrandada, el código de barras cede su columna al nombre del producto.
+        # Medido a 1600 px de ancho: la tabla tiene 638 px útiles y, con letra normal, el
+        # nombre ya solo se lleva 199; al agrandar crecen precio, cantidad y subtotal, y el
+        # nombre quedaba en 137 px, con **todos** los productos cortados en "Bebida ...". El
+        # código es lo que menos lee el cajero —ya lo escaneó— y sigue a mano en la ayuda del
+        # botón de copiar y en la consulta de precio. La celda no se borra, solo se oculta:
+        # las acciones de cada línea la usan para saber de qué producto se trata.
+        self.tabla.setColumnHidden(COL_CODIGO, estilos.escala > 1.0)
         self._refrescar()
 
     def enfocar_escaneo(self) -> None:
@@ -889,7 +897,9 @@ class VentaView(QWidget):
 
         tope = servicio_venta.CANTIDAD_MAX_POR_LINEA
         for fila, linea in enumerate(self._carrito.lineas):
-            self._celda(fila, COL_CODIGO, linea.codigo_barras)
+            # El código es referencia y no sigue al tamaño de letra: si creciera, le quitaría
+            # ancho al nombre, que es lo que el cajero necesita leer.
+            self._celda(fila, COL_CODIGO, linea.codigo_barras, fija=True)
             self._celda(fila, COL_NOMBRE, linea.nombre)
             self._celda(fila, COL_PRECIO, formatear_clp(linea.precio_unit_clp), derecha=True)
             self._celda(fila, COL_CANTIDAD, str(linea.cantidad), centrada=True, fuerte=True)
@@ -956,6 +966,10 @@ class VentaView(QWidget):
         El tamaño se aplica sobre la etiqueta y no desde la hoja de estilos porque depende
         del texto, no del tema. Solo se repinta cuando cambia de escalón: una venta corriente
         no lo toca en ningún escaneo.
+
+        Tampoco sigue al ajuste de tamaño de letra de la configuración: ya es el mayor que
+        cabe en la tarjeta, y agrandarlo más solo haría que un total de seis cifras se saliera
+        del borde.
         """
         texto = self.valor_total.text()
         # La fuente de medir se arma entera aquí, con el peso y el interletrado que se van a
@@ -1011,6 +1025,8 @@ class VentaView(QWidget):
             celda.setForeground(QBrush(QColor(paleta.texto_suave)))
             fuente = celda.font()
             fuente.setBold(True)
+            # Son botones, no datos: no siguen al tamaño de letra (ver `estilos.ESCALA_TEXTO`).
+            fuente.setPixelSize(estilos.LETRA_BASE)
             celda.setFont(fuente)
         self.tabla.setItem(fila, columna, celda)
 
@@ -1036,15 +1052,19 @@ class VentaView(QWidget):
         derecha: bool = False,
         centrada: bool = False,
         fuerte: bool = False,
+        fija: bool = False,
     ) -> None:
         celda = QTableWidgetItem(texto)
         if derecha:
             celda.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         elif centrada:
             celda.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        if fuerte:
+        if fuerte or fija:
             fuente = celda.font()
-            fuente.setBold(True)
+            if fuerte:
+                fuente.setBold(True)
+            if fija:
+                fuente.setPixelSize(estilos.LETRA_BASE)
             celda.setFont(fuente)
         self.tabla.setItem(fila, columna, celda)
 

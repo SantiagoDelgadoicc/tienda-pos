@@ -63,6 +63,29 @@ De la reunión del 2026-09-13:
 - El sistema debe funcionar en dos PC (D-015).
 - La instalación debe ser mejor que copiar una carpeta (D-020).
 
+De la conversación del 2026-09-18:
+
+- **Un usuario por empleado, con su propia clave.** En una misma caja pueden vender varios
+  empleados el mismo día.
+- **Cierre diario por caja**, donde se vea qué empleados vendieron en esa caja y qué ventas fueron.
+- **Registrar el medio de pago** de cada venta.
+- Mencionó boletería, el SII, sus impresoras y un cajón de dinero que se abría solo al cobrar.
+  **No se comprometió nada de eso**: es otro proyecto y está explicado en
+  `docs/BOLETA-ELECTRONICA-SII.md`.
+
+De sus respuestas por WhatsApp del 2026-09-23:
+
+- En el cierre quiere ver **ventas en efectivo y ventas en débito y crédito, por separado**, y
+  **la lista de las ventas con los productos de cada una**.
+- **"Que los números y letras sean un poquito más grandes."** → Tamaño de letra ajustable (D-031).
+- **"Mi logo sería ideal"**, y entregó el archivo. → Logotipo y rojo de la marca (D-030).
+- **"Ponerle un poco de color y recuadros."** Santiago concede el color y descarta los recuadros.
+- Sobre los retiros de efectivo escribió *"Si se anotan todos los retiros en efectivo"*. Sin
+  tilde puede ser "sí, se anotan" o un condicional. **Se lee como un sí, pero no está
+  confirmado**, y de ello depende que el arqueo sirva: ver el modo arqueo en el plan.
+- **No contestó con claridad si quiere cuadrar el efectivo del cajón.** Por eso Santiago decidió
+  que el arqueo sea un modo que se activa o se desactiva, y no un requisito.
+
 ### 3.2 Decidido por Santiago (dueño del proyecto)
 
 - Alcance: POS con venta e inventario mínimo, no solo consulta de precios.
@@ -81,8 +104,9 @@ De la reunión del 2026-09-13:
 - Reportes mínimos: ventas del día.
 - Descuento manual aplicable a la venta entera o a un producto concreto.
 - Tema claro y tema oscuro, elegibles desde una pantalla de configuración (F9), junto con el
-  sonido, la confirmación de cobro y la barra de atajos. Se guardan en `preferencias.json`,
-  dentro de la carpeta de datos.
+  sonido, la confirmación de cobro, la barra de atajos y el **tamaño de letra** (este último,
+  pedido por el cliente: ver 3.1 y D-031). Se guardan en `preferencias.json`, dentro de la
+  carpeta de datos.
 - **La apariencia sigue el sistema visual de `docs/DESIGN.md`** desde el 2026-09-17 (D-026 y
   D-027): navegación en barra lateral plegable, lienzo de piedra cálida y tarjetas blancas.
   **Dos colores y ninguno más**: **rojo** (el del logotipo) para dónde estoy, dónde está el
@@ -198,7 +222,7 @@ src/tienda_pos/
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    284 pruebas
+tests/                    300 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -233,7 +257,7 @@ pip install -r requirements-dev.txt   # requirements.txt son solo las de ejecuci
 
 python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
-pytest                                # pruebas (284, unos 40 s)
+pytest                                # pruebas (300, unos 50 s)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

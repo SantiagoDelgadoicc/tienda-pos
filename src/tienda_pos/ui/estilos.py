@@ -30,9 +30,16 @@ dos, de modo que ninguna pantalla se descoloca al cambiar de tema.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
-from ..services.preferencias import TEMA_CLARO, TEMA_OSCURO
+from ..services.preferencias import (
+    TAMANO_GRANDE,
+    TAMANO_MUY_GRANDE,
+    TAMANO_NORMAL,
+    TEMA_CLARO,
+    TEMA_OSCURO,
+)
 
 #: Inter es la fuente del sistema. En un Windows sin ella la pila cae en Segoe UI, que es el
 #: sustituto razonable: neutra, de trazo uniforme y presente en todas las instalaciones.
@@ -167,6 +174,41 @@ PALETAS = {CLARO.nombre: CLARO, OSCURO.nombre: OSCURO}
 #: escribir un código de color a mano, que sería el que se olvidaría al cambiar de tema.
 actual: Paleta = CLARO
 
+#: Cuánto agranda la letra cada escalón de `preferencias.tamano_texto`. El cliente pidió "un
+#: poquito más grandes" porque lee la pantalla desde el otro lado del mostrador.
+#:
+#: **Escala lo que se lee de lejos, no el andamiaje.** Crecen nombres, precios, cantidades,
+#: totales, títulos y avisos. No crecen el menú lateral, la barra de atajos, las cabeceras de
+#: tabla ni el campo de escaneo, que se usan de cerca: en la hoja llevan `/* fijo */` junto a
+#: su tamaño. Tampoco el código de barras ni los botones de cada línea del carrito, que fija
+#: `ui/venta_view.py`. Se decidió así al ver el tamaño mayor escalándolo todo: la barra lateral,
+#: de ancho fijo, montaba cada rótulo sobre su atajo, y en el carrito el código y los botones
+#: crecían hasta dejar el nombre del producto en "Bebida ...", que es lo único que no puede
+#: pasar en una caja.
+#:
+#: Solo escala la letra, no márgenes ni altura de filas: agrandarlo todo sería un zoom, y con
+#: zoom caben menos líneas en el carrito.
+ESCALA_TEXTO = {
+    TAMANO_NORMAL: 1.0,
+    TAMANO_GRANDE: 1.12,
+    TAMANO_MUY_GRANDE: 1.25,
+}
+
+#: Tamaño de la letra corriente de la interfaz y de las tablas, antes de escalar.
+LETRA_BASE = 15
+
+#: Escala en uso. Las pantallas que fijan un tamaño por su cuenta la aplican con `letra()`.
+escala: float = 1.0
+
+
+def letra(px: float) -> int:
+    """Un tamaño de letra de diseño, ajustado a la escala que eligió el usuario.
+
+    Para las pocas etiquetas que fijan su tamaño fuera de la hoja de estilos. Si escribieran
+    el número a pelo, serían las únicas que no crecen al cambiar el ajuste.
+    """
+    return round(px * escala)
+
 
 def paleta_de(tema: str) -> Paleta:
     """Devuelve la paleta de un tema, o la clara si el nombre no se reconoce."""
@@ -193,12 +235,27 @@ def aplicar_sombra(widget, difuminado: int = 18, desplazamiento: int = 4) -> Non
     widget.setGraphicsEffect(efecto)
 
 
-def hoja_de_estilos(p: Paleta) -> str:
-    """Construye la hoja de estilos completa a partir de una paleta.
+#: Un `font-size` en px, salvo los que llevan detrás el comentario `/* fijo */`.
+_TAMANO_DE_LETRA = re.compile(r"font-size:\s*(\d+(?:\.\d+)?)px(?=;(?!\s*/\*\s*fijo))")
+
+
+def hoja_de_estilos(p: Paleta, escala_texto: float = 1.0) -> str:
+    """Construye la hoja de estilos completa a partir de una paleta y una escala de letra.
 
     Los tamaños, los radios y el interletrado son los mismos en los dos temas: solo se
-    interpolan colores.
+    interpolan colores. La escala se aplica al final, sobre cada `font-size`, en vez de
+    escribir cada tamaño como una multiplicación: así la hoja se sigue leyendo con los números
+    del documento de diseño, y un tamaño nuevo que alguien añada mañana escala sin acordarse.
     """
+    hoja = _hoja_base(p)
+    if escala_texto == 1.0:
+        return hoja
+    return _TAMANO_DE_LETRA.sub(
+        lambda m: f"font-size: {round(float(m.group(1)) * escala_texto)}px", hoja
+    )
+
+
+def _hoja_base(p: Paleta) -> str:
     return f"""
 QWidget {{
     background-color: {p.fondo};
@@ -232,13 +289,13 @@ QFrame#barraLateral {{
 
 QLabel#marca {{
     color: {p.texto};
-    font-size: 17px;
+    font-size: 17px; /* fijo */
     font-weight: 700;
     letter-spacing: -0.3px;
 }}
 QLabel#marcaSub {{
     color: {p.texto_suave};
-    font-size: 11px;
+    font-size: 11px; /* fijo */
     font-weight: 600;
     letter-spacing: 0.6px;
 }}
@@ -246,7 +303,7 @@ QLabel#marcaSub {{
 /* Rótulo de un grupo del menú. Diminuto y espaciado: ordena sin pedir atención. */
 QLabel#navSeccion {{
     color: {p.texto_apagado};
-    font-size: 11px;
+    font-size: 11px; /* fijo */
     font-weight: 700;
     letter-spacing: 1.1px;
 }}
@@ -267,7 +324,7 @@ QPushButton#navBoton:checked {{
 
 QLabel#navAtajo {{
     color: {p.texto_apagado};
-    font-size: 12px;
+    font-size: 12px; /* fijo */
     font-weight: 700;
     letter-spacing: 0.3px;
 }}
@@ -280,12 +337,12 @@ QFrame#fichaUsuario {{
 }}
 QLabel#usuarioNombre {{
     color: {p.texto};
-    font-size: 14px;
+    font-size: 14px; /* fijo */
     font-weight: 700;
 }}
 QLabel#usuarioRol {{
     color: {p.texto_suave};
-    font-size: 12px;
+    font-size: 12px; /* fijo */
 }}
 
 /* Botón de plegar y desplegar, arriba del todo. */
@@ -386,7 +443,7 @@ QLineEdit#campoEscaneo {{
     border: 1px solid {p.borde_fuerte};
     border-radius: {RADIO_CAMPO}px;
     padding: 16px 20px;
-    font-size: 30px;
+    font-size: 30px; /* fijo */
     font-weight: 700;
     letter-spacing: -0.5px;
     color: {p.texto};
@@ -603,7 +660,7 @@ QHeaderView::section {{
     border-bottom: 1px solid {p.borde};
     padding: 10px 6px;
     font-weight: 700;
-    font-size: 12px;
+    font-size: 12px; /* fijo */
     letter-spacing: 0.8px;
 }}
 QTableCornerButton::section {{
@@ -708,7 +765,7 @@ QStatusBar {{
     background-color: {p.superficie};
     border-top: 1px solid {p.borde};
     color: {p.texto_apagado};
-    font-size: 12px;
+    font-size: 12px; /* fijo */
     font-weight: 500;
     letter-spacing: 0.4px;
 }}
@@ -754,15 +811,17 @@ QToolTip {{
 """
 
 
-def aplicar(app, tema: str = TEMA_CLARO) -> Paleta:
-    """Aplica el tema a la aplicación completa y devuelve la paleta que quedó activa.
+def aplicar(app, tema: str = TEMA_CLARO, tamano_texto: str = TAMANO_NORMAL) -> Paleta:
+    """Aplica el tema y el tamaño de letra a la aplicación completa.
 
-    Cambiar la hoja de estilos en caliente basta para que toda la interfaz se repinte: Qt
-    vuelve a resolver el estilo de cada widget existente, no solo de los nuevos. Por eso el
-    tema se puede cambiar sin reiniciar el programa. Lo que no alcanza son los iconos y los
-    colores fijados celda a celda, que cada pantalla vuelve a pintar en su `repintar()`.
+    Devuelve la paleta que quedó activa. Cambiar la hoja de estilos en caliente basta para que
+    toda la interfaz se repinte: Qt vuelve a resolver el estilo de cada widget existente, no
+    solo de los nuevos. Por eso el tema y la letra se pueden cambiar sin reiniciar el programa.
+    Lo que no alcanza son los iconos y los colores o tamaños fijados etiqueta a etiqueta, que
+    cada pantalla vuelve a pintar en su `repintar()`.
     """
-    global actual
+    global actual, escala
     actual = paleta_de(tema)
-    app.setStyleSheet(hoja_de_estilos(actual))
+    escala = ESCALA_TEXTO.get(tamano_texto, 1.0)
+    app.setStyleSheet(hoja_de_estilos(actual, escala))
     return actual

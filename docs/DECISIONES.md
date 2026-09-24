@@ -995,3 +995,53 @@ mismo y aplicándose igual. La guinda que dibujábamos deja de usarse como marca
 `tools/capturas.py`. Y queda escrito el criterio para la próxima vez que un color de marca choque
 con la legibilidad: **se conserva el matiz y se mueve la luminosidad**, que es lo que mantiene el
 parecido y arregla el contraste.
+
+---
+
+## D-031 — La letra se agranda donde se lee de lejos, y el código de barras cede su sitio
+
+**Fecha:** 2026-09-24 · **Estado:** aceptada · **Decide:** Santiago
+
+**Contexto.** El cliente pidió el 2026-09-23 que "los números y letras sean un poquito más
+grandes". Santiago decidió que fuera un **ajuste de la pantalla F9** con tres tamaños, guardado
+en `preferencias.json` como el tema y el sonido (D-013), y no una subida fija del tamaño base.
+
+**Lo que se vio al probarlo.** La primera versión escalaba todos los `font-size` de la hoja por
+igual. Renderizada a 1600×1000 con "Muy grande" (×1,25):
+
+- la barra lateral, de 232 px fijos, **montaba cada rótulo sobre su atajo** ("Consulta de
+  preF2", "Cambiar usuarF10");
+- en el carrito, código, botones, precio, cantidad y subtotal crecían a la vez y el nombre del
+  producto pasaba de 199 a 137 px: **los ocho productos de la prueba salían cortados**,
+  "Bebida ...", "Leche ...". En una caja eso no se puede vender;
+- la barra de atajos se salía por la derecha y la cabecera "Código" perdía el rabo de la g.
+
+**Decisión.**
+
+1. **Crece lo que se lee de lejos; lo que se usa de cerca no.** Crecen nombres, precios,
+   cantidades, totales, títulos y avisos. No crecen el menú lateral, la barra de atajos, las
+   cabeceras de tabla, el campo de escaneo, el código de barras ni los botones de línea. En la
+   hoja de estilos se marca con `/* fijo */` detrás del tamaño, que el escalador respeta.
+2. **Con letra Grande o Muy grande, la columna del código de barras se oculta** y su ancho pasa
+   al nombre. Es la columna más ancha después del nombre y la que menos lee el cajero, que ya
+   escaneó el producto. Sigue disponible en la ayuda del botón de copiar y en la consulta. La
+   celda no se borra: las acciones de cada línea la usan para identificar el producto.
+3. **Solo escala la letra**, no márgenes ni altura de filas. Caben nueve líneas en el carrito
+   con cualquier tamaño.
+4. El total a pagar no sigue al ajuste: ya ocupa todo el ancho de su tarjeta.
+
+Los factores son 1,00, 1,12 y 1,25. Se guarda el nombre del escalón y no el factor, para poder
+retocar cuánto agranda cada uno sin invalidar los archivos de las cajas.
+
+**Consecuencias.** Resultado medido: cero nombres cortados en los tres tamaños. Queda una prueba
+que protege el criterio sin depender de la fuente del equipo —la plataforma sin pantalla de las
+pruebas no carga las del sistema—: **con la letra agrandada no se puede cortar ningún nombre que
+con la normal se viera entero**. Se comprobó que falla si se deshace la cesión de la columna.
+
+También quedó cubierto un fallo que habría aparecido solo: el tema y la letra viven en la misma
+hoja, y previsualizar un tema en la rueda de configuración devolvía la letra al tamaño normal.
+La ventana ahora recuerda los dos.
+
+*Riesgo anotado:* la tabla solo tiene 638 px a 1600 de ancho. **No sabemos la resolución de los
+PC de la tienda.** Si es 1366×768, que es habitual en equipos de mostrador, todo este margen se
+estrecha. Hay que mirarlo en la próxima visita.

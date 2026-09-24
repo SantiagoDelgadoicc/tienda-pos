@@ -24,6 +24,15 @@ TEMA_CLARO = "claro"
 TEMA_OSCURO = "oscuro"
 TEMAS = (TEMA_CLARO, TEMA_OSCURO)
 
+#: Tamaño de la letra. Lo pidió el cliente el 2026-09-23 ("que los números y letras sean un
+#: poquito más grandes"): la pantalla se lee desde el otro lado del mostrador. Se guarda el
+#: nombre y no el factor, para que cambiar cuánto agranda cada escalón no invalide los archivos
+#: ya guardados. El factor lo pone la interfaz (`ui/estilos.py`).
+TAMANO_NORMAL = "normal"
+TAMANO_GRANDE = "grande"
+TAMANO_MUY_GRANDE = "muy_grande"
+TAMANOS_TEXTO = (TAMANO_NORMAL, TAMANO_GRANDE, TAMANO_MUY_GRANDE)
+
 
 @dataclass(slots=True)
 class Preferencias:
@@ -39,6 +48,7 @@ class Preferencias:
     #: Animaciones cortas: el aviso de escaneo, la línea que cambia y el plegado del menú.
     #: Apagadas, todo aparece y desaparece de golpe, como antes de D-029.
     animaciones: bool = True
+    tamano_texto: str = TAMANO_NORMAL
 
     def normalizar(self) -> "Preferencias":
         """Corrige valores imposibles en lugar de fallar.
@@ -53,6 +63,8 @@ class Preferencias:
         self.mostrar_atajos = bool(self.mostrar_atajos)
         self.barra_lateral_plegada = bool(self.barra_lateral_plegada)
         self.animaciones = bool(self.animaciones)
+        if self.tamano_texto not in TAMANOS_TEXTO:
+            self.tamano_texto = TAMANO_NORMAL
         return self
 
 

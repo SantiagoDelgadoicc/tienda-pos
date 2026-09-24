@@ -1045,3 +1045,68 @@ La ventana ahora recuerda los dos.
 *Riesgo anotado:* la tabla solo tiene 638 px a 1600 de ancho. **No sabemos la resolución de los
 PC de la tienda.** Si es 1366×768, que es habitual en equipos de mostrador, todo este margen se
 estrecha. Hay que mirarlo en la próxima visita.
+
+
+---
+
+## D-032 — Un usuario por empleado: PIN generado, sesión obligatoria y rescate del administrador
+
+**Fecha:** 2026-09-24 · **Estado:** aceptada · **Decide:** Santiago · **Absorbe:** la fase 12
+
+**Contexto.** El cliente pidió el 2026-09-18 un usuario por empleado, porque en una misma caja
+venden varios en un día y el cierre tiene que decir quién vendió qué. La lógica de usuarios
+existía desde D-007 pero sin pantalla, los dos PIN de fábrica (`1234` y `1111`) están publicados en
+el manual, y una base sin usuarios dejaba entrar **sin sesión**, con ventas sin autor.
+
+**Decisión.**
+
+1. **El PIN lo genera el sistema**, al dar de alta y al pedir uno nuevo, y se enseña **una sola
+   vez**. Cuatro cifras, como los de hoy (`config.LONGITUD_PIN_GENERADO`), con `secrets` y
+   descartando los de un dígito repetido y las escaleras (`1111`, `1234`, `9876`). Santiago lo
+   prefirió a una pantalla de cambio obligatorio en el primer acceso: no hace falta migración ni
+   pantalla nueva, y nadie acaba con `1234`. Perderlo no es grave: se genera otro.
+2. **Baja lógica, nunca borrado**, y **reactivación con PIN nuevo**. El nombre es único, así que
+   sin reactivar no se podría volver a contratar a quien ya trabajó aquí: el alta daría "ya
+   existe". Ahora el error sugiere reactivar.
+3. **Dos reglas en el servicio, no en la pantalla**: nadie se da de baja a sí mismo, y no se da
+   de baja al último administrador activo. La segunda se comprueba **dentro** de la transacción,
+   así que dos administradores que se dan de baja mutuamente a la vez no dejan la tienda vacía.
+4. **La administración funciona desde las dos cajas**: cinco operaciones nuevas en `Sesion` (de 13
+   a 18) y el protocolo sube a la **versión 2**. Se sube aunque las operaciones viejas no cambien:
+   si no, una caja actualizada conectaría con un servidor viejo y fallaría más tarde con
+   "Operación desconocida" en mitad de la pantalla.
+5. **Nunca se entra sin usuario.** Base vacía en el PC que la guarda → se crea el primer
+   administrador, se enseña su PIN y se pide el acceso con él (así se sabe que quedó anotado).
+   Usuarios pero ninguno activo → se explica el rescate. Caja secundaria y principal sin
+   usuarios → se manda a crearlos allí. Además, cobrar sin usuario se niega en la pantalla.
+6. **`--demo`** para las demostraciones. Sin esa opción, una base vacía **ya no se llena** con el
+   catálogo y los usuarios de ejemplo. Así ningún PIN publicado sirve en una instalación nueva, y
+   de paso se cierra el pendiente de la fase 13: los 65 productos de ejemplo no vuelven a
+   mezclarse con el catálogo real. `--verificar` tampoco siembra nada; lo hacía, y es la
+   explicación más probable de aquella mezcla.
+7. **`--reiniciar-admin`** para cuando nadie recuerda el PIN del único administrador. Con
+   diálogos y no por consola —el plan decía consola, pero el ejecutable se construye sin ella—,
+   solo en el PC que guarda la base, con respaldo previo y **constancia en el registro**, sin el
+   PIN. No pide PIN porque quien lo ejecuta ya tiene el archivo de la base al alcance: no abre
+   nada que no estuviera abierto.
+
+**Lo que no puede pasar por la red, y está probado.** Crear el primer administrador y rescatarlo
+son los únicos caminos para tener un administrador sin haber entrado como uno. **No están en
+`Sesion` ni en `red/servidor.py`**, y una prueba lo comprueba.
+
+**Riesgo anotado, que no es nuevo.** El servidor confía en el usuario que dice ser quien llama
+(`red/servidor.py::_usuario`, documentado como "esto no es autenticación"). Hoy eso ya permitía a
+cualquiera de la red local cambiar precios haciéndose pasar por administrador; con usuarios por
+la red, también podría crear administradores. Es el mismo riesgo aceptado para una red cerrada en
+D-007 y D-015, no uno nuevo. Si la red deja de ser de confianza, ahí va un testigo de sesión
+firmado por el servidor. Del mismo modo, los PIN generados viajan en claro por la red local, igual
+que el que se escribe en `autenticar`.
+
+**Consecuencias.** La tienda instalada conserva `Administrador/1234` y `Cajero/1111` hasta la
+visita de actualización: el procedimiento está en `docs/DESPLIEGUE-TIENDA.md` (nuevo PIN para el
+administrador, baja del cajero genérico). El manual de usuario todavía describe los PIN de fábrica
+y dice que no se pueden crear usuarios; por decisión de Santiago se reescribe al final, en la
+fase 20.
+
+Pruebas: 69 nuevas, incluida la primera suite de red contra un servidor de verdad
+(`tests/test_red.py`), que es donde tienen que ir las pruebas manuales de la fase 13.

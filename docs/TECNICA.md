@@ -34,7 +34,7 @@ python main.py
 pytest
 ```
 
-284 pruebas, unos 40 segundos. No necesitan pantalla: las de interfaz usan la plataforma
+369 pruebas, alrededor de un minuto. No necesitan pantalla: las de interfaz usan la plataforma
 `offscreen` de Qt, que `tests/conftest.py` activa automáticamente.
 
 ```bash
@@ -62,7 +62,7 @@ Los archivos de prueba, y qué cubre cada uno:
 ## 4. Estructura
 
 ```
-main.py                     punto de entrada (y --verificar)
+main.py                     punto de entrada (y --verificar, --demo, --reiniciar-admin)
 src/tienda_pos/
   app.py                    arranque: log, errores, respaldo, base, sesión, ventana
   config.py                 rutas de datos y constantes
@@ -143,7 +143,24 @@ PuntoYFamaCaja.exe --verificar
 ```
 
 Arranca el sistema completo sin mostrar nada, mide el tiempo y escribe
-`%LOCALAPPDATA%\TiendaPOS\autocomprobacion.txt`. Devuelve 0 si todo fue bien.
+`%LOCALAPPDATA%\TiendaPOS\autocomprobacion.txt`. Devuelve 0 si todo fue bien. **No siembra datos de
+ejemplo** (desde el 2026-09-24): se ejecuta en el PC de la tienda, y sembrar ahí el catálogo de
+muestra es como acabó mezclado con el real.
+
+**Las otras dos opciones del ejecutable** (D-032):
+
+| Opción | Para qué | Dónde |
+|---|---|---|
+| `--demo` | En una base **vacía**, carga los 65 productos y los dos usuarios de ejemplo, con los PIN publicados en el manual. Sobre una base con datos no hace nada. | Solo en el equipo de demostraciones. **Nunca en un acceso directo de la tienda.** |
+| `--reiniciar-admin` | Recupera un administrador cuando nadie recuerda el PIN: pide el nombre, le genera un PIN nuevo (lo crea si no existe) y lo enseña. Respaldo previo y constancia en el registro, sin el PIN. | Solo en el PC que guarda la base. En la caja secundaria se niega. |
+
+Sin `--demo`, una instalación nueva arranca vacía y pide crear al administrador: **nunca se entra
+sin usuario**. `--reiniciar-admin` funciona con diálogos y no por consola porque el ejecutable se
+construye sin ella.
+
+**Protocolo entre cajas.** Versión 1, dos cajas (fase 13) · **versión 2**, administración de
+usuarios (fase 15). Sube también cuando solo se añaden operaciones: así una actualización a medias
+se detecta al arrancar y no en mitad de una pantalla. Hay que actualizar las dos cajas a la vez.
 
 **Antivirus:** algunos marcan como sospechosos los ejecutables de PyInstaller. Conviene
 probarlo en el equipo del cliente antes de la demostración.

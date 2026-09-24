@@ -17,7 +17,7 @@ from typing import Any
 from .. import config
 from ..db.migrations import VERSION_ESQUEMA
 from ..domain.errors import ErrorDominio
-from ..domain.models import CodigoNoEncontrado, Producto, Usuario, Venta
+from ..domain.models import CodigoNoEncontrado, Producto, Rol, Usuario, Venta
 from ..services.venta import Carrito
 from . import protocolo
 from .sesion import Sesion
@@ -235,6 +235,44 @@ class SesionRemota(Sesion):
 
     def autenticar(self, nombre: str, pin: str) -> Usuario:
         return protocolo.a_usuario(self._llamar("autenticar", {"nombre": nombre, "pin": pin}))
+
+    # ------------------------------------------------------------------ usuarios
+
+    @staticmethod
+    def _admin(admin: Usuario | None) -> dict[str, Any] | None:
+        return protocolo.de_usuario(admin) if admin else None
+
+    def listar_para_administrar(
+        self, admin: Usuario | None, incluir_inactivos: bool = False
+    ) -> list[Usuario]:
+        datos = self._llamar(
+            "listar_para_administrar",
+            {"usuario": self._admin(admin), "incluir_inactivos": incluir_inactivos},
+        )
+        return [protocolo.a_usuario(d) for d in datos]
+
+    def alta_usuario(self, admin: Usuario | None, nombre: str, rol: Rol) -> tuple[Usuario, str]:
+        datos = self._llamar(
+            "alta_usuario", {"usuario": self._admin(admin), "nombre": nombre, "rol": str(rol)}
+        )
+        return protocolo.a_usuario(datos["usuario"]), datos["pin"]
+
+    def reiniciar_pin(self, admin: Usuario | None, usuario_id: int) -> str:
+        datos = self._llamar(
+            "reiniciar_pin", {"usuario": self._admin(admin), "usuario_id": usuario_id}
+        )
+        return datos["pin"]
+
+    def desactivar_usuario(self, admin: Usuario | None, usuario_id: int) -> None:
+        self._llamar(
+            "desactivar_usuario", {"usuario": self._admin(admin), "usuario_id": usuario_id}
+        )
+
+    def reactivar_usuario(self, admin: Usuario | None, usuario_id: int) -> str:
+        datos = self._llamar(
+            "reactivar_usuario", {"usuario": self._admin(admin), "usuario_id": usuario_id}
+        )
+        return datos["pin"]
 
     # ------------------------------------------------------------------ reportes
 

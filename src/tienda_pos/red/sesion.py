@@ -24,14 +24,14 @@ from collections.abc import Callable
 from datetime import date
 from typing import Any, TypeVar
 
-from ..domain.models import CodigoNoEncontrado, Producto, Usuario, Venta
+from ..domain.models import CodigoNoEncontrado, Producto, Rol, Usuario, Venta
 from ..services import auth, catalogo, reportes
 from ..services import venta as servicio_venta
 from ..services.venta import Carrito
 
 
 class Sesion(ABC):
-    """Las 13 operaciones que la interfaz necesita. Nada más.
+    """Las 18 operaciones que la interfaz necesita. Nada más.
 
     Es deliberadamente corta: cada método que se añada aquí es un método que habrá que
     implementar dos veces y hacer viajar por la red. Si algo se puede calcular en la caja con
@@ -95,6 +95,32 @@ class Sesion(ABC):
 
     @abstractmethod
     def autenticar(self, nombre: str, pin: str) -> Usuario: ...
+
+    # ------------------------------------------------------------------ usuarios
+    #
+    # Las que devuelven un PIN lo hacen **en claro y una sola vez**, para que la pantalla lo
+    # muestre. Viaja por la red local igual que el PIN de `autenticar`: ni más ni menos
+    # protegido que lo que ya había (D-007, D-015). Crear el primer administrador y rescatarlo
+    # **no están aquí a propósito**: no deben poder pedirse por la red.
+
+    @abstractmethod
+    def listar_para_administrar(
+        self, admin: Usuario | None, incluir_inactivos: bool = False
+    ) -> list[Usuario]: ...
+
+    @abstractmethod
+    def alta_usuario(
+        self, admin: Usuario | None, nombre: str, rol: Rol
+    ) -> tuple[Usuario, str]: ...
+
+    @abstractmethod
+    def reiniciar_pin(self, admin: Usuario | None, usuario_id: int) -> str: ...
+
+    @abstractmethod
+    def desactivar_usuario(self, admin: Usuario | None, usuario_id: int) -> None: ...
+
+    @abstractmethod
+    def reactivar_usuario(self, admin: Usuario | None, usuario_id: int) -> str: ...
 
     # ------------------------------------------------------------------ reportes
 
@@ -216,6 +242,30 @@ class SesionLocal(Sesion):
     @_serializado
     def autenticar(self, nombre: str, pin: str) -> Usuario:
         return auth.autenticar(self._conexion, nombre, pin)
+
+    # ------------------------------------------------------------------ usuarios
+
+    @_serializado
+    def listar_para_administrar(
+        self, admin: Usuario | None, incluir_inactivos: bool = False
+    ) -> list[Usuario]:
+        return auth.listar_para_administrar(self._conexion, admin, incluir_inactivos)
+
+    @_serializado
+    def alta_usuario(self, admin: Usuario | None, nombre: str, rol: Rol) -> tuple[Usuario, str]:
+        return auth.alta_usuario(self._conexion, admin, nombre, rol)
+
+    @_serializado
+    def reiniciar_pin(self, admin: Usuario | None, usuario_id: int) -> str:
+        return auth.reiniciar_pin(self._conexion, admin, usuario_id)
+
+    @_serializado
+    def desactivar_usuario(self, admin: Usuario | None, usuario_id: int) -> None:
+        auth.desactivar_usuario(self._conexion, admin, usuario_id)
+
+    @_serializado
+    def reactivar_usuario(self, admin: Usuario | None, usuario_id: int) -> str:
+        return auth.reactivar_usuario(self._conexion, admin, usuario_id)
 
     # ------------------------------------------------------------------ reportes
 

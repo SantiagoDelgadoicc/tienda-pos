@@ -29,7 +29,14 @@ _FORMATO_FECHA_HORA = "%Y-%m-%d %H:%M:%S"
 #: Versión del protocolo. Sube cuando cambia la forma de los mensajes, que no es lo mismo que
 #: la versión del esquema de la base: dos programas pueden entenderse hablando y aun así tener
 #: bases incompatibles, y al revés. Se comprueban las dos al conectar.
-VERSION_PROTOCOLO = 1
+#:
+#: Sube también cuando se **añaden** operaciones, aunque las viejas no cambien. Sin eso, una caja
+#: actualizada conectaría con un servidor viejo y fallaría más tarde, en la pantalla que usa la
+#: operación nueva y con un "Operación desconocida" delante del dueño. Subiéndola, la
+#: actualización a medias se detecta al arrancar, con el aviso de `VersionIncompatible`.
+#:
+#: Historia: 1, dos cajas (fase 13) · 2, administración de usuarios (fase 15).
+VERSION_PROTOCOLO = 2
 
 
 # --------------------------------------------------------------------------- dominio → JSON

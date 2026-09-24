@@ -294,16 +294,20 @@ avisará el día que alguien los rompa. Si no se cumplen, se arregla antes de ce
 
 ---
 
-## Fase 12 — Gestión de usuarios
+## Fase 12 — Gestión de usuarios · *absorbida por la fase 15 el 2026-09-24*
+
+> Se hizo dentro de la fase 15 (D-032), cuando el cliente pidió un usuario por empleado. La
+> segunda casilla cambió de forma: en lugar de obligar a cambiar el PIN de fábrica, el PIN lo
+> genera el sistema. La tercera pasa a la fase 18, que es el cierre por empleado.
 
 Es el hueco que ya estaba pendiente antes de esta reunión. La lógica existe y está probada
 (`services/auth.py::cambiar_pin`), pero no está conectada a ninguna pantalla. Con dos cajas y dos
 personas atendiendo deja de ser opcional: hay que saber quién vendió qué, y los PIN de hoy están
 publicados en el manual.
 
-- [ ] Pantalla de usuarios: crear, cambiar el PIN, dar de baja
-- [ ] Obligar a cambiar el PIN de fábrica la primera vez
-- [ ] Ventas del día por cajero
+- [x] Pantalla de usuarios: crear, cambiar el PIN, dar de baja *(fase 15)*
+- [x] ~~Obligar a cambiar el PIN de fábrica la primera vez~~ → el PIN lo genera el sistema *(D-032)*
+- [ ] Ventas del día por cajero → *fase 18*
 
 **Criterio de aceptación:** se puede poner el sistema en una tienda sin que ningún PIN publicado en
 la documentación sirva para entrar.
@@ -350,10 +354,13 @@ la documentación sirva para entrar.
       condición 2 de D-015 que falta: el tiempo límite ya está, pero el cajero todavía no ve el
       estado hasta que una operación falla.
 - [ ] **Llevar las pruebas manuales a `tests/`** como pruebas de pytest, y añadirlas a la suite.
+      *(2026-09-24: ya existe `tests/test_red.py`, con un servidor real, para las operaciones de
+      usuarios de la fase 15. Las de concurrencia siguen siendo manuales.)*
 - [x] **Probar en los dos PC reales.** Instalado y funcionando en la tienda desde el 2026-09-15:
       dos equipos unidos por cable directo, catálogo único, verificado incluido el reinicio de
       ambos. Ver `docs/DESPLIEGUE-TIENDA.md`.
-- [ ] Desactivar la carga de datos demo en instalaciones reales
+- [x] Desactivar la carga de datos demo en instalaciones reales *(2026-09-24, D-032: ahora solo
+      con `--demo`, y `--verificar` tampoco siembra ya nada)*
       (`abrir_base_datos(con_datos_demo=False)`). En la tienda los 65 productos de ejemplo se
       mezclaron con el catálogo real y hubo que separarlos a mano.
 
@@ -374,6 +381,82 @@ apagada.
 
 **Criterio de aceptación:** dos PC quedan funcionando ejecutando un instalador en cada uno y
 respondiendo preguntas, sin copiar carpetas a mano ni editar archivos de configuración.
+
+---
+
+## Tercera etapa — lo que pidió el cliente el 2026-09-18
+
+El 2026-09-18 el cliente pidió un usuario por empleado, un cierre diario por caja y registrar el
+medio de pago. El 2026-09-23 contestó por WhatsApp: el cierre con efectivo, débito y crédito por
+separado y la lista de ventas con sus productos; letra más grande, color y su logotipo. No contestó
+claro si quiere cuadrar el efectivo del cajón. Ver 3.1 en `CLAUDE.md`.
+
+Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro proyecto, explicado en
+`docs/BOLETA-ELECTRONICA-SII.md`. Las preguntas pendientes están en
+`docs/PREGUNTAS-CIERRE-Y-USUARIOS.md`.
+
+| Fase | Qué | Estado |
+|---|---|---|
+| — | Rojo y logotipo de la marca (D-030) · tamaño de letra ajustable (D-031) | ✅ 2026-09-24 |
+| 15 | Usuarios por empleado y sesión obligatoria (D-032) | ✅ 2026-09-24 |
+| 16 | Identidad de caja | pendiente |
+| 17 | Medio de pago: efectivo, débito y crédito | pendiente |
+| 18 | Informe de cierre diario por caja | pendiente |
+| 19 | Modo arqueo, activable | pendiente |
+| 20 | Documentación y manual | pendiente |
+
+---
+
+## Fase 15 — Usuarios por empleado y sesión obligatoria (D-032) ✅
+
+Absorbe la fase 12.
+
+- [x] Pantalla de usuarios: alta, PIN nuevo, dar de baja, reactivar; desde las dos cajas
+- [x] El PIN lo genera el sistema y se enseña una sola vez; nunca sale `1111` ni `1234`
+- [x] No darse de baja a uno mismo ni al último administrador; reactivar a quien vuelve
+- [x] Nunca se entra sin usuario: primer administrador en una base vacía; cobrar sin usuario se niega
+- [x] `--demo` para demostraciones; sin él, una base vacía no se llena con datos de ejemplo
+- [x] `--reiniciar-admin` para rescatar al administrador, solo en el PC de la base
+- [x] Protocolo entre cajas a la versión 2
+- [x] Nombre de usuario repetido: error legible en lugar del de SQLite
+- [ ] **En la tienda:** nuevo PIN para `Administrador` y baja de `Cajero` (`DESPLIEGUE-TIENDA.md`)
+
+**Criterio de aceptación:** no existe forma de llegar a la pantalla de venta sin usuario
+identificado, ningún PIN publicado en la documentación sirve en una instalación nueva, y un
+administrador que olvida su PIN puede recuperar la tienda sin llamar a nadie. **Cumplido**, salvo
+la tienda ya instalada, que conserva los PIN de fábrica hasta la visita.
+
+---
+
+## Fase 16 — Identidad de caja
+
+Cada venta guarda en qué caja se hizo. Hoy no lo sabe nadie: `red.json` no tiene nombre de caja.
+El dato **viaja en la petición** de la secundaria: si el servidor pusiera el suyo, todas las ventas
+de la caja 2 saldrían como de la 1. Las ventas anteriores quedan sin caja, no se inventa.
+Migración de esquema. Pendiente de la pregunta H8: cómo se llaman las cajas.
+
+## Fase 17 — Medio de pago
+
+Efectivo, débito y crédito, separados como pidió el cliente. Lo marca el cajero con una tecla que
+cicla, siempre visible y sin estorbar el cobro con F12. Vuelve a efectivo tras cada venta.
+Modifica D-006. Revisar con el cliente a las dos semanas si débito y crédito se marcan bien.
+
+## Fase 18 — Informe de cierre diario por caja
+
+Por caja y día: totales por medio de pago, por empleado, y la lista de ventas desplegable con sus
+productos. Un informe que se calcula al pedirlo y no bloquea nada. Pendiente de H10: si venden
+pasada la medianoche.
+
+## Fase 19 — Modo arqueo, activable
+
+El dinero del cajón, detrás de un interruptor porque el cliente no contestó claro: fondo inicial,
+conteo al cerrar, diferencia, y la pantalla de entradas y salidas de efectivo, sin la cual el
+arqueo no cuadra nunca. El interruptor es de la tienda, en la base, no de cada equipo.
+
+## Fase 20 — Documentación y manual
+
+El manual de usuario se reescribe al final, con todo hecho: hoy describe los PIN de fábrica y dice
+que no se pueden crear usuarios.
 
 ---
 

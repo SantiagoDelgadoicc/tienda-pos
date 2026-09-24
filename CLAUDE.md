@@ -96,7 +96,10 @@ De sus respuestas por WhatsApp del 2026-09-23:
 - La venta se cierra con total y queda registrada. Sin medios de pago, sin vuelto, sin
   comprobante impreso y sin boleta electrónica.
 - Stack: Python + PySide6 (Qt) + SQLite.
-- Acceso con PIN de cajero y modo administrador.
+- Acceso con PIN de cajero y modo administrador. **Desde el 2026-09-24, un usuario por empleado**
+  (pedido del cliente, ver 3.1): el PIN lo genera el sistema y se enseña una vez, **nunca se entra
+  sin usuario**, y el administrador olvidado se rescata con `--reiniciar-admin` (D-032). Los datos
+  de ejemplo solo se cargan con `--demo`.
 - Funcionamiento **sin internet**. *(Lo que decía antes esta línea —"local en un solo PC, sin red"—
   queda superado por D-015: sigue sin internet, pero ahora hay una red local entre las dos cajas.)*
 - Venta solo por unidad (nada a granel ni por peso).
@@ -206,7 +209,7 @@ de abajo es justamente lo que hace viable ese cambio.
 Las dependencias van en una sola dirección: `ui → services → repositories → db`.
 
 ```
-main.py                   punto de entrada del ejecutable (y de --verificar)
+main.py                   punto de entrada del ejecutable (y de --verificar, --demo, --reiniciar-admin)
 src/tienda_pos/
   app.py                  arranque: registro, errores, respaldo, base, sesión, ventana
   __main__.py             permite `python -m tienda_pos`
@@ -218,11 +221,12 @@ src/tienda_pos/
   ui/                     todo lo que sabe de Qt
     estilos.py            paletas, radios, sombras y la hoja de estilos entera
     barra_lateral.py      la navegación
+    usuarios_view.py      usuarios por empleado y el PIN generado (D-032)
     iconos.py             los iconos, dibujados con QPainter
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    300 pruebas
+tests/                    369 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -257,7 +261,9 @@ pip install -r requirements-dev.txt   # requirements.txt son solo las de ejecuci
 
 python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
-pytest                                # pruebas (300, unos 50 s)
+python main.py --demo                 # con el catálogo y los usuarios de ejemplo, en una base vacía
+python main.py --reiniciar-admin      # recuperar un administrador; solo en el PC de la base
+pytest                                # pruebas (369, un minuto)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

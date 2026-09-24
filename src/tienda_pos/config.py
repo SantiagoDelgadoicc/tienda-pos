@@ -31,6 +31,12 @@ RESPALDOS_A_CONSERVAR = 7
 PIN_LONGITUD_MIN = 4
 PIN_LONGITUD_MAX = 8
 
+#: Largo del PIN que genera el sistema al dar de alta a un empleado o al darle uno nuevo.
+#: Cuatro cifras, como los que la tienda usa hoy: el cliente pidió una clave por empleado, no
+#: una clave difícil, y un PIN que no se recuerda acaba escrito en un papel pegado a la caja.
+#: Lo que sí aporta el sistema es que no sea `1234`.
+LONGITUD_PIN_GENERADO = 4
+
 #: Si es False, una venta que dejaría el stock en negativo se rechaza.
 #: Se deja como constante y no como opción de interfaz porque cambiarlo es una decisión
 #: de negocio del cliente, no del cajero. Ver D-009 en docs/DECISIONES.md.

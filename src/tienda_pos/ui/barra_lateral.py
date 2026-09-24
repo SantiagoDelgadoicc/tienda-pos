@@ -43,6 +43,9 @@ _PRINCIPALES = (
 _ADMINISTRACION = (
     ("productos", "Productos", "catalogo", "F7"),
     ("reportes", "Ventas del día", "informe", "F8"),
+    # Sin tecla: F1 a F12 están tomadas, y es una pantalla que se abre cuando entra o se va
+    # alguien, no varias veces al día.
+    ("usuarios", "Usuarios", "usuario", ""),
 )
 _PIE = (
     ("configuracion", "Configuración", "ajustes", "F9"),

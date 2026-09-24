@@ -23,7 +23,7 @@ from typing import Any
 from .. import config
 from ..db.migrations import VERSION_ESQUEMA
 from ..domain.errors import ErrorDominio
-from ..domain.models import Usuario
+from ..domain.models import Rol, Usuario
 from ..services.venta import Carrito
 from . import protocolo
 from .sesion import SesionLocal
@@ -205,6 +205,29 @@ def _autenticar(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
     return protocolo.de_usuario(sesion.autenticar(a["nombre"], a["pin"]))
 
 
+def _listar_para_administrar(sesion: SesionLocal, a: dict[str, Any]) -> list[dict[str, Any]]:
+    usuarios = sesion.listar_para_administrar(_usuario(a), a.get("incluir_inactivos", False))
+    return [protocolo.de_usuario(u) for u in usuarios]
+
+
+def _alta_usuario(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
+    usuario, pin = sesion.alta_usuario(_usuario(a), a["nombre"], Rol(a["rol"]))
+    return {"usuario": protocolo.de_usuario(usuario), "pin": pin}
+
+
+def _reiniciar_pin(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, str]:
+    return {"pin": sesion.reiniciar_pin(_usuario(a), a["usuario_id"])}
+
+
+def _desactivar_usuario(sesion: SesionLocal, a: dict[str, Any]) -> None:
+    sesion.desactivar_usuario(_usuario(a), a["usuario_id"])
+    return None
+
+
+def _reactivar_usuario(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, str]:
+    return {"pin": sesion.reactivar_usuario(_usuario(a), a["usuario_id"])}
+
+
 def _resumen_del_dia(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, int]:
     return sesion.resumen_del_dia(protocolo.a_fecha(a.get("dia")))
 
@@ -226,6 +249,11 @@ _OPERACIONES = {
     "cerrar_venta": _cerrar_venta,
     "listar_usuarios": _listar_usuarios,
     "autenticar": _autenticar,
+    "listar_para_administrar": _listar_para_administrar,
+    "alta_usuario": _alta_usuario,
+    "reiniciar_pin": _reiniciar_pin,
+    "desactivar_usuario": _desactivar_usuario,
+    "reactivar_usuario": _reactivar_usuario,
     "resumen_del_dia": _resumen_del_dia,
     "ventas_del_dia": _ventas_del_dia,
 }

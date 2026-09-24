@@ -158,6 +158,26 @@ def generar(destino: Path) -> list[Path]:
     generadas.append(_guardar(configuracion, destino, "10-configuracion"))
     configuracion.close()
 
+    # 12. Usuarios por empleado (fase 15), con uno dado de baja para que se vea cómo queda.
+    from tienda_pos.domain.models import Rol
+    from tienda_pos.ui.usuarios_view import DialogoPin
+
+    for nombre in ("Marta Rojas", "Pedro Soto", "Luis Araya"):
+        usuario, _ = sesion.alta_usuario(administrador, nombre, Rol.CAJERO)
+        if nombre == "Luis Araya":
+            sesion.desactivar_usuario(administrador, usuario.id)
+    ventana.mostrar_usuarios()
+    ventana.vista_usuarios.casilla_bajas.setChecked(True)
+    generadas.append(_guardar(ventana, destino, "12-usuarios"))
+
+    # 13. El PIN recién generado. Se fija a mano: con uno al azar, la captura cambiaría en
+    # cada ejecución y ensuciaría el historial del repositorio.
+    marta = next(u for u in sesion.listar_para_administrar(administrador) if u.nombre == "Marta Rojas")
+    pin = DialogoPin("Usuario creado", marta, "5706", ventana)
+    pin.show()
+    generadas.append(_guardar(pin, destino, "13-pin-generado"))
+    pin.close()
+
     conexion.close()
     return generadas
 

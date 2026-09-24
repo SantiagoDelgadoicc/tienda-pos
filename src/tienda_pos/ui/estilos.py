@@ -417,6 +417,16 @@ QFrame#tarjeta {{
     border-radius: {RADIO_TARJETA}px;
 }}
 
+/* El PIN recién generado, en la pantalla de usuarios. Grande y espaciado porque se dicta o
+   se copia a mano: cada cifra tiene que leerse sola. */
+QLabel#pinGenerado {{
+    color: {p.texto};
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: 10px;
+    padding: 12px 0;
+}}
+
 QLabel#tituloTarjeta {{
     color: {p.texto};
     font-size: 16px;

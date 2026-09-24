@@ -835,6 +835,14 @@ class VentaView(QWidget):
 
     def cobrar(self) -> None:
         """Cierra la venta previa confirmación."""
+        # Red de seguridad: el arranque ya no deja entrar sin usuario, pero una venta sin
+        # autor rompería el cierre por empleado que pidió el cliente, así que tampoco se cobra
+        # sin uno. El servicio sigue aceptando `usuario=None` porque la regla "aquí siempre
+        # hay sesión" es de la aplicación, no del negocio.
+        if self.usuario is None:
+            self._avisar("Inicie sesión antes de cobrar (F10).", exito=False)
+            self.enfocar_escaneo()
+            return
         if self._carrito.esta_vacio:
             self._avisar("No hay productos que cobrar.", exito=False)
             self.enfocar_escaneo()

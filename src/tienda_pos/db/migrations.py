@@ -15,7 +15,7 @@ import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 
-VERSION_ESQUEMA = 4
+VERSION_ESQUEMA = 5
 
 _RUTA_ESQUEMA = Path(__file__).with_name("schema.sql")
 
@@ -107,12 +107,29 @@ def _caja_de_la_venta(conexion: sqlite3.Connection) -> None:
     conexion.execute("CREATE INDEX IF NOT EXISTS idx_venta_dia_caja ON venta (fecha_hora, caja)")
 
 
+def _medio_de_pago(conexion: sqlite3.Connection) -> None:
+    """Añade con qué pagó el cliente cada venta (fase 17): efectivo, débito o crédito.
+
+    **Sin `CHECK`**, a diferencia de `rol` y `estado`, y a propósito: en SQLite un `CHECK`
+    añadido con `ALTER TABLE` no se puede cambiar sin reconstruir la tabla, y la lista de medios
+    es justo lo que el cliente todavía puede cambiar —transferencia, fiado—. La validación vive
+    en el servicio, y la lectura tolera un valor que no conozca en lugar de romper el cierre.
+    Quien añada un medio nuevo debe subir igualmente `VERSION_ESQUEMA`, para que una versión
+    anterior no llegue a leerlo.
+
+    Las ventas anteriores quedan en NULL, "no registrado". No se rellenan con efectivo: sería
+    inventar un dato que el dueño leería como real.
+    """
+    conexion.execute("ALTER TABLE venta ADD COLUMN medio_pago TEXT")
+
+
 # Versión de destino -> función que lleva la base desde la versión anterior hasta ella.
 _MIGRACIONES: dict[int, Callable[[sqlite3.Connection], None]] = {
     1: _crear_esquema_inicial,
     2: _descuento_por_linea,
     3: _intento_de_cobro,
     4: _caja_de_la_venta,
+    5: _medio_de_pago,
 }
 
 

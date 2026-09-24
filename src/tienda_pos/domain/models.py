@@ -21,6 +21,33 @@ class EstadoVenta(StrEnum):
     ANULADA = "anulada"
 
 
+class MedioPago(StrEnum):
+    """Con qué pagó el cliente (fase 17). Lo marca el cajero al cobrar.
+
+    El cliente los pidió **separados**: efectivo, débito y crédito. Lo que se ve en pantalla
+    ("Débito") vive en la interfaz; aquí solo el valor que se guarda.
+    """
+
+    EFECTIVO = "efectivo"
+    DEBITO = "debito"
+    CREDITO = "credito"
+
+    @classmethod
+    def leer(cls, valor: object) -> "MedioPago | None":
+        """Lo guardado en la base o llegado por la red, **sin fallar** ante lo que no conoce.
+
+        La columna no tiene `CHECK` (migración 5), así que un valor desconocido es posible:
+        escrito a mano o por una versión más nueva. Se lee como no registrado, que es lo que
+        esta versión sabe de él, en lugar de tumbar el cierre del día.
+        """
+        if valor in (None, ""):
+            return None
+        try:
+            return cls(valor)
+        except ValueError:
+            return None
+
+
 @dataclass(slots=True)
 class Producto:
     codigo_barras: str
@@ -122,6 +149,8 @@ class Venta:
     #: Nombre de la caja donde se hizo, tal como se llamaba en ese momento (fase 16). Las
     #: ventas anteriores a la migración 4 lo tienen a None: no se sabe y no se inventa.
     caja: str | None = None
+    #: Con qué se pagó (fase 17). None en las ventas anteriores a la migración 5: no registrado.
+    medio_pago: MedioPago | None = None
     lineas: list[LineaVenta] = field(default_factory=list)
 
     @property

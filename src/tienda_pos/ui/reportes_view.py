@@ -27,7 +27,8 @@ from ..red.sesion import Sesion
 from ..utils.money import formatear_clp
 from . import estilos, tablas
 
-_COLUMNAS_VENTAS = ("N°", "Hora", "Artículos", "Total", "Atendió")
+_COLUMNAS_VENTAS = ("N°", "Hora", "Artículos", "Total", "Medio", "Atendió")
+_COL_MEDIO = 4
 _COLUMNAS_DETALLE = ("Producto", "Precio", "Cant.", "Subtotal")
 
 
@@ -114,10 +115,18 @@ class ReportesView(QWidget):
         cabecera.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         cabecera.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         cabecera.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        cabecera.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        cabecera.setSectionResizeMode(_COL_MEDIO, QHeaderView.ResizeMode.ResizeToContents)
+        cabecera.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
         tablas.alinear_cabeceras(
             self.tabla_ventas,
-            (tablas.CENTRO, tablas.CENTRO, tablas.CENTRO, tablas.DERECHA, tablas.IZQUIERDA),
+            (
+                tablas.CENTRO,
+                tablas.CENTRO,
+                tablas.CENTRO,
+                tablas.DERECHA,
+                tablas.IZQUIERDA,
+                tablas.IZQUIERDA,
+            ),
         )
         return self.tabla_ventas
 
@@ -170,7 +179,9 @@ class ReportesView(QWidget):
             self._celda(
                 self.tabla_ventas, fila, 3, formatear_clp(venta.total_clp), derecha=True
             )
-            self._celda(self.tabla_ventas, fila, 4, venta.usuario_nombre or "—")
+            self._celda(self.tabla_ventas, fila, _COL_MEDIO, _nombre_medio(venta))
+            self._celda(self.tabla_ventas, fila, 5, venta.usuario_nombre or "—")
+        self._colorear_medios()
 
         self._limpiar_detalle()
         if self._ventas:
@@ -188,9 +199,10 @@ class ReportesView(QWidget):
             if venta.descuento_clp
             else ""
         )
+        medio = f"  ·  {_nombre_medio(venta)}" if venta.medio_pago else ""
         self.titulo_detalle.setText(
             f"Venta N° {venta.folio}  ·  {venta.fecha_hora.strftime('%H:%M')}"
-            f"  ·  {formatear_clp(venta.total_clp)}{descuento}"
+            f"  ·  {formatear_clp(venta.total_clp)}{descuento}{medio}"
         )
 
         self.tabla_detalle.setRowCount(len(venta.lineas))
@@ -203,6 +215,19 @@ class ReportesView(QWidget):
             self._celda(
                 self.tabla_detalle, indice, 3, formatear_clp(linea.subtotal_clp), derecha=True
             )
+
+    def repintar(self) -> None:
+        """Tras un cambio de tema: el color de cada medio va celda a celda."""
+        self._colorear_medios()
+
+    def _colorear_medios(self) -> None:
+        """Pinta cada medio con su color (D-034), el mismo que en el cobro y en el cierre."""
+        from PySide6.QtGui import QBrush, QColor
+
+        for fila, venta in enumerate(self._ventas):
+            celda = self.tabla_ventas.item(fila, _COL_MEDIO)
+            if celda is not None:
+                celda.setForeground(QBrush(QColor(estilos.color_medio(venta.medio_pago))))
 
     def _limpiar_detalle(self) -> None:
         self.titulo_detalle.setText(
@@ -225,3 +250,11 @@ class ReportesView(QWidget):
         elif centrada:
             celda.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         tabla.setItem(fila, columna, celda)
+
+
+def _nombre_medio(venta) -> str:
+    """El medio de una venta tal como se lee en pantalla. Las anteriores a la fase 17 no lo
+    tienen registrado, y se dice así en lugar de suponer que fueron en efectivo."""
+    from .venta_view import NOMBRE_MEDIO
+
+    return NOMBRE_MEDIO.get(venta.medio_pago, "Sin registrar")

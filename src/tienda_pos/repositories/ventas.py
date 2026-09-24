@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import date, datetime
 
-from ..domain.models import EstadoVenta, LineaVenta, Venta
+from ..domain.models import EstadoVenta, LineaVenta, MedioPago, Venta
 
 _FORMATO_FECHA_HORA = "%Y-%m-%d %H:%M:%S"
 
@@ -23,6 +23,7 @@ def _a_venta(fila: sqlite3.Row) -> Venta:
         estado=EstadoVenta(fila["estado"]),
         intento_id=fila["intento_id"] if "intento_id" in fila.keys() else None,
         caja=fila["caja"] if "caja" in fila.keys() else None,
+        medio_pago=MedioPago.leer(fila["medio_pago"]) if "medio_pago" in fila.keys() else None,
     )
 
 
@@ -56,7 +57,8 @@ def insertar(conexion: sqlite3.Connection, venta: Venta) -> Venta:
     """Inserta la venta y todas sus líneas. Debe ejecutarse dentro de una transacción."""
     cursor = conexion.execute(
         "INSERT INTO venta (folio, usuario_id, fecha_hora, subtotal_clp, descuento_clp, "
-        "total_clp, estado, intento_id, caja) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "total_clp, estado, intento_id, caja, medio_pago) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             venta.folio,
             venta.usuario_id,
@@ -67,6 +69,7 @@ def insertar(conexion: sqlite3.Connection, venta: Venta) -> Venta:
             str(venta.estado),
             venta.intento_id,
             venta.caja,
+            str(venta.medio_pago) if venta.medio_pago else None,
         ),
     )
     venta.id = int(cursor.lastrowid)

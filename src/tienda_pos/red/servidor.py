@@ -197,7 +197,15 @@ def _cerrar_venta(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
     # al tocar esto: sin `caja=`, `SesionLocal` firmaría la venta con el nombre del servidor y
     # todas las ventas de la caja secundaria saldrían en el cierre como hechas en la principal,
     # sin ningún error que avise. Si la petición no trae caja, la venta queda sin caja.
-    venta = sesion.cerrar_venta(carrito, _usuario(a), a.get("intento_id"), caja=a.get("caja"))
+    venta = sesion.cerrar_venta(
+        carrito,
+        _usuario(a),
+        a.get("intento_id"),
+        caja=a.get("caja"),
+        # Lo que diga la caja. Si no dice nada, queda sin registrar: poner efectivo sería
+        # inventarlo. El servicio rechaza lo que no sea un medio conocido.
+        medio_pago=a.get("medio_pago"),
+    )
     return protocolo.de_venta(venta)
 
 

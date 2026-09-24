@@ -513,3 +513,21 @@ sigue en la ayuda del botón de copiar y en la consulta de precio.
 Cualquier columna nueva del carrito tiene que pasar la prueba
 `test_agrandar_la_letra_no_corta_ningun_nombre`: con la letra agrandada no se puede cortar
 ningún nombre que con la normal se viera entero.
+
+## Color por medio de pago
+
+*Sección propia de Punto y Fama. Decisión D-034. Vive en `ui/estilos.py` (`color_medio`).*
+
+El cliente pidió "un poco de color". Se concede **con significado**: cada medio de pago tiene su
+color, y es el mismo en el selector del cobro, en las ventas del día y en el cierre.
+
+| Medio | Claro | Oscuro |
+|---|---|---|
+| Efectivo | sin color: es lo corriente | sin color |
+| Débito | `#1D4ED8`, lavado `#EAF0FD` | `#8DB0F7`, lavado `#18243B` |
+| Crédito | `#6D28D9`, lavado `#F2ECFD` | `#C3A6F8`, lavado `#261C38` |
+
+Todos pasan AA con margen sobre su lavado y sobre el papel. **El color marca lo que no es lo de
+siempre**: por eso efectivo no lleva, y un cobro que va a salir en débito se nota de reojo.
+Ninguna pantalla escribe estos códigos: los pide a `estilos.color_medio`.
+

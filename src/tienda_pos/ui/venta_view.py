@@ -14,6 +14,7 @@ from PySide6.QtCore import QEvent, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QGuiApplication, QKeyEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QButtonGroup,
     QFrame,
     QHBoxLayout,
     QHeaderView,
@@ -31,7 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..domain.errors import ErrorDominio, ProductoNoEncontrado
-from ..domain.models import Usuario
+from ..domain.models import MedioPago, Usuario
 from ..red.sesion import Sesion
 from ..services import venta as servicio_venta
 from ..services.preferencias import Preferencias
@@ -62,6 +63,15 @@ COL_CANTIDAD = 5
 COL_MAS = 6
 COL_DESCUENTO = 7
 COL_SUBTOTAL = 8
+
+#: Los medios de pago, en el orden en que los recorre F11 y en que aparecen en pantalla.
+#: Efectivo primero: es lo más frecuente y a lo que se vuelve tras cada venta.
+MEDIOS = (MedioPago.EFECTIVO, MedioPago.DEBITO, MedioPago.CREDITO)
+NOMBRE_MEDIO = {
+    MedioPago.EFECTIVO: "Efectivo",
+    MedioPago.DEBITO: "Débito",
+    MedioPago.CREDITO: "Crédito",
+}
 
 #: Tamaños que puede tomar el total, de mayor a menor. Se usa el primero que quepa entero.
 #: Medidos, no supuestos: a 62 px cabe un total de seis cifras —$480.000— en los 256 px útiles
@@ -418,7 +428,10 @@ class VentaView(QWidget):
         self.valor_total = QLabel("$0")
         self.valor_total.setObjectName("valorTotal")
         columna.addWidget(self.valor_total)
-        columna.addSpacing(18)
+        columna.addSpacing(14)
+
+        columna.addLayout(self._selector_de_pago())
+        columna.addSpacing(12)
 
         self.boton_cobrar = QPushButton("Cobrar   ·   F12")
         self.boton_cobrar.setObjectName("botonPrincipal")
@@ -455,6 +468,63 @@ class VentaView(QWidget):
         columna.addWidget(self.boton_vaciar)
 
         return tarjeta
+
+    def _selector_de_pago(self) -> QHBoxLayout:
+        """Efectivo, débito o crédito, sobre el botón de cobrar (fase 17).
+
+        Siempre a la vista y nunca dentro del diálogo de confirmación, porque ese diálogo se
+        puede desactivar y el medio quedaría inalcanzable justo en la caja con más movimiento.
+        Los botones no toman el foco: el campo de escaneo tiene que seguir recibiendo la
+        pistola. Con el teclado, F11 los recorre.
+        """
+        fila = QHBoxLayout()
+        fila.setContentsMargins(0, 0, 0, 0)
+        fila.setSpacing(6)
+        self._grupo_medios = QButtonGroup(self)
+        self._grupo_medios.setExclusive(True)
+        self._botones_medio: dict[MedioPago, QPushButton] = {}
+        for medio in MEDIOS:
+            boton = QPushButton(NOMBRE_MEDIO[medio])
+            boton.setObjectName("segmentoPago")
+            # El color del elegido lo pone la hoja de estilos según el medio (D-034).
+            boton.setProperty("medio", str(medio))
+            boton.setCheckable(True)
+            boton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            boton.setCursor(Qt.CursorShape.PointingHandCursor)
+            boton.setToolTip("Con qué paga el cliente   (F11 cambia)")
+            boton.clicked.connect(lambda _=False, m=medio: self._pulsar_medio(m))
+            self._grupo_medios.addButton(boton)
+            self._botones_medio[medio] = boton
+            fila.addWidget(boton)
+        self._medio = MedioPago.EFECTIVO
+        self._botones_medio[self._medio].setChecked(True)
+        return fila
+
+    @property
+    def medio_pago(self) -> MedioPago:
+        """El medio con que se cobrará la venta en curso."""
+        return self._medio
+
+    def elegir_medio_pago(self, medio: MedioPago) -> None:
+        self._medio = medio
+        self._botones_medio[medio].setChecked(True)
+
+    def alternar_medio_pago(self) -> None:
+        """F11: efectivo, débito, crédito y vuelta a empezar. Dos pulsaciones como mucho."""
+        siguiente = MEDIOS[(MEDIOS.index(self._medio) + 1) % len(MEDIOS)]
+        self.elegir_medio_pago(siguiente)
+
+    def _pulsar_medio(self, medio: MedioPago) -> None:
+        self.elegir_medio_pago(medio)
+        self.enfocar_escaneo()
+
+    def _empezar_venta_nueva(self) -> None:
+        """Deja la pantalla como para el próximo cliente.
+
+        El medio vuelve a efectivo: un selector que se quedara en débito cobraría mal la
+        primera venta de la mañana siguiente, que casi siempre es en efectivo.
+        """
+        self.elegir_medio_pago(MedioPago.EFECTIVO)
 
     @staticmethod
     def _renglon(etiqueta: QLabel, valor: QLabel) -> QHBoxLayout:
@@ -829,6 +899,7 @@ class VentaView(QWidget):
             texto_si="Sí, cancelar",
         ):
             self._carrito.vaciar()
+            self._empezar_venta_nueva()
             self._refrescar()
             self._avisar("Venta cancelada.", exito=True)
         self.enfocar_escaneo()
@@ -855,6 +926,7 @@ class VentaView(QWidget):
             self,
             "Confirmar venta",
             f"Total a cobrar: {total}\n"
+            f"Pago: {NOMBRE_MEDIO[self._medio]}\n"
             f"{self._carrito.cantidad_articulos} artículos en {len(self._carrito.lineas)} "
             f"líneas.\n\n¿Confirma la venta?",
             texto_si="Sí, cobrar",
@@ -871,7 +943,7 @@ class VentaView(QWidget):
 
         try:
             venta = self._sesion.cerrar_venta(
-                self._carrito, self.usuario, self._intento_cobro
+                self._carrito, self.usuario, self._intento_cobro, medio_pago=self._medio
             )
         except ErrorDominio as error:
             dialogos.mostrar_error(self, str(error))
@@ -880,9 +952,14 @@ class VentaView(QWidget):
 
         self._intento_cobro = None
         self._carrito.vaciar()
+        self._empezar_venta_nueva()
         self._refrescar()
+        # El medio del aviso es el de la venta que devolvió la base, no el que está marcado:
+        # en un reintento el servidor devuelve la venta original, con el medio con que se
+        # guardó, y es eso lo que el cajero tiene que ver.
+        medio = f" · {NOMBRE_MEDIO[venta.medio_pago]}" if venta.medio_pago else ""
         self._avisar(
-            f"Venta N° {venta.folio} registrada por {formatear_clp(venta.total_clp)}.",
+            f"Venta N° {venta.folio} registrada por {formatear_clp(venta.total_clp)}{medio}.",
             exito=True,
         )
         self.venta_registrada.emit()

@@ -400,7 +400,7 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 | — | Rojo y logotipo de la marca (D-030) · tamaño de letra ajustable (D-031) | ✅ 2026-09-24 |
 | 15 | Usuarios por empleado y sesión obligatoria (D-032) | ✅ 2026-09-24 |
 | 16 | Identidad de caja (D-033) | ✅ 2026-09-24 |
-| 17 | Medio de pago: efectivo, débito y crédito | pendiente |
+| 17 | Medio de pago: efectivo, débito y crédito (D-034) | ✅ 2026-09-24 |
 | 18 | Informe de cierre diario por caja | pendiente |
 | 19 | Modo arqueo, activable | pendiente |
 | 20 | Documentación y manual | pendiente |
@@ -444,7 +444,15 @@ El dato **viaja en la petición** de la secundaria: si el servidor pusiera el su
 de la caja 2 saldrían como de la 1. Las ventas anteriores quedan sin caja, no se inventa.
 Migración de esquema. Pendiente de la pregunta H8: cómo se llaman las cajas.
 
-## Fase 17 — Medio de pago
+## Fase 17 — Medio de pago (D-034) ✅
+
+- [x] Migración 5: `venta.medio_pago`, sin `CHECK`; las ventas anteriores, sin registrar
+- [x] Tres botones sobre el de cobrar y F11 que los recorre; vuelve a efectivo tras cada venta
+- [x] Un color por medio, el mismo en el cobro y en las ventas del día; efectivo sin color
+- [x] Columna "Medio" en las ventas del día; protocolo a la versión 4
+- [ ] **Con el cliente, a las dos semanas:** ¿se marcan bien débito y crédito?
+
+**Criterio de aceptación:** el cajero registra una venta con tarjeta sin tocar el ratón. **Cumplido.**
 
 Efectivo, débito y crédito, separados como pidió el cliente. Lo marca el cajero con una tecla que
 cicla, siempre visible y sin estorbar el cobro con F12. Vuelve a efectivo tras cada venta.

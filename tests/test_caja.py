@@ -51,9 +51,10 @@ class TestMigracion:
         assert aplicar_migraciones(antigua) == VERSION_ESQUEMA
         despues = dict(antigua.execute("SELECT * FROM venta").fetchone())
 
-        # No se sabe en qué caja se hizo, y no se inventa.
-        assert despues.pop("caja") is None
-        assert despues == antes
+        # No se sabe en qué caja se hizo, y no se inventa. Y ninguna columna que ya existía
+        # cambia (las posteriores, como el medio de pago, tienen su propia prueba).
+        assert despues["caja"] is None
+        assert {columna: despues[columna] for columna in antes} == antes
         antigua.close()
 
     def test_el_indice_del_cierre_existe(self, conexion) -> None:

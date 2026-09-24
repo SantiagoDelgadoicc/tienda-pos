@@ -17,7 +17,7 @@ from typing import Any
 from .. import config
 from ..db.migrations import VERSION_ESQUEMA
 from ..domain.errors import ErrorDominio
-from ..domain.models import CodigoNoEncontrado, Producto, Rol, Usuario, Venta
+from ..domain.models import CodigoNoEncontrado, MedioPago, Producto, Rol, Usuario, Venta
 from ..services.venta import Carrito
 from . import protocolo
 from .sesion import Sesion
@@ -216,7 +216,12 @@ class SesionRemota(Sesion):
     # ------------------------------------------------------------------ venta
 
     def cerrar_venta(
-        self, carrito: Carrito, usuario: Usuario | None, intento_id: str | None = None
+        self,
+        carrito: Carrito,
+        usuario: Usuario | None,
+        intento_id: str | None = None,
+        *,
+        medio_pago: MedioPago | None = MedioPago.EFECTIVO,
     ) -> Venta:
         """Cobra.
 
@@ -234,6 +239,7 @@ class SesionRemota(Sesion):
                 # Esta caja dice quién es: el servidor no puede saberlo, no guarda estado por
                 # conexión, y la IP cambia sola.
                 "caja": self._caja,
+                "medio_pago": str(medio_pago) if medio_pago else None,
             },
         )
         return protocolo.a_venta(datos)

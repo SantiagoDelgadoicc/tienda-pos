@@ -19,6 +19,7 @@ from ..domain.models import (
     EstadoVenta,
     LineaVenta,
     Producto,
+    MedioPago,
     Rol,
     Usuario,
     Venta,
@@ -36,8 +37,8 @@ _FORMATO_FECHA_HORA = "%Y-%m-%d %H:%M:%S"
 #: actualización a medias se detecta al arrancar, con el aviso de `VersionIncompatible`.
 #:
 #: Historia: 1, dos cajas (fase 13) · 2, administración de usuarios (fase 15) · 3, cada venta
-#: dice de qué caja viene (fase 16).
-VERSION_PROTOCOLO = 3
+#: dice de qué caja viene (fase 16) · 4, y con qué se pagó (fase 17).
+VERSION_PROTOCOLO = 4
 
 
 # --------------------------------------------------------------------------- dominio → JSON
@@ -89,6 +90,7 @@ def de_venta(v: Venta) -> dict[str, Any]:
         "estado": str(v.estado),
         "intento_id": v.intento_id,
         "caja": v.caja,
+        "medio_pago": str(v.medio_pago) if v.medio_pago else None,
         "lineas": [de_linea_venta(linea) for linea in v.lineas],
     }
 
@@ -150,6 +152,7 @@ def a_venta(d: dict[str, Any]) -> Venta:
         estado=EstadoVenta(d["estado"]),
         intento_id=d.get("intento_id"),
         caja=d.get("caja"),
+        medio_pago=MedioPago.leer(d.get("medio_pago")),
         lineas=[a_linea_venta(x) for x in d.get("lineas", [])],
     )
 

@@ -227,8 +227,9 @@ usuarios de sus empleados.
 
 **En la tienda, con las dos cajas paradas:**
 
-1. **Actualizar los dos PC en la misma visita.** El protocolo entre cajas pasa a la versión 2:
-   la secundaria se niega a trabajar contra una principal sin actualizar, y lo dice al arrancar.
+1. **Actualizar los dos PC en la misma visita.** Cambian el protocolo entre cajas y el esquema
+   de la base: la secundaria se niega a trabajar contra una principal sin actualizar, y lo dice al
+   arrancar. La base se migra sola en el primer arranque del PC 1 (hacer antes un respaldo).
 2. Abrir el PC 1 y entrar como **`Administrador`** con el PIN de siempre.
 3. Ir a **Usuarios** (barra lateral, sección Administración) y, con **Nuevo usuario**, dar de alta
    a cada empleado. El sistema genera cada PIN y lo enseña **una sola vez**: que cada uno lo

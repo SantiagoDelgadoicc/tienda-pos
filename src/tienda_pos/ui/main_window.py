@@ -60,6 +60,7 @@ _AYUDA = """<b>Atajos de teclado</b><br><br>
 <tr><td><b>←</b> o <b>−</b></td><td>Quitar una unidad de la línea seleccionada</td></tr>
 <tr><td><b>Ctrl+C</b></td><td>Copiar el código de la línea seleccionada</td></tr>
 <tr><td><b>F6</b></td><td>Cancelar la venta en curso</td></tr>
+<tr><td><b>F11</b></td><td>Cambiar el medio de pago: efectivo, débito, crédito</td></tr>
 <tr><td><b>F12</b></td><td>Cobrar y registrar la venta</td></tr>
 <tr><td><b>F7</b></td><td>Administrar productos <i>(administrador)</i></td></tr>
 <tr><td><b>F8</b></td><td>Ventas del día <i>(administrador)</i></td></tr>
@@ -118,7 +119,7 @@ class VentanaPrincipal(QMainWindow):
         barra.showMessage(
             "F1 ayuda   ·   F2 consulta   ·   F3 buscar   ·   F4 descuento   ·   F5 quitar"
             "   ·   F6 cancelar   ·   F7 productos   ·   F8 ventas del día"
-            "   ·   F9 configuración   ·   F10 cambiar usuario   ·   F12 cobrar"
+            "   ·   F9 configuración   ·   F10 cambiar usuario   ·   F11 pago   ·   F12 cobrar"
             "   ·   Ctrl+B menú"
         )
         self.setStatusBar(barra)
@@ -205,6 +206,8 @@ class VentanaPrincipal(QMainWindow):
         self._atajo(QKeySequence(Qt.Key.Key_F8), self.mostrar_reportes)
         self._atajo(QKeySequence(Qt.Key.Key_F9), self.abrir_configuracion)
         self._atajo(QKeySequence(Qt.Key.Key_F10), self.cambiar_usuario)
+        # F11 recorre efectivo, débito y crédito (fase 17): la tecla libre más cerca de F12.
+        self._atajo(QKeySequence(Qt.Key.Key_F11), self._medio_pago)
         self._atajo(QKeySequence(Qt.Key.Key_F12), self._cobrar)
         self._atajo(QKeySequence(Qt.Key.Key_Escape), self.mostrar_venta)
         self._atajo(QKeySequence("Ctrl+B"), self.barra_lateral.alternar_plegado)
@@ -330,6 +333,7 @@ class VentanaPrincipal(QMainWindow):
             return
 
         self.vista_venta.carrito.vaciar()
+        self.vista_venta._empezar_venta_nueva()
         self.vista_venta._refrescar()
         self.establecer_usuario(usuario)
         self.mostrar_venta()
@@ -350,6 +354,10 @@ class VentanaPrincipal(QMainWindow):
     def _descuento(self) -> None:
         if self._en_venta():
             self.vista_venta.aplicar_descuento()
+
+    def _medio_pago(self) -> None:
+        if self._en_venta():
+            self.vista_venta.alternar_medio_pago()
 
     def _quitar_linea(self) -> None:
         if self._en_venta():
@@ -435,6 +443,7 @@ class VentanaPrincipal(QMainWindow):
         self.vista_venta.repintar()
         self.vista_productos.repintar()
         self.vista_usuarios.repintar()
+        self.vista_reportes.repintar()
 
     # ------------------------------------------------------------------ sesión
 

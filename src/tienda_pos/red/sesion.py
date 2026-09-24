@@ -24,7 +24,7 @@ from collections.abc import Callable
 from datetime import date
 from typing import Any, TypeVar
 
-from ..domain.models import CodigoNoEncontrado, Producto, Rol, Usuario, Venta
+from ..domain.models import CodigoNoEncontrado, MedioPago, Producto, Rol, Usuario, Venta
 from ..services import auth, catalogo, reportes
 from ..services import venta as servicio_venta
 from ..services.venta import Carrito
@@ -93,7 +93,12 @@ class Sesion(ABC):
 
     @abstractmethod
     def cerrar_venta(
-        self, carrito: Carrito, usuario: Usuario | None, intento_id: str | None = None
+        self,
+        carrito: Carrito,
+        usuario: Usuario | None,
+        intento_id: str | None = None,
+        *,
+        medio_pago: MedioPago | None = MedioPago.EFECTIVO,
     ) -> Venta: ...
 
     # ------------------------------------------------------------------ acceso
@@ -248,6 +253,7 @@ class SesionLocal(Sesion):
         usuario: Usuario | None,
         intento_id: str | None = None,
         *,
+        medio_pago: MedioPago | None = MedioPago.EFECTIVO,
         caja: str | None = _DE_ESTA_CAJA,
     ) -> Venta:
         """Cobra. Sin `caja`, la venta lleva la de esta sesión; con ella, la que se diga.
@@ -257,7 +263,12 @@ class SesionLocal(Sesion):
         """
         caja_de_la_venta = self._caja if caja is _DE_ESTA_CAJA else caja
         return servicio_venta.cerrar_venta(
-            self._conexion, carrito, usuario, intento_id, caja=caja_de_la_venta
+            self._conexion,
+            carrito,
+            usuario,
+            intento_id,
+            caja=caja_de_la_venta,
+            medio_pago=medio_pago,
         )
 
     # ------------------------------------------------------------------ acceso

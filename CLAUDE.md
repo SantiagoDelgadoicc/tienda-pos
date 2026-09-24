@@ -93,8 +93,10 @@ De sus respuestas por WhatsApp del 2026-09-23:
 - Aplicación de **escritorio Windows**. Explícitamente **no web**: el cliente abre un acceso
   directo y el programa arranca. Sin navegador ni `localhost`.
 - Entrada manual del código además de la pistola lectora.
-- La venta se cierra con total y queda registrada. Sin medios de pago, sin vuelto, sin
-  comprobante impreso y sin boleta electrónica.
+- La venta se cierra con su total, **el medio de pago** —efectivo, débito o crédito, que lo
+  marca el cajero— y **la caja donde se hizo**, y queda registrada (D-033, D-034; los dos,
+  pedidos por el cliente). Sigue sin vuelto, sin comprobante impreso y sin boleta electrónica
+  (D-006).
 - Stack: Python + PySide6 (Qt) + SQLite.
 - Acceso con PIN de cajero y modo administrador. **Desde el 2026-09-24, un usuario por empleado**
   (pedido del cliente, ver 3.1): el PIN lo genera el sistema y se enseña una vez, **nunca se entra
@@ -112,9 +114,12 @@ De sus respuestas por WhatsApp del 2026-09-23:
   carpeta de datos.
 - **La apariencia sigue el sistema visual de `docs/DESIGN.md`** desde el 2026-09-17 (D-026 y
   D-027): navegación en barra lateral plegable, lienzo de piedra cálida y tarjetas blancas.
-  **Dos colores y ninguno más**: **rojo** (el del logotipo) para dónde estoy, dónde está el
-  foco y lo que cancela o borra, siempre en lavado o filete; **verde** para lo que salió bien
-  y lo que confirma, que es el único que va relleno.
+  **Cada color significa algo, y lo mismo en todas partes**: **rojo** (el del logotipo, D-030)
+  para dónde estoy, dónde está el foco y lo que cancela o borra, siempre en lavado o filete;
+  **verde** para lo que salió bien y lo que confirma, que es el único que va relleno; y desde el
+  2026-09-24, **un color por medio de pago** —azul débito, violeta crédito, efectivo sin
+  color—, el mismo en el cobro y en los informes (D-034). El cliente pidió color; los recuadros
+  que pidió con él se descartaron.
 - **Movimiento breve y con propósito** desde el 2026-09-23 (D-029): destello verde en la línea
   del carrito que cambia, fundido del aviso de escaneo y plegado animado de la barra lateral.
   Además: fundido del precio en la consulta y de los diálogos, y sacudida del PIN incorrecto.
@@ -226,7 +231,7 @@ src/tienda_pos/
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    394 pruebas
+tests/                    429 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -263,7 +268,7 @@ python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
 python main.py --demo                 # con el catálogo y los usuarios de ejemplo, en una base vacía
 python main.py --reiniciar-admin      # recuperar un administrador; solo en el PC de la base
-pytest                                # pruebas (394, un minuto)
+pytest                                # pruebas (429, un minuto)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

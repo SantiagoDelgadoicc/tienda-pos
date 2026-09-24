@@ -91,6 +91,12 @@ class Paleta:
     seleccion: str             # fila seleccionada
     pulsado: str               # control mientras se pulsa
     barra_desplazamiento: str
+    # Un color por medio de pago (D-034), el mismo en el cobro y en el cierre. Efectivo no
+    # tiene: es lo normal, y el color marca lo que no es lo de siempre.
+    debito: str
+    debito_suave: str
+    credito: str
+    credito_suave: str
     sombra: tuple[int, int, int, int]  # r, g, b, alfa de la sombra de las tarjetas
 
 
@@ -133,6 +139,11 @@ CLARO = Paleta(
     seleccion="#F2EFED",
     pulsado="#EBE8E5",
     barra_desplazamiento="#CFCBC7",
+    # Medidos: 5,9:1 y 6,2:1 sobre su propio lavado, más sobre el papel.
+    debito="#1D4ED8",
+    debito_suave="#EAF0FD",
+    credito="#6D28D9",
+    credito_suave="#F2ECFD",
     sombra=(28, 25, 23, 22),
 )
 
@@ -165,6 +176,10 @@ OSCURO = Paleta(
     seleccion="#292625",
     pulsado="#332F2D",
     barra_desplazamiento="#413C39",
+    debito="#8DB0F7",
+    debito_suave="#18243B",
+    credito="#C3A6F8",
+    credito_suave="#261C38",
     sombra=(0, 0, 0, 110),
 )
 
@@ -208,6 +223,20 @@ def letra(px: float) -> int:
     el número a pelo, serían las únicas que no crecen al cambiar el ajuste.
     """
     return round(px * escala)
+
+
+def color_medio(medio: object) -> str:
+    """El color de un medio de pago en la paleta en uso (D-034).
+
+    Débito y crédito tienen el suyo; efectivo y "sin registrar", el del texto corriente. Todas
+    las pantallas lo piden aquí, para que un medio tenga el mismo color en el cobro, en las
+    ventas del día y en el cierre: si cambiara de una pantalla a otra, dejaría de significar.
+    """
+    from ..domain.models import MedioPago
+
+    return {MedioPago.DEBITO: actual.debito, MedioPago.CREDITO: actual.credito}.get(
+        medio, actual.texto
+    )
 
 
 def paleta_de(tema: str) -> Paleta:
@@ -419,6 +448,38 @@ QFrame#tarjeta {{
 
 /* El PIN recién generado, en la pantalla de usuarios. Grande y espaciado porque se dicta o
    se copia a mano: cada cifra tiene que leerse sola. */
+/* Selector del medio de pago, sobre el botón de cobrar (fase 17, D-034). El elegido lleva el
+   color de su medio; efectivo, el de lo corriente. Cada medio tiene el mismo color aquí y en el
+   cierre, que es lo que hace que el color diga algo. */
+QPushButton#segmentoPago {{
+    background-color: {p.superficie};
+    color: {p.texto_suave};
+    border: 1px solid {p.borde_fuerte};
+    border-radius: {RADIO_PILDORA_BAJA}px;
+    padding: 7px 10px;
+    font-size: 14px;
+    font-weight: 600;
+}}
+QPushButton#segmentoPago:hover {{
+    background-color: {p.superficie_alterna};
+}}
+QPushButton#segmentoPago:checked {{
+    background-color: {p.superficie_alterna};
+    color: {p.texto};
+    border: 2px solid {p.texto};
+    font-weight: 700;
+}}
+QPushButton#segmentoPago[medio="debito"]:checked {{
+    background-color: {p.debito_suave};
+    color: {p.debito};
+    border: 2px solid {p.debito};
+}}
+QPushButton#segmentoPago[medio="credito"]:checked {{
+    background-color: {p.credito_suave};
+    color: {p.credito};
+    border: 2px solid {p.credito};
+}}
+
 QLabel#pinGenerado {{
     color: {p.texto};
     font-size: 48px;

@@ -159,8 +159,8 @@ sin usuario**. `--reiniciar-admin` funciona con diálogos y no por consola porqu
 construye sin ella.
 
 **Protocolo entre cajas.** Versión 1, dos cajas (fase 13) · 2, administración de usuarios
-(fase 15) · **3**, cada venta dice de qué caja viene (fase 16). **Esquema de la base: 4**
-(`venta.caja`). Sube también cuando solo se añaden operaciones: así una actualización a medias
+(fase 15) · 3, cada venta dice de qué caja viene (fase 16) · **4**, y con qué se pagó
+(fase 17). **Esquema de la base: 5** (`venta.caja`, `venta.medio_pago`). Sube también cuando solo se añaden operaciones: así una actualización a medias
 se detecta al arrancar y no en mitad de una pantalla. Hay que actualizar las dos cajas a la vez.
 
 **Antivirus:** algunos marcan como sospechosos los ejecutables de PyInstaller. Conviene

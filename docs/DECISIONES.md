@@ -107,6 +107,10 @@ correcta, no un descuido.
 
 **Fecha:** 2026-09-09 · **Estado:** aceptada · **Decide:** Santiago
 
+> **Modificada parcialmente el 2026-09-24 por [D-034](#d-034).** Decae "sin medios de pago": la
+> venta registra si fue en efectivo, débito o crédito, porque lo pidió el cliente. Todo lo demás
+> sigue en pie: sin vuelto, sin comprobante impreso y sin boleta electrónica.
+
 **Contexto.** El cliente solo pidió consultar precios. Registrar medios de pago o emitir
 boletas electrónicas abre obligaciones legales y técnicas enormes (certificado digital,
 integración con el SII, responsabilidad tributaria).
@@ -1154,3 +1158,61 @@ delante** el día de la visita (pregunta H8).
 el nombre de la secundaria, que una petición sin caja no hereda la del servidor, y que las dos
 cajas vendiendo a la vez quedan separadas. Se comprobó que esas pruebas fallan si se quita el
 `caja=` del servidor, que es exactamente el cambio que alguien haría sin querer.
+
+
+---
+
+## D-034 — La venta registra con qué se pagó, y cada medio tiene su color
+
+**Fecha:** 2026-09-24 · **Estado:** aceptada · **Decide:** Santiago · **Modifica:** D-006, y
+enmienda D-026 y D-027 en el número de colores
+
+**Contexto.** El cliente pidió el 2026-09-18 que quedara registrado el medio de pago, y el
+2026-09-23 precisó que en el cierre quiere ver **efectivo, débito y crédito por separado**. D-006
+decía "sin medios de pago". En la misma conversación pidió "un poco de color", y Santiago lo
+concedió.
+
+**Decisión.**
+
+1. **Migración 5**: `venta.medio_pago`, texto, con tres valores: `efectivo`, `debito`, `credito`.
+   **Sin `CHECK`**, al contrario que `rol` y `estado`: un `CHECK` añadido con `ALTER TABLE` no se
+   cambia sin reconstruir la tabla, y la lista de medios es lo que el cliente aún puede cambiar
+   (transferencia, fiado). La validación vive en el servicio, que rechaza con un error legible lo
+   que no sea un medio conocido —por la red llega texto—; y la lectura **tolera** un valor
+   desconocido y lo trata como no registrado, en lugar de tumbar el cierre.
+2. **Las ventas anteriores quedan sin registrar**, no en efectivo. Rellenarlas sería inventar un
+   dato que el dueño leería como real, y el cierre de hoy no le cuadraría con su cuaderno.
+3. **Lo marca el cajero**, con tres botones sobre el de cobrar y **F11**, que recorre efectivo,
+   débito y crédito: dos pulsaciones como mucho, y solo cuando no es efectivo. Siempre a la vista,
+   nunca dentro del diálogo de confirmación, que se puede desactivar. Los botones no toman el foco,
+   para no quitarle la entrada a la pistola. El sistema **no habla con la máquina de Mercado Pago**:
+   haría falta internet permanente, y eso es otro proyecto.
+4. **Tras cada venta, y al cancelarla, vuelve a efectivo.** Un selector que se quedara en débito
+   cobraría mal la primera venta de la mañana siguiente.
+5. **El aviso de venta registrada dice el medio de la venta que devolvió la base**, no el marcado:
+   en un reintento el servidor devuelve la venta original, y es eso lo que el cajero tiene que ver.
+6. Protocolo a la **versión 4**. Si una petición no dice el medio, la venta queda sin registrar.
+
+**El color (enmienda de D-026 y D-027).** El sistema tenía dos colores con significado. Pasa a
+tener **uno más por medio de pago**, con la misma regla: **el color significa algo, y lo mismo en
+todas partes**.
+
+| Medio | Tema claro | Tema oscuro | Contraste sobre su lavado |
+|---|---|---|---|
+| Efectivo | sin color | sin color | — |
+| Débito | `#1D4ED8` sobre `#EAF0FD` | `#8DB0F7` sobre `#18243B` | 5,9:1 · 7,2:1 |
+| Crédito | `#6D28D9` sobre `#F2ECFD` | `#C3A6F8` sobre `#261C38` | 6,2:1 · 7,8:1 |
+
+**Efectivo va sin color a propósito**: es lo corriente, y el color marca lo que no es lo de
+siempre. Así, un cobro a punto de salir en débito se nota de reojo. Los tonos no chocan con los que
+ya tenían significado: ni el rojo de "dónde estoy / cancelar" ni el verde de "salió bien". Todas las
+pantallas piden el color a `estilos.color_medio`, para que un medio no cambie de color entre el
+cobro, las ventas del día y el cierre.
+
+**Consecuencias.** `CLAUDE.md` decía en 3.2 "sin medios de pago" y "dos colores y ninguno más", y
+las dos frases quedan corregidas. El manual lo recogerá en la fase 20.
+
+*Riesgo anotado:* separar débito de crédito solo vale lo que valga la disciplina de marcarlo bien.
+Si el cajero le da a cualquiera con prisa, el cierre mentirá con aspecto de precisión. Hay que
+revisarlo con el cliente a las dos semanas de uso; si no se marca bien, se funden en "tarjeta", y
+que la columna vaya sin `CHECK` es justo lo que hace barata esa marcha atrás.

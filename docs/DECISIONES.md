@@ -1301,3 +1301,13 @@ que podría dejar uno fijo si el sistema se lo indica.
 misma visita, como siempre. El primer cobro tras actualizar pide abrir la caja. Riesgo aceptado:
 el pago a proveedor lo anota el propio cajero, así que un pago inventado baja el esperado; queda a
 su nombre y con el proveedor, a la vista del dueño en los cierres.
+
+**Añadido el 2026-09-25 — la medianoche (H10), decidida por Santiago.** El cliente no la contestó, y
+Santiago la resuelve así: **cada caja se abre al empezar el día y se cierra al terminarlo, como se
+viene haciendo**, y lo que se vende entre una cosa y otra es de ese turno, pase o no la medianoche.
+No se toca código: el arqueo ya es por turno (punto 2) y `config.HORA_CORTE_DIA` sigue en 0.
+*Lo que esto no cubre:* el informe **Cierre de caja** (D-035) es por día de calendario, así que si
+un turno cruza la medianoche, sus ventas de después de las 00:00 salen en el cierre del día
+siguiente. El dinero del cajón cuadra igual, porque eso lo calcula el turno. Si llegara a molestar,
+hay dos salidas: subir `HORA_CORTE_DIA` a la hora en que la tienda ya cerró seguro, que es un
+número, o que el cierre se pida por turno y no por día, que es un cambio de pantalla.

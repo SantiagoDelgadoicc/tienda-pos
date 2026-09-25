@@ -1,215 +1,203 @@
 ===============================================================================
-  TIENDA POS - CONECTAR LAS DOS CAJAS
-  Plan para la visita del 2026-09-15
+  PUNTO Y FAMA - CAJA
+  Actualizar las dos cajas a la version con usuarios, cierre y arqueo
 ===============================================================================
 
 
   *** LO PRIMERO, Y NO ES NEGOCIABLE ***
 
-  El PC 1 tiene los productos que cargaron ayer. Eso es lo unico
-  irreemplazable de todo esto. Ningun archivo de este pendrive toca
-  esa base de datos, PERO la regla es:
+  El PC 1 tiene el catalogo y todas las ventas. Es lo unico
+  irreemplazable. Ningun archivo de este pendrive borra esa base
+  de datos, PERO la regla es:
 
       EJECUTA PASO-1-RESPALDAR.bat ANTES QUE NADA, EN EL PC 1.
 
-  Si algo sale mal despues, se vuelve atras con ese respaldo.
+  El programa nuevo pone al dia la base la primera vez que se abre
+  en el PC 1. Si algo sale mal, se vuelve atras con ese respaldo.
 
 
 -------------------------------------------------------------------------------
-  EL PLAN, EN UNA LINEA
+  QUE HAY QUE TENER ANTES DE EMPEZAR
 -------------------------------------------------------------------------------
 
-  Un cable de red directo entre los dos PC, con direcciones fijas.
-  El PC 1 sirve el catalogo, el PC 2 se lo pide.
-
-  Por que cable y no wifi:
-    - el numero nunca cambia (el wifi depende del router, que puede
-      cambiarlo solo cualquier dia y romper todo sin motivo aparente)
-    - no hay cortes ni tirones
-    - no hace falta entrar al router ni saber su contrasena
-    - esta listo en cuanto arranca Windows
-
-  El wifi de los dos PC NO se toca. Sigue funcionando igual para lo que
-  sea que lo usen. El cable es una segunda red, solo entre las dos cajas.
-
-  Si el cable no se puede, hay PLAN-B-WIFI.bat. Funciona, pero peor.
-
-
--------------------------------------------------------------------------------
-  QUE NECESITAS LLEVAR
--------------------------------------------------------------------------------
-
-  - Este pendrive
-  - UN CABLE DE RED (ethernet, RJ45) que llegue de un PC al otro
-
-  Sobre el cable: vale cualquiera, normal y corriente. NO hace falta uno
-  "cruzado": los PC de los ultimos 20 anos se arreglan solos con eso.
-  Mide la distancia entre las dos cajas antes de comprarlo.
+  - Este pendrive.
+  - Al DUENO delante: es el quien crea los usuarios de sus empleados.
+  - Los nombres de las personas que atienden.
+  - Como se llamara cada caja en el cierre. Si nadie dice otra cosa:
+    "Caja 1" el PC 1 y "Caja 2" el PC 2. TIENEN QUE SER DISTINTOS.
+  - Las dos cajas PARADAS: se actualizan las dos en la misma visita.
+    Una caja nueva no trabaja contra una vieja, y lo dice al abrir.
 
 
 ===============================================================================
-  EN EL PC 1  (el que tiene los productos)
+  PARTE A - ACTUALIZAR  (lo que toca en esta visita)
 ===============================================================================
 
-  PASO 1 - RESPALDAR
-  ------------------
-    Cierra Tienda POS.
-    Doble clic en:   PASO-1-RESPALDAR.bat
+  EN EL PC 1
+  ----------
+  1. Cierra el programa.
 
-    Copia el catalogo al pendrive, a la carpeta RESPALDOS.
-    No cambia nada. Solo copia.
+  2. Doble clic en  PASO-1-RESPALDAR.bat
+     COMPROBAR: al final lista los archivos copiados.
+     Si tienda.db son 4096 bytes NO TE ASUSTES: el resto esta en
+     tienda.db-wal, que tambien se copia.
 
-    COMPROBAR: al final lista los archivos copiados.
-    Si tienda.db son 4096 bytes NO TE ASUSTES: el catalogo esta en el
-    archivo tienda.db-wal, que tambien se copia. Es normal.
+  3. Doble clic en  PASO-2-ACTUALIZAR-PROGRAMA.bat
+     - Aparta el programa viejo (no lo borra: queda en
+       C:\TiendaPOS-ANTERIOR-fecha) y copia el nuevo.
+     - Rehace los accesos directos del escritorio y del arranque
+       automatico, que apuntaban al programa viejo.
+     - Al final PREGUNTA EL NOMBRE DE ESTA CAJA. Enter = Caja 1.
+     COMPROBAR: dice "LISTO. PROGRAMA ACTUALIZADO".
+     NO ABRAS TODAVIA EL PROGRAMA.
 
+  EN EL PC 2
+  ----------
+  4. Cierra el programa.
 
-  PASO 2 - ACTUALIZAR EL PROGRAMA
-  -------------------------------
-    Doble clic en:   PASO-2-ACTUALIZAR-PROGRAMA.bat
+  5. Doble clic en  PASO-2-ACTUALIZAR-PROGRAMA.bat
+     Al final pregunta el nombre: Enter = Caja 2.
+     OJO: distinto del que pusiste en el PC 1.
 
-    Copia solo el programa. NO TOCA LA BASE DE DATOS.
-
-
-  Ahora ENCHUFA EL CABLE de red entre los dos PC.
-
-
-  PASO 3 - CONFIGURAR
+  OTRA VEZ EN EL PC 1
   -------------------
-    Doble clic en:   PASO-3-PC1-PRINCIPAL.bat
+  6. Abre el programa (acceso "Punto y Fama" del escritorio).
+     La primera vez pone al dia la base: puede tardar un momento.
+     Entra como Administrador con el PIN de siempre.
+     COMPROBAR: que esten TODOS los productos.
 
-    Va a pedir permisos de administrador: dile que SI.
+  7. Con el dueno, en  Usuarios  (barra lateral, Administracion):
+     a) "Nuevo usuario" para cada empleado. El sistema inventa el
+        PIN y lo ensena UNA SOLA VEZ: que cada uno lo anote ya.
+     b) Selecciona "Administrador" -> "PIN nuevo". El de siempre
+        esta publicado en el manual antiguo: hay que cambiarlo.
+        QUE EL DUENO LO APUNTE EN UN LUGAR SEGURO.
+     c) Selecciona "Cajero" -> "Dar de baja". Sus ventas antiguas
+        se conservan; solo deja de poder entrar.
 
-    Hace cuatro cosas:
-      - le pone la direccion fija 192.168.50.1 al cable
-      - abre el permiso en el cortafuegos
-      - deja este PC en modo servidor
-      - hace que Tienda POS se abra solo al encender
+  8. Con el dueno, en  Efectivo :
+     a) Abajo, "Cierres anteriores" -> "Cambiar": el monto con que
+        se propone abrir cada caja por la manana.
+     b) Abre la Caja 1 contando lo que hay en el cajon.
 
-    COMPROBAR: al final dice "PC 1 LISTO" y la direccion.
-
-    Abre Tienda POS y MIRA QUE ESTEN TODOS LOS PRODUCTOS que
-    cargaron ayer. Si falta algo, PARA y avisa.
-
-    DEJA TIENDA POS ABIERTO y vete al otro PC.
-
-
-===============================================================================
-  EN EL PC 2  (el que tiene el catalogo de ejemplo)
-===============================================================================
-
-  PASO 2 - ACTUALIZAR EL PROGRAMA
-  -------------------------------
-    Doble clic en:   PASO-2-ACTUALIZAR-PROGRAMA.bat
-
-
-  PASO 4 - CONFIGURAR
-  -------------------
-    Doble clic en:   PASO-4-PC2-SECUNDARIA.bat
-
-    Permisos de administrador: SI.
-
-    Hace cuatro cosas:
-      - le pone la direccion fija 192.168.50.2 al cable
-      - aparta el catalogo de ejemplo (lo renombra, NO lo borra)
-      - deja este PC en modo caja, apuntando al PC 1
-      - hace que Tienda POS se abra solo al encender
-
-    Al final prueba solo si ve al PC 1 y te lo dice.
-
-    COMPROBAR en el navegador:
-
-        http://192.168.50.1:8477/api/estado
-
-    Tiene que salir un texto con llaves, tipo:
-        {"resultado": {"version_protocolo": 1, ...
-
-    SI SALE  -> abre Tienda POS. Ya esta.
-    SI NO SALE -> ejecuta DIAGNOSTICO.bat en los dos PC.
+  EN EL PC 2
+  ----------
+  9. Abre el programa. Entra con el PIN de un empleado.
+     Abre la Caja 2 contando su cajon (lo propone al entrar).
+     COMPROBAR: al pie de la barra lateral sale el nombre del
+     empleado y debajo "Cajero - Caja 2" (con su nombre de caja).
 
 
-===============================================================================
+-------------------------------------------------------------------------------
   LA PRUEBA FINAL
-===============================================================================
+-------------------------------------------------------------------------------
 
-  1. Escanea un producto en el PC 2. Debe salir el precio.
+  1. Cobra una venta pequena en el PC 2, en efectivo.
+     En el PC 1, "Cierre de caja", Caja 2: tiene que salir a
+     nombre del empleado, en efectivo.
 
-  2. LA IMPORTANTE:
-     Cambia un precio en el PC 1 y guarda.
-     Escanea ese mismo producto en el PC 2.
-     Debe salir el precio NUEVO.
+  2. Cambia un precio en el PC 1. Escanea ese producto en el PC 2.
+     Tiene que salir el precio NUEVO.
 
-  3. Cobra una venta pequena en el PC 2.
-     Miralo en el informe del dia del PC 1. Tiene que estar.
+  3. En Efectivo, el dueno anota un retiro: pide SU PIN.
+     Un empleado anota un pago a proveedor: pide el nombre del
+     proveedor y queda a nombre del empleado.
 
-  4. Con productos en el carrito del PC 2, desenchufa el cable.
-     Intenta cobrar.
-     Debe avisar en menos de 3 segundos, sin perder el carrito.
-     Vuelve a enchufar y cobra: tiene que funcionar.
+  4. Con productos en el carrito del PC 2, desenchufa el cable e
+     intenta cobrar. Debe avisar en menos de 3 segundos, sin perder
+     el carrito. Enchufa otra vez y cobra: tiene que funcionar.
+
+  Si todo eso sale, esta terminado.
 
 
-===============================================================================
+-------------------------------------------------------------------------------
   COMO QUEDA EL DIA A DIA
-===============================================================================
+-------------------------------------------------------------------------------
 
-  Se encienden los dos PC. Nada mas.
-
-    PC 1:  Windows arranca -> Tienda POS se abre solo -> pide el PIN
-    PC 2:  Windows arranca -> Tienda POS se abre solo -> espera a que el
-           PC 1 este listo (hasta 90 segundos, con un cartel que lo dice)
-           -> pide el PIN
-
-  No importa cual se encienda primero. El PC 2 espera al PC 1 sin
-  quejarse ni pedir nada.
-
-  Lo unico que hay que hacer a mano es escribir el PIN, y eso no se
-  puede quitar: es lo que permite saber quien vendio cada cosa.
-
-  Si el PC 1 esta apagado, el PC 2 no puede vender y lo dice claro.
-  Es a proposito: vender sin ver el stock real descuadra el inventario.
+  - Se encienden los dos PC. El programa se abre solo.
+    El PC 2 espera al PC 1 (hasta 90 segundos, con un cartel).
+  - Cada empleado entra con SU PIN. Asi se sabe quien vendio que.
+  - AL EMPEZAR EL DIA: se abre cada caja contando el cajon.
+    Con la caja cerrada no se puede cobrar.
+  - AL TERMINAR EL DIA: se cierra cada caja contando el cajon.
+    Todo lo que se venda entre la apertura y el cierre es de esa
+    caja, aunque pase la medianoche.
+  - Quien cierra NO VE cuanto deberia haber. Es a proposito. El
+    dueno lo ve en Efectivo, con su PIN. Diselo en voz alta, para
+    que nadie piense que es un fallo.
+  - Si el PC 1 esta apagado, el PC 2 no puede vender y lo dice.
 
 
-===============================================================================
+-------------------------------------------------------------------------------
   SI ALGO FALLA
-===============================================================================
+-------------------------------------------------------------------------------
 
-  DIAGNOSTICO.bat   en el PC que falle. Dice que papel cree que juega,
-                    si tiene catalogo propio y las ultimas lineas del
-                    registro.
+  DIAGNOSTICO.bat   en el PC que falle. Dice que papel juega el
+                    equipo, como se llama la caja, que programa
+                    hay instalado y a donde apuntan los accesos.
+                    Mandame una foto de esa ventana.
 
-  Y mandame el archivo de registro de los dos PC. Para llegar rapido:
-  tecla Windows + R, pegar esto, Enter:
+  El registro de los dos PC: tecla Windows + R, pegar, Enter:
 
       %LOCALAPPDATA%\TiendaPOS\logs
 
+  UN EMPLEADO OLVIDO SU PIN
+    El dueno, en Usuarios: seleccionarlo -> "PIN nuevo".
 
-  SI EL CABLE NO FUNCIONA
-  -----------------------
-    PLAN-B-WIFI.bat    en los dos PC. Te pregunta cual es cual.
-    En el PC 1 te dara su direccion de wifi; apuntala para el PC 2.
+  EL DUENO OLVIDO SU PIN
+    Solo en el PC 1. Ventana de comandos en C:\TiendaPOS y:
+        PuntoYFamaCaja.exe --reiniciar-admin
 
-    Aviso: por wifi, si el router le cambia la direccion al PC 1, el
-    PC 2 deja de conectar. Para evitarlo hay que reservar la direccion
-    en el router. Por eso el cable es mejor.
+  EL PROGRAMA NUEVO NO ARRANCA
+    NO vuelvas tu solo al programa viejo de TiendaPOS-ANTERIOR:
+    la base ya esta al dia y el viejo no la entiende. Llamame.
+
+  NUNCA pongas --demo en un acceso directo de la tienda.
 
 
 ===============================================================================
-  COSAS QUE CONVIENE SABER
+  PARTE B - INSTALACION DESDE CERO  (solo si un PC es nuevo)
 ===============================================================================
 
-  LOS PIN SIGUEN SIENDO LOS DE FABRICA
-    1234 (Administrador) y 1111 (Cajero), y estan publicados en el
-    manual de usuario. Antes de que la tienda opere de verdad hay que
-    cambiarlos. Avisame y te paso como.
+  Hace falta UN CABLE DE RED normal entre los dos PC (no hace falta
+  que sea "cruzado").
 
+  EN EL PC 1
+    1. PASO-1-RESPALDAR.bat         (si ya tenia catalogo)
+    2. PASO-2-ACTUALIZAR-PROGRAMA.bat
+    3. Enchufa el cable.
+    4. PASO-3-PC1-PRINCIPAL.bat      permisos de administrador: SI
+       Pone la direccion 192.168.50.1 al cable, abre el cortafuegos,
+       deja el PC como principal, pregunta el nombre de la caja y
+       hace que el programa se abra solo al encender.
+       COMPROBAR: dice "PC 1 LISTO".
+    5. Abre el programa y DEJALO ABIERTO.
+
+  EN EL PC 2
+    1. PASO-2-ACTUALIZAR-PROGRAMA.bat
+    2. PASO-4-PC2-SECUNDARIA.bat     permisos de administrador: SI
+       Pone la direccion 192.168.50.2, aparta el catalogo propio si
+       lo hay (no lo borra), apunta al PC 1, pregunta el nombre de
+       la caja y prueba la conexion.
+       SI RESPONDE -> abre el programa.
+       SI NO       -> DIAGNOSTICO.bat en los dos PC.
+
+  EN EL PC 2 NO SE COPIA NUNCA UN tienda.db.
+
+  SI EL CABLE NO FUNCIONA: PLAN-B-WIFI.bat en los dos PC.
+    Por wifi, si el router le cambia la direccion al PC 1, el PC 2
+    deja de conectar. Hay que reservar la direccion en el router.
+
+
+-------------------------------------------------------------------------------
   RESPALDOS
-    El programa copia la base al abrir y al cerrar, y guarda las 7
-    ultimas en  %LOCALAPPDATA%\TiendaPOS\backups
-    Estan en el mismo disco: NO sirven si el disco se rompe. Copia esa
-    carpeta a un pendrive cada cierto tiempo.
+-------------------------------------------------------------------------------
 
-  LLEVARSE EL CATALOGO A MANO
-    CIERRA EL PROGRAMA PRIMERO. Con el abierto, lo que copias puede ser
-    un archivo vacio que parece bueno.
+  El programa copia la base al abrir y al cerrar, y guarda las 7
+  ultimas en  %LOCALAPPDATA%\TiendaPOS\backups  del PC 1.
+  Estan en el mismo disco: NO sirven si el disco se rompe. Copia
+  esa carpeta a un pendrive cada cierto tiempo, o usa PASO-1.
+
+  Para llevarte la base a mano: CIERRA EL PROGRAMA PRIMERO.
 
 ===============================================================================

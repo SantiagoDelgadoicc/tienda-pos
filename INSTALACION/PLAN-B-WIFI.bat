@@ -1,6 +1,6 @@
 @echo off
 setlocal
-title Tienda POS - PLAN B - Conectar por wifi
+title Punto y Fama - PLAN B - Conectar por wifi
 
 net session >nul 2>&1
 if errorlevel 1 (
@@ -8,6 +8,7 @@ if errorlevel 1 (
     exit /b
 )
 
+set "ORIGEN=%~dp0"
 if not defined DATOS set "DATOS=%LOCALAPPDATA%\TiendaPOS"
 
 echo.
@@ -48,13 +49,12 @@ netsh advfirewall firewall delete rule name="TiendaPOS" >nul 2>&1
 netsh advfirewall firewall add rule name="TiendaPOS" dir=in action=allow protocol=TCP localport=8477 profile=any
 echo   Cortafuegos: listo.
 
-if not exist "%DATOS%" mkdir "%DATOS%"
-> "%DATOS%\red.json" echo {
->>"%DATOS%\red.json" echo   "modo": "servidor",
->>"%DATOS%\red.json" echo   "servidor_host": "",
->>"%DATOS%\red.json" echo   "puerto": 8477
->>"%DATOS%\red.json" echo }
-echo   Modo servidor: listo.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%ORIGEN%_red_json.ps1" -Datos "%DATOS%" -Modo servidor -NombrePorDefecto "Caja 1"
+if errorlevel 1 (
+    echo   ERROR: no se pudo escribir red.json
+    pause
+    exit /b 1
+)
 
 echo.
 echo -----------------------------------------------------------
@@ -87,27 +87,18 @@ if "%IP%"=="" (
 
 if exist "%DATOS%\tienda.db" (
     move /y "%DATOS%\tienda.db" "%DATOS%\tienda-NO-USAR.db" >nul
-    echo   Catalogo de ejemplo apartado.
+    echo   Catalogo propio apartado como tienda-NO-USAR.db
 )
 del /q "%DATOS%\tienda.db-wal" 2>nul
 del /q "%DATOS%\tienda.db-shm" 2>nul
 
-if not exist "%DATOS%" mkdir "%DATOS%"
-> "%DATOS%\red.json" echo {
->>"%DATOS%\red.json" echo   "modo": "caja",
->>"%DATOS%\red.json" echo   "servidor_host": "%IP%",
->>"%DATOS%\red.json" echo   "puerto": 8477
->>"%DATOS%\red.json" echo }
-echo   Modo caja: listo.
-echo.
-type "%DATOS%\red.json"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%ORIGEN%_red_json.ps1" -Datos "%DATOS%" -Modo caja -Servidor "%IP%" -NombrePorDefecto "Caja 2"
+if errorlevel 1 (
+    echo   ERROR: no se pudo escribir red.json
+    pause
+    exit /b 1
+)
 
 echo.
-echo   Probando si se ve el PC 1...
-ping -n 2 %IP% >nul 2>&1
-if errorlevel 1 (echo   *** NO responde %IP% ***) else (echo   El PC 1 responde.)
-echo.
-echo   Comprueba en el navegador:  http://%IP%:8477/api/estado
-echo.
-pause
+call "%ORIGEN%PROBAR-CONEXION.bat" %IP%
 exit /b 0

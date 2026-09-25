@@ -67,6 +67,21 @@ class ConfiguracionRed:
         )
 
 
+def _leer_texto(ruta: Path) -> str:
+    """El texto de `red.json` tal como lo haya guardado quien lo editó.
+
+    Se edita con el Bloc de notas, y según la versión de Windows eso deja UTF-8 con BOM o,
+    en los antiguos, ANSI. Leído como UTF-8 estricto, un nombre de caja con tilde hacía el
+    archivo ilegible, y el PC 2 arrancaba en modo suelto con una base propia y vacía.
+    """
+    crudo = ruta.read_bytes()
+    try:
+        return crudo.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        _logger.warning("red.json no está en UTF-8; se lee como ANSI (cp1252)")
+        return crudo.decode("cp1252", errors="replace")
+
+
 def cargar(ruta: Path | None = None) -> ConfiguracionRed:
     """Lee la configuración de red. Si no existe o está rota, devuelve el modo suelto.
 
@@ -79,7 +94,7 @@ def cargar(ruta: Path | None = None) -> ConfiguracionRed:
         return ConfiguracionRed()
 
     try:
-        datos = json.loads(ruta.read_text(encoding="utf-8"))
+        datos = json.loads(_leer_texto(ruta))
         return ConfiguracionRed(
             modo=Modo(datos.get("modo", Modo.SUELTO)),
             servidor_host=str(datos.get("servidor_host", "")).strip(),

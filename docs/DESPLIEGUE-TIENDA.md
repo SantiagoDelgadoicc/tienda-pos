@@ -22,6 +22,9 @@ Complementa a los otros documentos, no los repite:
 > tienda no es copiar la carpeta nueva encima: hay que rehacer los accesos directos de los dos
 > PC, porque los actuales apuntan a un archivo que ya no existirá. La carpeta de datos
 > (`%LOCALAPPDATA%\TiendaPOS`) **no cambia** y no hay que tocarla.
+>
+> *2026-09-25:* eso lo hace ya `PASO-2-ACTUALIZAR-PROGRAMA.bat` (sección 5). La carpeta del
+> programa sigue siendo `C:\TiendaPOS\`.
 
 ## 1. Ficha de la instalación
 
@@ -157,8 +160,7 @@ funcionó en la tienda y es la que conviene conservar.
 Contenido del pendrive:
 
 ```
-TiendaPOS\                        el programa completo (~114 MB, .exe + _internal)
-tienda.db                         copia del catálogo
+PuntoYFamaCaja\                   el programa completo (~115 MB, .exe + _internal)
 INSTRUCCIONES.txt                 el mismo procedimiento, en texto plano
 PASO-1-RESPALDAR.bat              PC 1 · solo copia, no cambia nada
 PASO-2-ACTUALIZAR-PROGRAMA.bat    los dos · NO toca ninguna base de datos
@@ -169,7 +171,39 @@ PROBAR-CONEXION.bat               PC 2 · comprueba si el PC 1 responde
 DIAGNOSTICO.bat                   cualquiera · dice qué papel cree que juega el equipo
 VER-MI-IP.bat                     muestra la dirección del equipo
 _red_cable.ps1                    detecta la tarjeta de cable y le pone la IP fija
+_red_json.ps1                     escribe red.json sin perder nada y pregunta el nombre de la caja
+_accesos.ps1                      deja los accesos directos apuntando a PuntoYFamaCaja.exe
 ```
+
+Ya no viaja un `tienda.db` en el pendrive: los respaldos de `PASO-1` van a `RESPALDOS\`, cada
+uno en su carpeta con fecha y hora.
+
+**Qué hace `PASO-2` desde el 2026-09-25**, en este orden, y sin tocar ninguna base de datos:
+
+1. Se niega a seguir si el programa, nuevo o viejo, está abierto, o si al pendrive le falta algo.
+2. **Aparta** `C:\TiendaPOS` entero a `C:\TiendaPOS-ANTERIOR-<fecha>`. Así no quedan ni el
+   `TiendaPOS.exe` viejo ni restos suyos en `_internal`.
+3. Copia el programa con `robocopy`. **Si la copia falla, devuelve el programa anterior a su
+   sitio** y el equipo queda como estaba.
+4. Corrige todo acceso directo que apunte a la carpeta del programa (escritorio, arranque
+   automático, escritorio común y barra de tareas), le quita un `--demo` si lo tuviera, y deja
+   uno llamado "Punto y Fama" en el escritorio. El arranque automático solo se mantiene donde ya
+   estaba.
+5. Si el equipo ya tiene `red.json` y la caja no tiene nombre, **lo pregunta**, con "Caja 1" en el
+   principal y "Caja 2" en la secundaria si se pulsa Enter.
+
+Los pasos 3, 4 y el Plan B también escriben `red.json` con `_red_json.ps1`: cambian el papel del
+equipo **conservando el nombre de la caja**, que antes borraban. Se escribe en UTF-8 sin BOM, y el
+programa lee además UTF-8 con BOM y ANSI: antes, un `red.json` guardado así por el Bloc de notas
+hacía arrancar al PC 2 en modo suelto sin avisar.
+
+**Cómo se probó** (2026-09-25), contra una copia de la tienda en carpetas temporales (los `.bat`
+aceptan `PROGRAMA`, `DATOS`, `ESCRITORIO` e `INICIO` desde fuera para esto): actualización
+desde `TiendaPOS.exe` con accesos en el escritorio y en el arranque, otra actualización encima de
+la nueva, el programa nuevo o el viejo abiertos, el pendrive sin el programa y un archivo del
+pendrive bloqueado a mitad de copia. El `.exe` instalado pasa `--verificar`. **`PASO-3`, `PASO-4`
+y el Plan B no se pueden probar fuera de la tienda**, porque cambian la dirección de red del
+equipo; lo que cambió en ellos son las llamadas a los dos ayudantes, probados por separado.
 
 Los archivos viven en `INSTALACION/` dentro del repositorio. Para armar el pendrive:
 
@@ -177,7 +211,8 @@ Los archivos viven en `INSTALACION/` dentro del repositorio. Para armar el pendr
 python tools/construir.py
 ```
 
-y después copiar `dist\TiendaPOS\` y el contenido de `INSTALACION\` a la raíz del pendrive.
+y después copiar `dist\PuntoYFamaCaja\` (la carpeta entera) y el contenido de `INSTALACION\` a la
+raíz del pendrive.
 En Windows conviene usar `robocopy` en vez de `cp`, que falla al escribir archivos grandes
 en unidades extraíbles.
 
@@ -205,7 +240,7 @@ estrictas:
 
 Es la operación más frecuente y la más segura. En cada equipo:
 
-1. Cerrar Tienda POS
+1. Cerrar el programa (si sigue abierto, `PASO-2` se niega y lo dice)
 2. Enchufar el pendrive
 3. Doble clic en **`PASO-2-ACTUALIZAR-PROGRAMA.bat`**
 4. Abrir el programa
@@ -238,9 +273,9 @@ usuarios de sus empleados.
    desde el principio, y mientras siga valiendo cualquiera puede entrar como administrador.
 5. Seleccionar a **`Cajero`**, el usuario genérico, y pulsar **Dar de baja**. Sus ventas siguen a
    su nombre en los informes; lo único que cambia es que ya no se puede entrar con él.
-6. **Poner nombre a cada caja** (fase 16). En la carpeta de datos de cada PC, abrir `red.json`
-   con el Bloc de notas y añadir la línea `"nombre_caja": "Caja 1"` —o el nombre que diga el
-   cliente, pregunta H8—, con **nombres distintos** en los dos PC. Es el nombre con que cada caja
+6. **Poner nombre a cada caja** (fase 16). Lo pregunta `PASO-2` al final, en cada PC: Enter deja
+   "Caja 1" en el principal y "Caja 2" en la secundaria, o se escribe el que diga el cliente
+   (pregunta H8). **Nombres distintos** en los dos PC. Es el nombre con que cada caja
    firma sus ventas en el cierre: si los dos se llamaran igual, sus ventas se mezclarían sin
    aviso. Sin esa línea se usa el nombre del PC, que funciona pero no se lee bien.
 7. Comprobar en el PC 2 que cada empleado entra con su PIN, y que **al pie de la barra lateral**

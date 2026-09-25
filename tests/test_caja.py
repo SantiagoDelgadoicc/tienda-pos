@@ -134,6 +134,23 @@ class TestNombreDeLaCaja:
         self._escribir(tmp_path / "red.json", modo="servidor", nombre_caja=escrito)
         assert config_red.cargar(tmp_path / "red.json").nombre_caja == queda
 
+    @pytest.mark.parametrize(
+        "codificacion",
+        ["utf-8", "utf-8-sig", "cp1252"],
+        ids=["utf8", "utf8-con-bom", "ansi-bloc-de-notas-antiguo"],
+    )
+    def test_se_lee_como_lo_guarde_el_bloc_de_notas(self, tmp_path, codificacion) -> None:
+        # Con BOM o en ANSI, antes el archivo era ilegible y el PC 2 arrancaba suelto.
+        ruta = tmp_path / "red.json"
+        texto = json.dumps(
+            {"modo": "caja", "servidor_host": "192.168.50.1", "nombre_caja": "Caja Única"},
+            ensure_ascii=False,
+        )
+        ruta.write_bytes(texto.encode(codificacion))
+        cargada = config_red.cargar(ruta)
+        assert cargada.modo is Modo.CAJA
+        assert cargada.caja == "Caja Única"
+
     def test_se_guarda_y_se_recupera(self, tmp_path) -> None:
         ruta = tmp_path / "red.json"
         assert config_red.guardar(ConfiguracionRed(modo=Modo.SERVIDOR, nombre_caja="Bodega"), ruta)

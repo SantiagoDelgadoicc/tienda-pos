@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Manual de usuario · Punto y Fama</title>
+<style>
+  :root {
+    --rojo: #D10117;
+    --rojo-oscuro: #A70112;
+    --rojo-lavado: #FDECEE;
+    --verde: #15803D;
+    --verde-lavado: #E7F5EC;
+    --azul: #1D4ED8;
+    --azul-lavado: #EAF0FD;
+    --violeta: #6D28D9;
+    --violeta-lavado: #F2ECFD;
+    --tinta: #0C0A09;
+    --texto: #292524;
+    --suave: #57534E;
+    --apagado: #8C847E;
+    --borde: #E4E1DF;
+    --borde-suave: #EFECEA;
+    --piedra: #F6F4F2;
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    color: var(--texto);
+    font-size: 10.4pt;
+    line-height: 1.5;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ---------- la hoja ---------- */
+  .hoja {
+    width: 210mm; height: 297mm;
+    position: relative; overflow: hidden;
+    page-break-after: always; break-after: page;
+    padding: 24mm 20mm 22mm 20mm;
+  }
+  .hoja:last-child { page-break-after: auto; break-after: auto; }
+  .cabecera {
+    position: absolute; top: 10mm; left: 20mm; right: 20mm;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 8pt; color: var(--apagado); letter-spacing: .04em;
+    border-bottom: 0.6pt solid var(--borde); padding-bottom: 2.5mm;
+  }
+  .cabecera .marca { display: flex; align-items: center; gap: 2.5mm; color: var(--suave); font-weight: 600; }
+  .cabecera img { width: 5.5mm; height: 5.5mm; }
+  .pie {
+    position: absolute; bottom: 10mm; left: 20mm; right: 20mm;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 8pt; color: var(--apagado);
+  }
+  .pie .numero {
+    font-weight: 700; color: var(--tinta);
+    border-left: 2pt solid var(--rojo); padding-left: 2.5mm;
+  }
+
+  /* ---------- tipografía ---------- */
+  h1.seccion {
+    font-size: 21pt; line-height: 1.15; font-weight: 600; color: var(--tinta);
+    margin: 0 0 1.5mm 0; letter-spacing: -0.01em;
+    display: flex; align-items: baseline; gap: 4mm;
+  }
+  h1.seccion .n {
+    font-size: 11pt; font-weight: 700; color: var(--rojo);
+    border: 1.2pt solid var(--rojo); border-radius: 2mm;
+    padding: 0.4mm 2.2mm; position: relative; top: -1mm;
+  }
+  .entrada { font-size: 11.5pt; color: var(--suave); margin: 0 0 6mm 0; max-width: 150mm; }
+  h2 {
+    font-size: 12.5pt; font-weight: 600; color: var(--tinta);
+    margin: 6mm 0 2mm 0;
+  }
+  h2:first-child { margin-top: 0; }
+  p { margin: 0 0 2.6mm 0; }
+  ul, ol { margin: 0 0 3mm 0; padding-left: 6mm; }
+  li { margin-bottom: 1.3mm; }
+  li::marker { color: var(--rojo); font-weight: 600; }
+  strong { color: var(--tinta); font-weight: 600; }
+  kbd {
+    font-family: "Segoe UI", sans-serif; font-size: 8.6pt; font-weight: 700;
+    color: var(--tinta); background: #fff;
+    border: 0.8pt solid #CFCAC6; border-bottom-width: 1.8pt; border-radius: 1.3mm;
+    padding: 0.1mm 1.6mm; white-space: nowrap;
+  }
+  .boton {
+    font-weight: 600; color: var(--tinta); white-space: nowrap;
+    border: 0.8pt solid #CFCAC6; border-radius: 10mm; padding: 0.1mm 2.2mm; font-size: 9.4pt;
+  }
+  .efectivo { font-weight: 600; color: var(--tinta); }
+  .debito { font-weight: 600; color: var(--azul); }
+  .credito { font-weight: 600; color: var(--violeta); }
+
+  /* ---------- piezas ---------- */
+  figure { margin: 0 0 5mm 0; }
+  figure img {
+    width: 100%; display: block;
+    border: 0.6pt solid var(--borde); border-radius: 2.5mm;
+    box-shadow: 0 1.2mm 4mm rgba(12,10,9,.07);
+  }
+  figure.chica { width: 92mm; }
+  figure.media { width: 120mm; }
+  figcaption { font-size: 8.4pt; color: var(--apagado); margin-top: 2mm; }
+
+  .pasos { counter-reset: paso; list-style: none; padding: 0; margin: 0 0 4mm 0; }
+  .pasos > li {
+    counter-increment: paso; position: relative;
+    padding-left: 11mm; margin-bottom: 3mm; min-height: 7mm;
+  }
+  .pasos > li::before {
+    content: counter(paso);
+    position: absolute; left: 0; top: -0.2mm;
+    width: 7mm; height: 7mm; border-radius: 50%;
+    background: var(--tinta); color: #fff;
+    font-weight: 700; font-size: 9.5pt;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .aviso {
+    border-left: 2.2pt solid var(--rojo); background: var(--rojo-lavado);
+    border-radius: 0 2mm 2mm 0; padding: 3mm 4mm; margin: 0 0 4mm 0;
+    font-size: 9.8pt;
+  }
+  .aviso.bien { border-left-color: var(--verde); background: var(--verde-lavado); }
+  .aviso.nota { border-left-color: #A8A29E; background: var(--piedra); }
+  .aviso .titulo {
+    display: block; font-size: 7.8pt; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; margin-bottom: 0.8mm; color: var(--rojo-oscuro);
+  }
+  .aviso.bien .titulo { color: var(--verde); }
+  .aviso.nota .titulo { color: var(--suave); }
+  .aviso p:last-child { margin-bottom: 0; }
+
+  .etiqueta-dueno {
+    display: inline-block; font-size: 7.6pt; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--rojo); border: 0.9pt solid var(--rojo);
+    border-radius: 10mm; padding: 0.3mm 2.6mm; margin-bottom: 3mm;
+  }
+
+  table.tabla { width: 100%; border-collapse: collapse; margin: 0 0 4mm 0; font-size: 9.6pt; }
+  table.tabla th {
+    text-align: left; font-size: 7.8pt; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--suave); font-weight: 700; padding: 2mm 3mm; border-bottom: 0.9pt solid var(--tinta);
+  }
+  table.tabla td { padding: 2.1mm 3mm; border-bottom: 0.6pt solid var(--borde); vertical-align: top; }
+  table.tabla td:first-child { white-space: nowrap; }
+  table.tabla tr:last-child td { border-bottom: none; }
+
+  .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; }
+  .dos-desigual { display: grid; grid-template-columns: 92mm 1fr; gap: 7mm; align-items: start; }
+
+  .tarjeta {
+    border: 0.7pt solid var(--borde); border-radius: 2.5mm; padding: 4mm 4.5mm;
+    background: #fff;
+  }
+  .tarjeta h3 { margin: 0 0 1.5mm 0; font-size: 10.8pt; color: var(--tinta); font-weight: 600; }
+  .tarjeta p { font-size: 9.6pt; color: var(--suave); margin: 0; }
+
+  /* ---------- portada ---------- */
+  .portada { padding: 0; background: #fff; }
+  .portada .franja { position: absolute; left: 0; top: 0; bottom: 0; width: 9mm; background: var(--rojo); }
+  .portada .contenido { position: absolute; left: 30mm; right: 24mm; top: 46mm; }
+  .portada .logo { width: 44mm; height: 44mm; margin-bottom: 16mm; }
+  .portada .antetitulo {
+    font-size: 9pt; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--rojo);
+    margin-bottom: 4mm;
+  }
+  .portada .titulo { font-size: 40pt; line-height: 1.02; font-weight: 600; color: var(--tinta); letter-spacing: -0.02em; margin: 0 0 6mm 0; }
+  .portada .subtitulo { font-size: 14pt; color: var(--suave); margin: 0; max-width: 130mm; }
+  .portada .datos {
+    position: absolute; left: 30mm; right: 24mm; bottom: 26mm;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6mm;
+    border-top: 0.8pt solid var(--tinta); padding-top: 5mm;
+    font-size: 9pt;
+  }
+  .portada .datos .rotulo { font-size: 7.4pt; letter-spacing: .1em; text-transform: uppercase; color: var(--apagado); font-weight: 700; margin-bottom: 1mm; }
+  .portada .datos .valor { color: var(--tinta); font-weight: 600; }
+
+  /* ---------- índice ---------- */
+  .indice { list-style: none; padding: 0; margin: 0; }
+  .indice li { display: flex; align-items: baseline; gap: 3mm; padding: 2.2mm 0; border-bottom: 0.6pt solid var(--borde-suave); margin: 0; }
+  .indice .num { width: 8mm; color: var(--rojo); font-weight: 700; font-size: 9.5pt; }
+  .indice .nombre { flex: 1; color: var(--tinta); }
+  .indice .nombre small { color: var(--apagado); font-size: 8.6pt; margin-left: 2mm; }
+  .indice .pag { font-weight: 600; color: var(--tinta); font-variant-numeric: tabular-nums; }
+  .indice .grupo { border-bottom: none; padding-top: 5mm; font-size: 7.8pt; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--apagado); }
+
+  /* ---------- línea del día ---------- */
+  .dia { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3mm; margin: 2mm 0 7mm 0; }
+  .dia .momento { border-top: 2.4pt solid var(--tinta); padding-top: 3mm; }
+  .dia .momento.inicio, .dia .momento.fin { border-top-color: var(--rojo); }
+  .dia .cuando { font-size: 7.4pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--apagado); }
+  .dia .que { font-size: 11pt; font-weight: 600; color: var(--tinta); margin: 1mm 0; line-height: 1.25; }
+  .dia .como { font-size: 8.8pt; color: var(--suave); line-height: 1.4; }
+
+  /* ---------- atajos ---------- */
+  .atajos { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8mm; }
+  .atajos .fila { display: flex; align-items: center; gap: 4mm; padding: 2.3mm 0; border-bottom: 0.6pt solid var(--borde-suave); }
+  .atajos .fila kbd { min-width: 13mm; text-align: center; font-size: 9.4pt; padding: 0.6mm 2mm; }
+  .atajos .grupo { grid-column: 1 / -1; font-size: 7.8pt; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--rojo); margin: 5mm 0 1mm 0; }
+  .atajos .grupo:first-child { margin-top: 0; }
+
+  .firma { display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; margin-top: 8mm; }
+  .firma .linea { border-bottom: 0.7pt solid var(--tinta); height: 10mm; }
+  .firma .rotulo { font-size: 8pt; color: var(--apagado); margin-top: 1.5mm; }
+</style>
+</head>
+<body>
+
+<!-- =============================================================== PORTADA -->
+<section class="hoja portada">
+  <div class="franja"></div>
+  <div class="contenido">
+    <img class="logo" src="../../assets/logo.png" alt="Punto y Fama">
+    <div class="antetitulo">Sistema de caja</div>
+    <h1 class="titulo">Manual de<br>usuario</h1>
+    <p class="subtitulo">Punto y Fama · Botillería y market. Cómo vender, abrir y cerrar la caja, y revisar lo vendido cada día.</p>
+  </div>
+  <div class="datos">
+    <div><div class="rotulo">Versión</div><div class="valor">1.0</div></div>
+    <div><div class="rotulo">Fecha</div><div class="valor">Septiembre de 2026</div></div>
+    <div><div class="rotulo">Preparado por</div><div class="valor">Santiago Delgado</div></div>
+  </div>
+</section>
+
+<!-- =============================================================== ÍNDICE -->
+<section class="hoja">
+  <h1 class="seccion">Contenido</h1>
+  <p class="entrada">Las primeras secciones son para todos los que atienden. Las que llevan la marca <em>solo el dueño</em> necesitan el PIN de administrador.</p>
+  <ul class="indice" id="indice">
+    <li class="grupo">Para todos</li>
+    <li data-ir="antes"><span class="num">1</span><span class="nombre">Antes de empezar</span><span class="pag"></span></li>
+    <li data-ir="dia"><span class="num">2</span><span class="nombre">Un día en la caja</span><span class="pag"></span></li>
+    <li data-ir="entrar"><span class="num">3</span><span class="nombre">Entrar al programa</span><span class="pag"></span></li>
+    <li data-ir="abrir"><span class="num">4</span><span class="nombre">Abrir la caja</span><span class="pag"></span></li>
+    <li data-ir="vender"><span class="num">5</span><span class="nombre">Vender y cobrar</span><span class="pag"></span></li>
+    <li data-ir="corregir"><span class="num">6</span><span class="nombre">Corregir una venta y hacer descuentos</span><span class="pag"></span></li>
+    <li data-ir="consultar"><span class="num">7</span><span class="nombre">Consultar un precio · Cuando un producto no aparece</span><span class="pag"></span></li>
+    <li data-ir="efectivo"><span class="num">8</span><span class="nombre">Plata que sale o entra del cajón</span><span class="pag"></span></li>
+    <li data-ir="cerrar"><span class="num">9</span><span class="nombre">Cerrar la caja</span><span class="pag"></span></li>
+    <li class="grupo">Solo el dueño</li>
+    <li data-ir="cierre"><span class="num">10</span><span class="nombre">El cierre de caja</span><span class="pag"></span></li>
+    <li data-ir="cuentas"><span class="num">11</span><span class="nombre">Las cuentas del efectivo y las ventas del día</span><span class="pag"></span></li>
+    <li data-ir="usuarios"><span class="num">12</span><span class="nombre">Empleados y claves</span><span class="pag"></span></li>
+    <li data-ir="productos"><span class="num">13</span><span class="nombre">Productos y precios</span><span class="pag"></span></li>
+    <li class="grupo">Referencia</li>
+    <li data-ir="configuracion"><span class="num">14</span><span class="nombre">Configuración y cambio de usuario</span><span class="pag"></span></li>
+    <li data-ir="atajos"><span class="num">15</span><span class="nombre">Atajos de teclado</span><span class="pag"></span></li>
+    <li data-ir="cuidados"><span class="num">16</span><span class="nombre">Cuidados, respaldos y soporte</span><span class="pag"></span></li>
+  </ul>
+</section>
+
+<!-- =============================================================== 1 ANTES -->
+<section class="hoja" id="antes">
+  <h1 class="seccion"><span class="n">1</span>Antes de empezar</h1>
+  <p class="entrada">El sistema tiene dos cajas que trabajan a la vez y comparten los mismos productos, precios y ventas.</p>
+
+  <h2>Cómo está instalado</h2>
+  <div class="dos">
+    <div class="tarjeta">
+      <h3>Caja 1 · el computador principal</h3>
+      <p>Guarda todos los datos: productos, ventas, usuarios y cierres. <strong>Tiene que estar encendido</strong> para que la otra caja pueda vender.</p>
+    </div>
+    <div class="tarjeta">
+      <h3>Caja 2</h3>
+      <p>Trabaja con los datos de la Caja 1, a través del cable que las une. Lo que se vende en una se ve al instante en la otra.</p>
+    </div>
+  </div>
+
+  <p>Los dos computadores abren el programa solos al encenderse. Si la Caja 2 enciende primero, espera a la Caja 1 con un aviso en pantalla. <strong>No necesita internet.</strong></p>
+
+  <h2>Quién puede hacer qué</h2>
+  <p>Cada persona que atiende tiene <strong>su propio usuario y su propia clave</strong> (PIN). Así el sistema sabe quién vendió cada cosa.</p>
+  <table class="tabla">
+    <tr><th>Tarea</th><th>Cajero</th><th>Dueño (administrador)</th></tr>
+    <tr><td>Vender, cobrar y consultar precios</td><td>Sí</td><td>Sí</td></tr>
+    <tr><td>Abrir y cerrar su caja</td><td>Sí</td><td>Sí, también la de la otra caja</td></tr>
+    <tr><td>Anotar un pago a proveedor o un ingreso de sencillo</td><td>Sí</td><td>Sí</td></tr>
+    <tr><td>Anotar un retiro de plata</td><td>No</td><td>Sí, con su PIN</td></tr>
+    <tr><td>Ver cuánto debería haber en el cajón</td><td>No</td><td>Sí</td></tr>
+    <tr><td>Cierre de caja y ventas del día</td><td>No</td><td>Sí</td></tr>
+    <tr><td>Productos, precios y empleados</td><td>No</td><td>Sí</td></tr>
+  </table>
+
+  <div class="aviso">
+    <span class="titulo">Importante</span>
+    <p>La clave es personal. Quien presta la suya firma las ventas y los movimientos de plata del otro. Si alguien la olvida, el dueño le genera una nueva en un minuto (sección 12).</p>
+  </div>
+</section>
+
+<!-- =============================================================== 2 DÍA -->
+<section class="hoja" id="dia">
+  <h1 class="seccion"><span class="n">2</span>Un día en la caja</h1>
+  <p class="entrada">Esta página resume todo el manual. Si solo va a leer una, que sea esta.</p>
+
+  <div class="dia">
+    <div class="momento inicio">
+      <div class="cuando">Al llegar</div>
+      <div class="que">Entrar con su PIN</div>
+      <div class="como">Cada uno con su clave. Sección 3.</div>
+    </div>
+    <div class="momento inicio">
+      <div class="cuando">Antes de vender</div>
+      <div class="que">Abrir la caja</div>
+      <div class="como">Contando la plata que hay en el cajón. Sección 4.</div>
+    </div>
+    <div class="momento">
+      <div class="cuando">Todo el día</div>
+      <div class="que">Vender</div>
+      <div class="como">Escanear, marcar cómo pagó y cobrar con <kbd>F12</kbd>. Sección 5.</div>
+    </div>
+    <div class="momento">
+      <div class="cuando">Cuando pase</div>
+      <div class="que">Anotar la plata que sale</div>
+      <div class="como">Retiros, pagos a proveedores y sencillo. Sección 8.</div>
+    </div>
+    <div class="momento fin">
+      <div class="cuando">Al terminar</div>
+      <div class="que">Cerrar la caja</div>
+      <div class="como">Contando otra vez el cajón. Sección 9.</div>
+    </div>
+  </div>
+
+  <h2>Las cinco reglas de la caja</h2>
+  <ol class="pasos">
+    <li><strong>Cada uno entra con su clave, y nadie presta la suya.</strong> Si se cambia de persona en la caja, se pulsa <kbd>F10</kbd> y entra la otra.</li>
+    <li><strong>Sin abrir la caja no se puede cobrar.</strong> El programa lo pide al encender y, si se deja para después, lo vuelve a pedir en el primer cobro.</li>
+    <li><strong>Cada venta lleva cómo se pagó:</strong> <span class="efectivo">efectivo</span>, <span class="debito">débito</span> o <span class="credito">crédito</span>. Por defecto es efectivo; si pagan con tarjeta, hay que marcarlo antes de cobrar.</li>
+    <li><strong>Toda plata que sale del cajón se anota</strong>, en el momento: retiros del dueño y pagos a proveedores. Si no se anota, la caja no cuadra al cerrar.</li>
+    <li><strong>Al terminar el día se cierra la caja contando el cajón.</strong> Lo vendido entre que se abre y se cierra es de ese día de caja, aunque pase la medianoche.</li>
+  </ol>
+
+  <div class="aviso bien">
+    <span class="titulo">Sobre el cierre</span>
+    <p>Quien cierra escribe lo que contó <strong>sin ver cuánto debería haber</strong>. Es a propósito: así nadie cuenta "hasta que dé". El dueño ve la diferencia con su PIN.</p>
+  </div>
+</section>
+
+<!-- =============================================================== 3 ENTRAR -->
+<section class="hoja" id="entrar">
+  <h1 class="seccion"><span class="n">3</span>Entrar al programa</h1>
+  <p class="entrada">Normalmente el programa ya está abierto al encender el computador. Si no, haga doble clic en el icono <strong>Punto y Fama</strong> del escritorio.</p>
+
+  <div class="dos-desigual" style="grid-template-columns:66mm 1fr">
+    <figure style="margin:0;width:66mm">
+      <img src="../img/05-acceso.png" alt="Pantalla de acceso">
+      <figcaption>La pantalla de acceso.</figcaption>
+    </figure>
+    <div>
+      <ol class="pasos">
+        <li>Elija su nombre en la lista.</li>
+        <li>Escriba su PIN y pulse <kbd>Enter</kbd>.</li>
+        <li>Si el PIN no es correcto, la ventana se sacude y puede volver a intentarlo.</li>
+      </ol>
+      <p>Al pie de la barra lateral aparece siempre <strong>quién está atendiendo y en qué caja</strong>. Mírelo antes de empezar a vender.</p>
+    </div>
+  </div>
+
+  <h2>La pantalla principal</h2>
+  <figure style="width:132mm">
+    <img src="../img/01-venta-vacia.png" alt="Pantalla de venta vacía">
+    <figcaption>La pantalla de venta, lista para escanear.</figcaption>
+  </figure>
+  <table class="tabla">
+    <tr><th>Zona</th><th>Para qué sirve</th></tr>
+    <tr><td>Barra lateral, a la izquierda</td><td>Lleva a cada pantalla. La sección <strong>Caja</strong> es para todos y <strong>Administración</strong> es para el dueño. Al pie, quién atiende y en qué caja.</td></tr>
+    <tr><td>Campo de código, arriba</td><td>Donde entra lo que se escanea. El cursor vuelve ahí solo después de cada acción.</td></tr>
+    <tr><td>Panel derecho</td><td>El total, cómo se paga y los botones para cobrar, quitar, descontar o cancelar.</td></tr>
+    <tr><td>Franja de abajo</td><td>Los atajos de teclado, siempre a la vista.</td></tr>
+  </table>
+</section>
+
+<!-- =============================================================== 4 ABRIR -->
+<section class="hoja" id="abrir">
+  <h1 class="seccion"><span class="n">4</span>Abrir la caja</h1>
+  <p class="entrada">Abrir la caja es decirle al sistema con cuánta plata parte el cajón. Se hace una vez al día, en cada caja, antes de la primera venta.</p>
+
+  <ol class="pasos">
+    <li>Al entrar, el programa pregunta si quiere abrir la caja. Si dice que no, lo vuelve a preguntar en el primer cobro. También puede hacerlo desde <strong>Efectivo</strong>, en la barra lateral, con el botón <span class="boton">Abrir la caja</span>.</li>
+    <li><strong>Cuente la plata del cajón.</strong> El programa le propone un monto, que es el que fijó el dueño.</li>
+    <li>Escriba <strong>lo que de verdad hay</strong>, aunque sea distinto de lo propuesto, y confirme.</li>
+  </ol>
+
+  <p>Desde ese momento la caja está abierta y se puede vender. En <strong>Efectivo</strong> se ve arriba "Caja 1 abierta", desde qué hora, quién la abrió y con cuánto.</p>
+
+  <div class="aviso nota">
+    <span class="titulo">Bueno saber</span>
+    <p>Cada caja se abre y se cierra por su cuenta: la Caja 1 y la Caja 2 tienen cada una su cajón. Durante el día pueden entrar y salir varios empleados en la misma caja abierta, cada uno con su clave. No hace falta cerrarla para cambiar de persona.</p>
+  </div>
+
+  <h2>Si el programa dice que la caja está cerrada</h2>
+  <p>Aparece al intentar cobrar sin haberla abierto. La venta no se pierde: abra la caja en el aviso que aparece y cobre a continuación.</p>
+
+  <h2>El monto con que se propone abrir</h2>
+  <p>Lo fija el dueño (sección 11). Sirve para dejar preparado el cajón con el mismo sencillo todas las mañanas. <strong>Aunque exista, quien abre siempre escribe lo que contó.</strong></p>
+</section>
+
+<!-- =============================================================== 5 VENDER -->
+<section class="hoja" id="vender">
+  <h1 class="seccion"><span class="n">5</span>Vender y cobrar</h1>
+  <p class="entrada">Una venta normal no necesita el mouse: se escanea, se marca cómo paga y se cobra.</p>
+
+  <figure>
+    <img src="../img/02-venta-con-carrito.png" alt="Venta con productos en el carrito">
+    <figcaption>Una venta en curso. El último producto escaneado se anuncia en verde sobre el total.</figcaption>
+  </figure>
+
+  <ol class="pasos">
+    <li><strong>Escanee cada producto</strong> con el lector. Si el código está borrado o no hay lector, escriba el número y pulse <kbd>Enter</kbd>. Si escanea dos veces el mismo, se suma en la misma línea.</li>
+    <li><strong>Marque cómo paga el cliente</strong>, bajo el total: <span class="efectivo">Efectivo</span>, <span class="debito">Débito</span> o <span class="credito">Crédito</span>. Con <kbd>F11</kbd> se pasa de uno a otro sin el mouse. Si no toca nada, queda en efectivo.</li>
+    <li><strong>Cobre con <kbd>F12</kbd></strong> o con el botón verde <strong>Cobrar</strong>, y confirme. La venta queda guardada a su nombre, en su caja y con su medio de pago, y la pantalla queda lista para el siguiente cliente.</li>
+  </ol>
+
+  <div class="aviso">
+    <span class="titulo">Importante</span>
+    <p>Marque débito o crédito <strong>antes</strong> de cobrar. Una venta con tarjeta cobrada como efectivo hace que al cerrar la caja parezca que falta plata.</p>
+  </div>
+  <p style="font-size:9.4pt;color:var(--suave)">El sistema no calcula el vuelto ni imprime boleta. El vuelto se da como siempre; el cajón cuadra igual, porque lo que entra es el total de la venta.</p>
+</section>
+
+<!-- =============================================================== 6 CORREGIR -->
+<section class="hoja" id="corregir">
+  <h1 class="seccion"><span class="n">6</span>Corregir una venta y hacer descuentos</h1>
+  <p class="entrada">Todo se puede corregir antes de cobrar. Una vez cobrada, la venta queda registrada tal como se hizo.</p>
+
+  <div class="dos">
+    <div>
+      <h2>Cambiar la cantidad</h2>
+      <p>Use el <strong>+</strong> o el <strong>−</strong> de la línea, o seleccione la línea y use las flechas <kbd>→</kbd> para sumar y <kbd>←</kbd> para restar. Con <kbd>↑</kbd> y <kbd>↓</kbd> se mueve entre líneas.</p>
+      <h2>Quitar un producto</h2>
+      <p>Seleccione la línea y pulse <kbd>F5</kbd>, o el botón <span class="boton">Quitar</span>. Quita una unidad; si era la última, desaparece la línea.</p>
+    </div>
+    <div>
+      <h2>Cancelar toda la venta</h2>
+      <p>Pulse <kbd>F6</kbd> o <span class="boton">Cancelar venta</span>. El programa pide confirmación antes de vaciar el carrito.</p>
+      <h2>Buscar por nombre</h2>
+      <p>Si un producto no tiene código legible, pulse <kbd>F3</kbd>, escriba parte del nombre y elíjalo en la lista.</p>
+    </div>
+  </div>
+
+  <h2>Hacer un descuento</h2>
+  <figure class="media" style="float:right;margin-left:6mm;width:82mm">
+    <img src="../img/08-descuento-por-producto.png" alt="Descuento aplicado a un producto">
+    <figcaption>El descuento de un producto aparece en su propia línea.</figcaption>
+  </figure>
+  <p>Pulse <kbd>F4</kbd> o <span class="boton">Descuento</span>. Se eligen dos cosas:</p>
+  <ul>
+    <li><strong>A qué se aplica:</strong> a toda la venta o solo al producto seleccionado. Para descontar un producto, selecciónelo antes.</li>
+    <li><strong>Cómo:</strong> un monto en pesos ("se lo dejo en cinco mil") o un porcentaje ("le hago el diez por ciento").</li>
+  </ul>
+  <p>Los dos se pueden combinar. Un descuento nunca deja el total bajo cero, y si cambian las cantidades, el porcentaje se recalcula solo.</p>
+</section>
+
+<!-- =============================================================== 7 CONSULTAR -->
+<section class="hoja" id="consultar">
+  <h1 class="seccion"><span class="n">7</span>Consultar un precio</h1>
+  <p class="entrada">Para responder "¿cuánto cuesta esto?" sin tocar la venta que está armando.</p>
+
+  <div class="dos-desigual">
+    <figure style="margin:0">
+      <img src="../img/03-consulta-precio.png" alt="Consulta de precio">
+      <figcaption>El precio aparece en grande.</figcaption>
+    </figure>
+    <div>
+      <ol class="pasos">
+        <li>Pulse <kbd>F2</kbd>.</li>
+        <li>Escanee el producto.</li>
+        <li>Vuelva a la venta con <kbd>Esc</kbd>.</li>
+      </ol>
+      <p>Consultar <strong>no agrega nada</strong> al carrito. La pantalla se limpia sola a los 15 segundos.</p>
+    </div>
+  </div>
+
+  <h1 class="seccion" style="margin-top:12mm">Cuando un producto no aparece</h1>
+  <p class="entrada">Si se escanea algo que no está cargado en el sistema, aparece este aviso.</p>
+  <div class="dos-desigual">
+    <figure style="margin:0">
+      <img src="../img/04-consulta-no-encontrado.png" alt="Producto no encontrado">
+      <figcaption>El aviso de producto no encontrado.</figcaption>
+    </figure>
+    <div>
+      <p><strong>Si el producto existe pero el código no se lee</strong>, pulse <em>Buscar por nombre</em> (<kbd>F3</kbd>) y elíjalo de la lista.</p>
+      <p><strong>Si el producto no está cargado</strong>, no hace falta anotarlo en un papel: el sistema guarda el código en una lista de pendientes, y el dueño lo carga después (sección 13).</p>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================== 8 EFECTIVO -->
+<section class="hoja" id="efectivo">
+  <h1 class="seccion"><span class="n">8</span>Plata que sale o entra del cajón</h1>
+  <p class="entrada">Todo lo que sale o entra del cajón sin ser una venta se anota en <strong>Efectivo</strong>, en la barra lateral, en el momento en que pasa.</p>
+
+  <figure>
+    <img src="../img/15-efectivo.png" alt="Pantalla de efectivo">
+    <figcaption>La pantalla Efectivo, vista por el dueño. Un cajero ve lo mismo, salvo lo que debería haber y los cierres anteriores.</figcaption>
+  </figure>
+
+  <table class="tabla">
+    <tr><th>Botón</th><th>Cuándo se usa</th><th>Quién</th></tr>
+    <tr><td><span class="boton">Retiro</span></td><td>El dueño saca plata del cajón, por ejemplo para depositar.</td><td>Solo el dueño: pide <strong>su</strong> PIN.</td></tr>
+    <tr><td><span class="boton">Pago a proveedor</span></td><td>Se le paga en efectivo a un proveedor con plata de la caja. Pide el nombre del proveedor.</td><td>Cualquier empleado. Queda a su nombre.</td></tr>
+    <tr><td><span class="boton">Ingreso de sencillo</span></td><td>Se agrega plata al cajón, por ejemplo monedas para dar vuelto.</td><td>Cualquier empleado.</td></tr>
+  </table>
+
+  <div class="aviso">
+    <span class="titulo">Importante</span>
+    <p>Lo anotado <strong>no se borra</strong>, ni por error: queda con la hora y el nombre de quién lo hizo. Si se equivocó en un monto, anote el movimiento contrario (por ejemplo, un ingreso por la diferencia) y dígaselo al dueño.</p>
+  </div>
+</section>
+
+<!-- =============================================================== 9 CERRAR -->
+<section class="hoja" id="cerrar">
+  <h1 class="seccion"><span class="n">9</span>Cerrar la caja</h1>
+  <p class="entrada">Al terminar el día, cada caja se cierra contando la plata del cajón. Es lo que permite saber si la caja cuadró.</p>
+
+  <ol class="pasos">
+    <li>Termine y cobre la última venta.</li>
+    <li>Vaya a <strong>Efectivo</strong> y pulse <span class="boton">Cerrar la caja</span>.</li>
+    <li><strong>Cuente toda la plata del cajón</strong> y escriba el total. Puede agregar una nota, por ejemplo "billete de $10.000 roto".</li>
+    <li>Confirme. La caja queda cerrada hasta que se abra de nuevo.</li>
+  </ol>
+
+  <div class="aviso bien">
+    <span class="titulo">El conteo es a ciegas</span>
+    <p>Quien cierra <strong>no ve cuánto debería haber</strong>, y tampoco la diferencia. No es un error del programa: así el conteo es honesto. El dueño ve después, con su PIN, cuánto debía haber, cuánto se contó y si sobró o faltó.</p>
+  </div>
+
+  <h2>Cosas que conviene saber</h2>
+  <ul>
+    <li>Cerrar la caja <strong>no borra nada ni bloquea el programa</strong>: solo guarda la cuenta. Las ventas siguen viéndose en el cierre de caja.</li>
+    <li>Todo lo vendido desde que se abrió la caja cuenta para ese cierre, <strong>aunque pase la medianoche</strong>.</li>
+    <li>Si un computador no enciende y su caja quedó abierta, el dueño puede cerrarla desde el otro.</li>
+    <li>Si el conteo no cuadra, el programa lo anota igual. Qué hacer con la diferencia lo decide el dueño.</li>
+  </ul>
+
+  <h2>Cómo sabe el sistema cuánto debería haber</h2>
+  <table class="tabla">
+    <tr><td>Plata con que se abrió la caja</td><td style="text-align:right">$50.000</td></tr>
+    <tr><td>+ Ventas en <span class="efectivo">efectivo</span> del día</td><td style="text-align:right">$35.340</td></tr>
+    <tr><td>+ Ingresos de sencillo</td><td style="text-align:right">$10.000</td></tr>
+    <tr><td>− Retiros y pagos a proveedores</td><td style="text-align:right">−$78.500</td></tr>
+    <tr><td><strong>= Debería haber en el cajón</strong></td><td style="text-align:right"><strong>$16.840</strong></td></tr>
+  </table>
+  <p style="font-size:9.2pt;color:var(--suave)">Las ventas con <span class="debito">débito</span> y <span class="credito">crédito</span> no entran en la cuenta: esa plata no pasa por el cajón. Montos de ejemplo.</p>
+</section>
+
+<!-- =============================================================== 10 CIERRE -->
+<section class="hoja" id="cierre">
+  <span class="etiqueta-dueno">Solo el dueño</span>
+  <h1 class="seccion"><span class="n">10</span>El cierre de caja</h1>
+  <p class="entrada">Lo vendido en una caja durante un día: el total, separado por forma de pago y por empleado, con cada venta y sus productos.</p>
+
+  <figure>
+    <img src="../img/14-cierre.png" alt="Cierre de caja">
+    <figcaption>El cierre de la Caja 1. Cada forma de pago tiene su color, el mismo que en la pantalla de venta.</figcaption>
+  </figure>
+
+  <div class="dos">
+    <div>
+      <h2>Cómo se lee</h2>
+      <ul>
+        <li><strong>Arriba</strong> se eligen el día y la caja. Puede mirar cualquier día anterior.</li>
+        <li><strong>Total vendido</strong>, en verde, y a su lado lo vendido en <span class="efectivo">efectivo</span>, <span class="debito">débito</span> y <span class="credito">crédito</span>, cada uno con su número de ventas.</li>
+        <li><strong>Ventas de la caja</strong>: cada venta con su hora, quién la hizo y cómo se pagó. Con la flecha se despliegan sus productos.</li>
+        <li><strong>Por empleado</strong>: cuánto vendió cada uno en esa caja.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Bueno saber</h2>
+      <ul>
+        <li>El informe se puede mirar las veces que quiera: <strong>mirarlo no cierra nada</strong>. La caja se cierra en <strong>Efectivo</strong> (sección 9).</li>
+        <li>Si la tienda vende pasada la medianoche, lo vendido después de las 00:00 aparece en el día siguiente de este informe. El conteo del cajón en <strong>Efectivo</strong> no cambia por eso.</li>
+        <li>Las ventas anteriores a esta versión aparecen como "Sin caja registrada" y con la forma de pago "Sin registrar".</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================== 11 CUENTAS -->
+<section class="hoja" id="cuentas">
+  <span class="etiqueta-dueno">Solo el dueño</span>
+  <h1 class="seccion"><span class="n">11</span>Las cuentas del efectivo y las ventas del día</h1>
+  <p class="entrada">En <strong>Efectivo</strong>, el dueño ve lo que el cajero no ve: cuánto debería haber y cómo terminaron los cierres.</p>
+
+  <h2>Ver cuánto debería haber</h2>
+  <p>Si entró como administrador, lo ve directamente. Si está atendiendo un cajero, pulse <span class="boton">Ver las cuentas</span> y escriba su PIN: el cajero sigue en su sesión, y las cuentas se ocultan al salir de la pantalla.</p>
+
+  <h2>Cierres anteriores</h2>
+  <p>Abajo, en <strong>Efectivo</strong>, cada cierre de las dos cajas: cuánto debía haber, cuánto se contó, si <strong>sobró o faltó</strong> y quién cerró. Una caja que sigue abierta aparece como "Abierta".</p>
+
+  <h2>Fijar el monto de apertura</h2>
+  <p>En <strong>Cierres anteriores</strong>, pulse <span class="boton">Cambiar</span> y escriba con cuánto quiere que parta cada caja. Ese monto se propone cada mañana al abrir.</p>
+
+  <h2>Retiros</h2>
+  <p>Cuando saque plata de una caja, anótelo con <span class="boton">Retiro</span> en ese momento, con su PIN. Así el cierre da cifras exactas.</p>
+
+  <h2 style="margin-top:8mm">Ventas del día</h2>
+  <div class="dos-desigual">
+    <figure style="margin:0">
+      <img src="../img/07-ventas-del-dia.png" alt="Ventas del día">
+      <figcaption>Ventas del día, de las dos cajas juntas.</figcaption>
+    </figure>
+    <div>
+      <p>Pulse <kbd>F8</kbd>. Muestra lo vendido hoy <strong>entre las dos cajas</strong>: el total, cuántas ventas y cuántos artículos.</p>
+      <p>Al elegir una venta, a la derecha se ve lo que llevaba. Para el detalle de una sola caja, use el cierre de caja.</p>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================== 12 USUARIOS -->
+<section class="hoja" id="usuarios">
+  <span class="etiqueta-dueno">Solo el dueño</span>
+  <h1 class="seccion"><span class="n">12</span>Empleados y claves</h1>
+  <p class="entrada">En <strong>Usuarios</strong>, en la barra lateral, se da de alta a cada persona que atiende.</p>
+
+  <figure style="width:138mm">
+    <img src="../img/12-usuarios.png" alt="Pantalla de usuarios">
+    <figcaption>La lista de usuarios. Los dados de baja se ven en gris.</figcaption>
+  </figure>
+
+  <div class="dos-desigual">
+    <figure style="margin:0">
+      <img src="../img/13-pin-generado.png" alt="PIN generado">
+      <figcaption>El PIN se enseña una sola vez.</figcaption>
+    </figure>
+    <div>
+      <table class="tabla">
+        <tr><th>Botón</th><th>Qué hace</th></tr>
+        <tr><td><span class="boton">Nuevo usuario</span></td><td>Alta de un empleado. El sistema inventa su PIN.</td></tr>
+        <tr><td><span class="boton">PIN nuevo</span></td><td>Para quien olvidó el suyo. El anterior deja de servir.</td></tr>
+        <tr><td><span class="boton">Dar de baja</span></td><td>Quien ya no trabaja deja de poder entrar. <strong>Sus ventas se conservan.</strong></td></tr>
+        <tr><td><span class="boton">Reactivar</span></td><td>Para quien vuelve.</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="aviso">
+    <span class="titulo">El PIN se ve una sola vez</span>
+    <p>Cuando el sistema genera un PIN, lo enseña en pantalla una única vez. <strong>Que el empleado lo anote en ese momento.</strong> Si lo pierde, se le genera otro con <span class="boton">PIN nuevo</span>.</p>
+  </div>
+  <p style="font-size:9.4pt;color:var(--suave)">Si el dueño olvida su propio PIN, se recupera en la Caja 1 con ayuda de soporte (sección 16). El sistema no deja dar de baja al último administrador ni a uno mismo.</p>
+</section>
+
+<!-- =============================================================== 13 PRODUCTOS -->
+<section class="hoja" id="productos">
+  <span class="etiqueta-dueno">Solo el dueño</span>
+  <h1 class="seccion"><span class="n">13</span>Productos y precios</h1>
+  <p class="entrada">Pulse <kbd>F7</kbd>. Si está atendiendo un cajero, el programa pide el PIN del dueño, sin cambiar quién está en la caja.</p>
+
+  <figure>
+    <img src="../img/06-productos.png" alt="Catálogo de productos">
+    <figcaption>El catálogo. El stock se marca en rojo cuando quedan 5 unidades o menos.</figcaption>
+  </figure>
+
+  <table class="tabla">
+    <tr><th>Acción</th><th>Cómo</th></tr>
+    <tr><td>Buscar</td><td>Escriba parte del nombre o del código en el filtro.</td></tr>
+    <tr><td>Nuevo producto</td><td>Lo más cómodo es escanear el código dentro del formulario. Luego el nombre, el precio y el stock.</td></tr>
+    <tr><td>Cambiar un precio</td><td><strong>Editar</strong>, o doble clic en el producto. El precio nuevo se ve al instante en las dos cajas. Las ventas pasadas conservan el precio al que se vendieron.</td></tr>
+    <tr><td>Dar de baja</td><td>El producto deja de venderse, pero <strong>no se borra</strong>: las ventas antiguas siguen correctas.</td></tr>
+    <tr><td>Códigos pendientes</td><td>Los códigos que se escanearon en la caja y no están cargados, ordenados por cuántas veces se intentaron.</td></tr>
+  </table>
+
+  <div class="aviso nota">
+    <span class="titulo">Bueno saber</span>
+    <p>El stock baja solo con cada venta. Si al contar la mercadería no coincide, corríjalo editando el producto.</p>
+  </div>
+</section>
+
+<!-- =============================================================== 14 CONFIG -->
+<section class="hoja" id="configuracion">
+  <h1 class="seccion"><span class="n">14</span>Configuración y cambio de usuario</h1>
+  <p class="entrada">Pulse <kbd>F9</kbd>, o <strong>Configuración</strong> al pie de la barra lateral. Los ajustes se guardan en cada computador.</p>
+
+  <div class="dos-desigual" style="grid-template-columns: 70mm 1fr">
+    <figure style="margin:0">
+      <img src="../img/10-configuracion.png" alt="Configuración">
+      <figcaption>La ventana de configuración.</figcaption>
+    </figure>
+    <table class="tabla">
+      <tr><th>Ajuste</th><th>Para qué sirve</th></tr>
+      <tr><td>Tamaño de letra</td><td><em>Normal</em>, <em>Grande</em> o <em>Muy grande</em>. Se ve al instante.</td></tr>
+      <tr><td>Tema</td><td><em>Claro</em> u <em>Oscuro</em>, para poca luz o turnos de noche.</td></tr>
+      <tr><td>Sonido al escanear</td><td>El pitido que confirma que el producto entró.</td></tr>
+      <tr><td>Confirmar antes de cobrar</td><td>Si se apaga, <kbd>F12</kbd> cobra de inmediato. Más rápido, pero sin segunda oportunidad.</td></tr>
+      <tr><td>Barra de atajos</td><td>La franja de teclas al pie de la pantalla.</td></tr>
+      <tr><td>Animaciones</td><td>Los destellos y fundidos. Apáguelas si el equipo va lento.</td></tr>
+    </table>
+  </div>
+
+  <h2 style="margin-top:8mm">Cambiar de usuario</h2>
+  <p>Cuando cambia la persona que atiende, pulse <kbd>F10</kbd> y entra la siguiente con su PIN. La caja sigue abierta. Si hay una venta a medio armar, el programa avisa antes: cambiar de persona con el carrito lleno es la forma más fácil de cobrarle a alguien lo que llevaba otro.</p>
+
+  <h2>Esconder la barra lateral</h2>
+  <p>Con <kbd>Ctrl</kbd>+<kbd>B</kbd>, o la flecha doble de arriba, la barra se recoge y deja solo los iconos. Con la misma tecla vuelve.</p>
+</section>
+
+<!-- =============================================================== 15 ATAJOS -->
+<section class="hoja" id="atajos">
+  <h1 class="seccion"><span class="n">15</span>Atajos de teclado</h1>
+  <p class="entrada">Con estas teclas se trabaja sin tocar el mouse. <kbd>F1</kbd> muestra esta lista dentro del programa.</p>
+
+  <div class="atajos">
+    <div class="grupo">Vender</div>
+    <div class="fila"><kbd>Enter</kbd><span>Agregar el código escrito</span></div>
+    <div class="fila"><kbd>F11</kbd><span>Cambiar la forma de pago</span></div>
+    <div class="fila"><kbd>F12</kbd><span><strong>Cobrar</strong></span></div>
+    <div class="fila"><kbd>F4</kbd><span>Descuento</span></div>
+    <div class="fila"><kbd>F5</kbd><span>Quitar una unidad</span></div>
+    <div class="fila"><kbd>F6</kbd><span>Cancelar la venta</span></div>
+    <div class="fila"><kbd>F3</kbd><span>Buscar un producto por nombre</span></div>
+    <div class="fila"><kbd>Ctrl+C</kbd><span>Copiar el código de la línea</span></div>
+
+    <div class="grupo">En el carrito</div>
+    <div class="fila"><kbd>↑</kbd> <kbd>↓</kbd><span>Moverse entre líneas</span></div>
+    <div class="fila"><kbd>→</kbd> <kbd>+</kbd><span>Una unidad más</span></div>
+    <div class="fila"><kbd>←</kbd> <kbd>−</kbd><span>Una unidad menos</span></div>
+    <div class="fila"><span style="color:var(--apagado);font-size:9pt">Las flechas actúan sobre el carrito cuando el campo de código está vacío.</span></div>
+
+    <div class="grupo">Pantallas</div>
+    <div class="fila"><kbd>Esc</kbd><span>Volver a la venta</span></div>
+    <div class="fila"><kbd>F2</kbd><span>Consultar un precio</span></div>
+    <div class="fila"><kbd>F7</kbd><span>Productos <em style="color:var(--apagado)">(dueño)</em></span></div>
+    <div class="fila"><kbd>F8</kbd><span>Ventas del día <em style="color:var(--apagado)">(dueño)</em></span></div>
+    <div class="fila"><kbd>F9</kbd><span>Configuración</span></div>
+    <div class="fila"><kbd>F10</kbd><span>Cambiar de usuario</span></div>
+    <div class="fila"><kbd>F1</kbd><span>Ayuda</span></div>
+    <div class="fila"><kbd>Ctrl+B</kbd><span>Esconder o mostrar la barra lateral</span></div>
+  </div>
+
+  <div class="aviso nota" style="margin-top:8mm">
+    <span class="titulo">El lector de códigos</span>
+    <p>Funciona como un teclado: no hay que configurar nada. Si deja de leer, casi siempre es que el cursor no está en el campo de código. Pulse <kbd>Esc</kbd> para volver a la venta y escanee de nuevo.</p>
+  </div>
+</section>
+
+<!-- =============================================================== 16 CUIDADOS -->
+<section class="hoja" id="cuidados">
+  <h1 class="seccion"><span class="n">16</span>Cuidados, respaldos y soporte</h1>
+  <p class="entrada">Todo lo de la tienda está guardado en la Caja 1. Estos cuidados lo protegen.</p>
+
+  <div class="dos">
+    <div>
+      <h2>Para que todo funcione</h2>
+      <ul>
+        <li><strong>La Caja 1 encendida</strong> mientras se vende en la Caja 2. Si se apaga, la Caja 2 avisa y no deja cobrar hasta que vuelva, sin perder el carrito.</li>
+        <li><strong>No desenchufar el cable</strong> que une las dos cajas.</li>
+        <li><strong>Cerrar el programa antes de apagar</strong> el computador, en vez de cortar la luz.</li>
+        <li>No mover ni borrar archivos de la carpeta del programa.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Respaldos</h2>
+      <ul>
+        <li>La Caja 1 guarda una copia de todo <strong>al abrir y al cerrar el programa</strong>, y conserva las 7 últimas.</li>
+        <li>Esas copias están en el mismo computador: no sirven si se estropea. <strong>Conviene llevarlas a un pendrive</strong> de vez en cuando; soporte puede hacerlo.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Si algo sale mal</h2>
+  <table class="tabla">
+    <tr><th>Qué pasa</th><th>Qué hacer</th></tr>
+    <tr><td>Aparece un aviso de error</td><td>El programa sigue funcionando. Revise el carrito antes de cobrar y avise a soporte.</td></tr>
+    <tr><td>La Caja 2 dice que no encuentra a la Caja 1</td><td>Compruebe que la Caja 1 está encendida, con el programa abierto, y que el cable está enchufado.</td></tr>
+    <tr><td>Un empleado olvidó su PIN</td><td>El dueño le genera uno nuevo en <strong>Usuarios</strong> → <span class="boton">PIN nuevo</span>.</td></tr>
+    <tr><td>El dueño olvidó su PIN</td><td>Llame a soporte. Se recupera en la Caja 1, sin perder nada.</td></tr>
+    <tr><td>El programa no abre</td><td>Reinicie el computador. Si sigue igual, llame a soporte.</td></tr>
+  </table>
+
+  <h2>Lo que este sistema no hace</h2>
+  <p style="font-size:9.6pt">No emite boletas ni facturas y no está conectado al SII. No imprime comprobantes ni calcula el vuelto. No vende por peso o a granel. No anula ventas ya cobradas.</p>
+
+  <h2>Soporte</h2>
+  <div class="firma">
+    <div><div class="linea" style="display:flex;align-items:flex-end;padding-bottom:1.2mm;font-weight:600;color:var(--tinta);font-size:11pt">Santiago Delgado</div><div class="rotulo">Desarrollo y soporte del sistema</div></div>
+    <div><div class="linea"></div><div class="rotulo">Teléfono</div></div>
+  </div>
+</section>
+
+<script>
+  // Cabecera y pie en cada hoja salvo la portada, numeración, e índice con la página de cada
+  // sección. Se hace aquí para que agregar o mover una hoja no deje el índice mal.
+  const hojas = [...document.querySelectorAll('.hoja')];
+  hojas.forEach((hoja, i) => {
+    if (i === 0) return;
+    const titulo = hoja.querySelector('h1.seccion');
+    const nombre = titulo ? titulo.textContent.replace(/^\d+/, '').trim() : '';
+    hoja.insertAdjacentHTML('afterbegin',
+      '<div class="cabecera"><span class="marca"><img src="../../assets/punto_y_fama.png" alt="">Punto y Fama</span><span>Manual de usuario</span></div>');
+    hoja.insertAdjacentHTML('beforeend',
+      '<div class="pie"><span>' + nombre + '</span><span class="numero">' + (i + 1) + '</span></div>');
+  });
+  document.querySelectorAll('#indice [data-ir]').forEach(li => {
+    const destino = document.getElementById(li.dataset.ir);
+    li.querySelector('.pag').textContent = hojas.indexOf(destino) + 1;
+  });
+  // Para revisar: marca las hojas cuyo contenido no cabe. Tras cargar las imágenes.
+  window.addEventListener('load', () => hojas.forEach((hoja, i) => {
+    const pie = hoja.querySelector('.pie');
+    const limite = pie ? pie.getBoundingClientRect().top - 4 : hoja.getBoundingClientRect().bottom;
+    let fondo = 0;
+    [...hoja.children].forEach(h => {
+      if (h.classList.contains('pie') || h.classList.contains('cabecera') || h.classList.contains('datos') || h.classList.contains('franja')) return;
+      fondo = Math.max(fondo, h.getBoundingClientRect().bottom);
+    });
+    hoja.dataset.sobra = Math.round(limite - fondo);
+  }));
+</script>
+</body>
+</html>

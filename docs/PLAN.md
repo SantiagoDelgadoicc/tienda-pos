@@ -416,7 +416,7 @@ el nombre de cada caja sin borrarlo nunca. Se probó entero contra una copia de 
 la tienda, con los fallos a mitad de copia incluidos; los pasos 3 y 4 solo se pueden probar en la
 tienda, porque cambian la dirección de red del equipo. Ver `DESPLIEGUE-TIENDA.md`, sección 5.
 
-**Lo siguiente es la fase 20**, la documentación y el manual, escrito con todo hecho.
+**Lo siguiente es cerrar la fase 20**: el manual está hecho (PDF); faltan `GUION-DEMO.md` y `README.md`.
 
 **Pendiente del cliente** (detalle en `docs/PREGUNTAS-CIERRE-Y-USUARIOS.md`):
 
@@ -615,7 +615,16 @@ una (se desplazan). Falta alto, no ancho; a 1366×768 se ve todo.
 **Conteo a ciegas aprobado por Santiago** el 2026-09-24 (D-036, punto 7). Si algún día se quiere
 quitar, basta con devolver el esperado a cualquier usuario en `services/arqueo.py::_visible_para`.
 
-## Fase 20 — Documentación y manual · pendiente
+## Fase 20 — Documentación y manual · manual hecho, falta el resto
+
+**2026-09-25: el manual está hecho**, como PDF para entregar al cliente:
+`docs/Manual-de-usuario-Punto-y-Fama.pdf`, generado desde `docs/manual/manual.html` con
+`python tools/manual_pdf.py`, con las capturas regeneradas ese día. Cubre todo lo de abajo
+salvo la nota de los nombres de caja, que es de instalación y está en `LEEME-PRIMERO.txt`. Ya no
+publica ningún PIN. `MANUAL-USUARIO.md` queda como puntero al PDF. **Falta:** `GUION-DEMO.md`
+(arrancar con `--demo`) y `README.md`.
+
+Lo que se pedía, para contrastar:
 
 Decidido: **un solo manual**, el que ya existe, **escrito al final** con todo hecho. Lo que hay que
 tocar en `docs/MANUAL-USUARIO.md`:

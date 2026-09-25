@@ -160,6 +160,8 @@ funcionó en la tienda y es la que conviene conservar.
 Contenido del pendrive:
 
 ```
+ACTUALIZAR-ESTE-PC.bat            los dos · la actualización de un doble clic (PASO-1 y PASO-2)
+LEEME-PRIMERO.txt                 la hoja corta de la visita, y lo que hay que explicarle al dueño
 PuntoYFamaCaja\                   el programa completo (~115 MB, .exe + _internal)
 INSTRUCCIONES.txt                 el mismo procedimiento, en texto plano
 PASO-1-RESPALDAR.bat              PC 1 · solo copia, no cambia nada
@@ -174,6 +176,15 @@ _red_cable.ps1                    detecta la tarjeta de cable y le pone la IP fi
 _red_json.ps1                     escribe red.json sin perder nada y pregunta el nombre de la caja
 _accesos.ps1                      deja los accesos directos apuntando a PuntoYFamaCaja.exe
 ```
+
+**Desde el 2026-09-25 el kit va en la carpeta `PUNTO-Y-FAMA\` del pendrive**, no en la raíz: el
+pendrive de Santiago lleva otros archivos, y el kit anterior quedó apartado en
+`_KIT-ANTIGUO-NO-USAR\` (su `TiendaPOS\` instalaría el programa viejo). Los respaldos del 14 y 15
+de septiembre siguen en `RESPALDOS\`, en la raíz. Los scripts funcionan desde cualquier carpeta.
+
+**`ACTUALIZAR-ESTE-PC.bat`** es lo que se usa en una visita normal: si el equipo tiene
+`tienda.db`, ejecuta `PASO-1` y **no sigue si la copia no es idéntica byte a byte** al original;
+después, `PASO-2`. Sin las pausas de cada paso: lo único que pregunta es el nombre de la caja.
 
 Ya no viaja un `tienda.db` en el pendrive: los respaldos de `PASO-1` van a `RESPALDOS\`, cada
 uno en su carpeta con fecha y hora.

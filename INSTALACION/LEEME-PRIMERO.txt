@@ -1,0 +1,65 @@
+===============================================================================
+  PUNTO Y FAMA - ACTUALIZAR LAS DOS CAJAS
+===============================================================================
+
+  Los productos que ya estan cargados en el PC 1 NO se tocan.
+  Antes de nada se copian a este pendrive y se comprueba la copia.
+
+
+  1. PC 1  (el que tiene los productos)
+     Cierra el programa.
+     Doble clic en  ACTUALIZAR-ESTE-PC.bat
+     Pregunta el nombre de la caja: Enter  (= Caja 1)
+
+  2. PC 2
+     Cierra el programa.
+     Doble clic en  ACTUALIZAR-ESTE-PC.bat
+     Pregunta el nombre de la caja: Enter  (= Caja 2)
+
+  3. PC 1: abre "Punto y Fama" del escritorio.
+     Entra como Administrador, con el PIN de siempre.
+     Mira que esten todos los productos.
+
+  4. Con el dueno, en el PC 1:
+     USUARIOS  -> "Nuevo usuario" por cada empleado.
+                  El PIN sale UNA vez: que lo anoten ya.
+               -> "Administrador" -> "PIN nuevo". Que lo guarde bien.
+               -> "Cajero" -> "Dar de baja".
+     EFECTIVO  -> "Cierres anteriores" -> "Cambiar": con cuanto
+                  parte cada caja.  Luego abre la Caja 1.
+
+  5. PC 2: abre el programa, entra un empleado, abre la Caja 2.
+     Cobra una venta chica y mirala en el PC 1, en "Cierre de caja".
+
+  LISTO.
+
+
+-------------------------------------------------------------------------------
+  LO QUE HAY QUE EXPLICARLE AL DUENO  (5 ideas)
+-------------------------------------------------------------------------------
+
+  1. Cada empleado entra con SU clave. Asi se sabe quien vendio que.
+  2. Al empezar el dia se ABRE la caja contando la plata del cajon.
+     Sin abrirla no se puede cobrar.
+  3. Al cobrar se marca si fue efectivo, debito o credito.
+  4. Si saca plata (retiro) o paga a un proveedor, se anota en
+     EFECTIVO. El retiro pide SU clave de dueno.
+  5. Al terminar el dia se CIERRA la caja contando el cajon.
+     Quien cierra no ve cuanto deberia haber: solo el dueno lo ve.
+     En "Cierre de caja" ve lo vendido en efectivo, debito y
+     credito, por separado, con cada venta y sus productos.
+
+
+-------------------------------------------------------------------------------
+  SI ALGO SALE MAL
+-------------------------------------------------------------------------------
+
+  - Si una ventana dice "SE PARO": lee lo de arriba. La base de
+    datos no se toco. Casi siempre es el programa abierto.
+  - DIAGNOSTICO.bat dice que tiene cada PC. Sacale una foto.
+  - Nadie recuerda el PIN del administrador: en el PC 1, con el
+    programa cerrado, RECUPERAR-ADMINISTRADOR.bat. Da un PIN nuevo.
+  - El detalle de todo esta en INSTRUCCIONES.txt.
+  - NO copies ningun archivo tienda.db a mano.
+
+===============================================================================

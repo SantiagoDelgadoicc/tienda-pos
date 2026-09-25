@@ -97,7 +97,7 @@
 -------------------------------------------------------------------------------
 
   1. Cobra una venta pequena en el PC 2, en efectivo.
-     En el PC 1, "Cierre de caja", Caja 2: tiene que salir a
+     En el PC 1, "Ventas por caja", Caja 2: tiene que salir a
      nombre del empleado, en efectivo.
 
   2. Cambia un precio en el PC 1. Escanea ese producto en el PC 2.
@@ -107,7 +107,11 @@
      Un empleado anota un pago a proveedor: pide el nombre del
      proveedor y queda a nombre del empleado.
 
-  4. Con productos en el carrito del PC 2, desenchufa el cable e
+  4. Con el dueno, en Productos, carga el pan: sin codigo, marca
+     "Se vende por peso" y el precio del kilo. En el PC 2, F3,
+     busca "pan", escribe los gramos y mira que el precio cuadre.
+
+  5. Con productos en el carrito del PC 2, desenchufa el cable e
      intenta cobrar. Debe avisar en menos de 3 segundos, sin perder
      el carrito. Enchufa otra vez y cobra: tiene que funcionar.
 

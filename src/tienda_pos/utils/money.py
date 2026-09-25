@@ -57,3 +57,24 @@ def porcentaje_de(monto: int, porcentaje: float) -> int:
         Decimal("1"), rounding=ROUND_HALF_UP
     )
     return int(resultado)
+
+
+def precio_por_gramos(precio_kilo_clp: int, gramos: int) -> int:
+    """Lo que cuestan `gramos` de un producto que se vende a `precio_kilo_clp` el kilo.
+
+    Al peso más cercano, la mitad hacia arriba, y en enteros: $7.990 el kilo por 350 g son
+    $2.796,5, que se cobran $2.797. Sin `float`, por lo mismo que el resto del dinero.
+    """
+    return (int(precio_kilo_clp) * int(gramos) + 500) // 1000
+
+
+def formatear_peso(gramos: int) -> str:
+    """Un peso para leerlo en la caja: "350 g" hasta el kilo, "1,25 kg" desde ahí.
+
+    Los kilos van con coma decimal, como se escriben en Chile, y sin ceros de sobra.
+    """
+    gramos = int(gramos)
+    if abs(gramos) < 1000:
+        return f"{gramos} g"
+    kilos = f"{gramos / 1000:.3f}".rstrip("0").rstrip(".")
+    return f"{kilos.replace('.', ',')} kg"

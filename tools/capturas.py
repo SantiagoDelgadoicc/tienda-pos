@@ -221,6 +221,36 @@ def generar(destino: Path) -> list[Path]:
     ventana.mostrar_efectivo()
     generadas.append(_guardar(ventana, destino, "15-efectivo"))
 
+    # 16 y 17. Venta por peso (D-037): el jamón escaneado, el pan buscado por nombre, y la
+    # ventana del peso con el precio a la vista.
+    from tienda_pos.db.seed import catalogo_demo
+    from tienda_pos.ui.dialogos import DialogoPeso
+
+    jamon = next(p.codigo_barras for p in catalogo_demo() if p.nombre == "Jamón pierna")
+    ventana.mostrar_venta()
+    ventana.vista_venta.carrito.vaciar()
+    pesos = iter([350, 640])
+    ventana.vista_venta.pedir_gramos = lambda *a, **k: next(pesos)
+    for codigo in (codigo_demo(0), jamon, "2000001"):
+        ventana.vista_venta.agregar_por_codigo(codigo)
+    generadas.append(_guardar(ventana, destino, "16-venta-por-peso"))
+    peso = DialogoPeso("Pan batido", 2490, ventana)
+    peso.campo.setText("640")
+    peso.show()
+    generadas.append(_guardar(peso, destino, "17-peso"))
+    peso.close()
+
+    # 18. El formulario de un producto por peso sin código, como el pan.
+    from tienda_pos.ui.productos_view import DialogoProducto
+
+    formulario = DialogoProducto(ventana)
+    formulario.campo_nombre.setText("Pan amasado")
+    formulario.casilla_peso.setChecked(True)
+    formulario.campo_precio.setText("2790")
+    formulario.show()
+    generadas.append(_guardar(formulario, destino, "18-producto-por-peso"))
+    formulario.close()
+
     conexion.close()
     return generadas
 

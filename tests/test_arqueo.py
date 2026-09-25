@@ -64,7 +64,7 @@ class TestMigracion:
         antigua.commit()
         antes = dict(antigua.execute("SELECT * FROM venta").fetchone())
 
-        assert aplicar_migraciones(antigua) == VERSION_ESQUEMA == 6
+        assert aplicar_migraciones(antigua) == VERSION_ESQUEMA
         despues = dict(antigua.execute("SELECT * FROM venta").fetchone())
 
         # No se abrió con arqueo: no se inventa de qué cajón salió.

@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..domain.models import Producto
-from ..utils.money import formatear_clp
+from ..utils.money import formatear_clp, formatear_peso
 from . import movimiento
 
 
@@ -60,11 +60,14 @@ class DialogoResultados(QDialog):
         for fila, producto in enumerate(resultados):
             self.tabla.setItem(fila, 0, QTableWidgetItem(producto.nombre))
 
-            precio = QTableWidgetItem(formatear_clp(producto.precio_clp))
+            texto_precio = formatear_clp(producto.precio_clp)
+            precio = QTableWidgetItem(f"{texto_precio}/kg" if producto.por_peso else texto_precio)
             precio.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.tabla.setItem(fila, 1, precio)
 
-            stock = QTableWidgetItem(str(producto.stock))
+            stock = QTableWidgetItem(
+                formatear_peso(producto.stock) if producto.por_peso else str(producto.stock)
+            )
             stock.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.tabla.setItem(fila, 2, stock)
 

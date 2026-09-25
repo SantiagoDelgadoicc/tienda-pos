@@ -15,7 +15,7 @@ import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 
-VERSION_ESQUEMA = 6
+VERSION_ESQUEMA = 7
 
 _RUTA_ESQUEMA = Path(__file__).with_name("schema.sql")
 
@@ -180,6 +180,22 @@ def _arqueo_de_caja(conexion: sqlite3.Connection) -> None:
     conexion.execute("CREATE INDEX idx_venta_turno ON venta (turno_id)")
 
 
+def _venta_por_peso(conexion: sqlite3.Connection) -> None:
+    """Añade la venta por peso (D-037): productos con precio por kilo, líneas con gramos.
+
+    `producto.por_peso` en 0 para todo lo que ya existía: se vendía por unidad y así sigue.
+    `venta_linea.gramos` en NULL en las ventas anteriores, que son todas por unidad. Una línea
+    por peso guarda `cantidad` 1, así que contar artículos sigue siendo sumar `cantidad`.
+    """
+    conexion.execute(
+        "ALTER TABLE producto ADD COLUMN por_peso INTEGER NOT NULL DEFAULT 0 "
+        "CHECK (por_peso IN (0, 1))"
+    )
+    conexion.execute(
+        "ALTER TABLE venta_linea ADD COLUMN gramos INTEGER CHECK (gramos IS NULL OR gramos > 0)"
+    )
+
+
 # Versión de destino -> función que lleva la base desde la versión anterior hasta ella.
 _MIGRACIONES: dict[int, Callable[[sqlite3.Connection], None]] = {
     1: _crear_esquema_inicial,
@@ -188,6 +204,7 @@ _MIGRACIONES: dict[int, Callable[[sqlite3.Connection], None]] = {
     4: _caja_de_la_venta,
     5: _medio_de_pago,
     6: _arqueo_de_caja,
+    7: _venta_por_peso,
 }
 
 

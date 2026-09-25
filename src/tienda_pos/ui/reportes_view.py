@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 from ..domain.models import Venta
 from ..red.sesion import Sesion
 from ..services import reportes
-from ..utils.money import formatear_clp
+from ..utils.money import formatear_clp, formatear_peso
 from . import estilos, tablas
 
 _COLUMNAS_VENTAS = ("N°", "Hora", "Artículos", "Total", "Medio", "Atendió")
@@ -35,7 +35,7 @@ class ReportesView(QWidget):
     """Ventas del día, con el detalle de la venta seleccionada."""
 
     salir_solicitado = Signal()
-    #: El botón "Cierre de caja": es aquí donde el dueño lo va a buscar (fase 18).
+    #: El botón "Ventas por caja", el cierre diario: es aquí donde el dueño lo va a buscar (fase 18).
     cierre_solicitado = Signal()
 
     def __init__(self, sesion: Sesion, padre: QWidget | None = None) -> None:
@@ -53,7 +53,7 @@ class ReportesView(QWidget):
         encabezado.setSpacing(10)
         encabezado.addStretch()
 
-        self.boton_cierre = QPushButton("Cierre de caja")
+        self.boton_cierre = QPushButton("Ventas por caja")
         self.boton_cierre.setToolTip("Lo vendido en cada caja, por medio de pago y por empleado")
         self.boton_cierre.clicked.connect(self.cierre_solicitado.emit)
         encabezado.addWidget(self.boton_cierre)
@@ -217,9 +217,16 @@ class ReportesView(QWidget):
         for indice, linea in enumerate(venta.lineas):
             self._celda(self.tabla_detalle, indice, 0, linea.nombre)
             self._celda(
-                self.tabla_detalle, indice, 1, formatear_clp(linea.precio_unit_clp), derecha=True
+                self.tabla_detalle,
+                indice,
+                1,
+                f"{formatear_clp(linea.precio_unit_clp)}/kg"
+                if linea.gramos
+                else formatear_clp(linea.precio_unit_clp),
+                derecha=True,
             )
-            self._celda(self.tabla_detalle, indice, 2, str(linea.cantidad), centrada=True)
+            cantidad = formatear_peso(linea.gramos) if linea.gramos else str(linea.cantidad)
+            self._celda(self.tabla_detalle, indice, 2, cantidad, centrada=True)
             self._celda(
                 self.tabla_detalle, indice, 3, formatear_clp(linea.subtotal_clp), derecha=True
             )

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import sqlite3
 
+from .. import config
 from ..db.connection import transaccion
 from ..domain.errors import (
     CodigoInvalido,
@@ -71,7 +72,25 @@ def listar(conexion: sqlite3.Connection, incluir_inactivos: bool = False) -> lis
     return repo_productos.listar(conexion, incluir_inactivos=incluir_inactivos)
 
 
-def _validar_datos(codigo: str, nombre: str, precio_clp: int, stock: int) -> tuple[str, str]:
+def _codigo_interno(conexion: sqlite3.Connection) -> str:
+    """Un código para un producto que no trae código de barras, como el pan (D-037).
+
+    Siete cifras que empiezan por el prefijo de uso interno: "2000001", "2000002"... Cortas, para
+    poder teclearlas si hace falta, y distintas de cualquier EAN de fábrica, que tienen 8 o 13.
+    """
+    prefijo = config.PREFIJO_CODIGO_INTERNO
+    ultimo = repo_productos.ultimo_codigo_interno(conexion, prefijo)
+    siguiente = int(ultimo[len(prefijo):]) + 1 if ultimo else 1
+    while True:
+        codigo = f"{prefijo}{siguiente:06d}"
+        if repo_productos.obtener_por_codigo(conexion, codigo, incluir_inactivos=True) is None:
+            return codigo
+        siguiente += 1
+
+
+def _validar_datos(
+    codigo: str, nombre: str, precio_clp: int, stock: int, stock_anterior: int | None = None
+) -> tuple[str, str]:
     if not cb.es_valido(codigo):
         raise DatosInvalidos("El código de barras no es válido.")
     nombre = nombre.strip()
@@ -81,7 +100,10 @@ def _validar_datos(codigo: str, nombre: str, precio_clp: int, stock: int) -> tup
         raise DatosInvalidos(f"El nombre no puede superar los {_NOMBRE_LONGITUD_MAX} caracteres.")
     if precio_clp < 0:
         raise DatosInvalidos("El precio no puede ser negativo.")
-    if stock < 0:
+    # Un stock negativo sale de vender sin stock (D-009). Se acepta si no baja del que había:
+    # igual, para poder cambiarle el precio a ese producto, o más alto, porque entró mercadería
+    # y el -3 pasa a -1 (fase 22). Lo que no se puede es escribir uno negativo de la nada.
+    if stock < 0 and (stock_anterior is None or stock < stock_anterior):
         raise DatosInvalidos("El stock no puede ser negativo.")
     return cb.normalizar(codigo), nombre
 
@@ -93,8 +115,12 @@ def crear_producto(
     nombre: str,
     precio_clp: int,
     stock: int = 0,
+    por_peso: bool = False,
 ) -> Producto:
     """Da de alta un producto. Solo administradores.
+
+    Con `por_peso` (D-037), `precio_clp` es el precio del kilo y `stock` son gramos. Sin código
+    de barras, el sistema le da uno interno: el pan no trae etiqueta y se vende buscándolo.
 
     Raises:
         PermisoDenegado, DatosInvalidos, ProductoDuplicado
@@ -102,12 +128,19 @@ def crear_producto(
     from .auth import exigir_admin  # importación local: evita un ciclo entre servicios
 
     exigir_admin(usuario, "crear productos")
-    codigo, nombre = _validar_datos(codigo, nombre, precio_clp, stock)
-
     with transaccion(conexion):
+        if not cb.normalizar(codigo):
+            codigo = _codigo_interno(conexion)
+        codigo, nombre = _validar_datos(codigo, nombre, precio_clp, stock)
         producto = repo_productos.crear(
             conexion,
-            Producto(codigo_barras=codigo, nombre=nombre, precio_clp=precio_clp, stock=stock),
+            Producto(
+                codigo_barras=codigo,
+                nombre=nombre,
+                precio_clp=precio_clp,
+                stock=stock,
+                por_peso=bool(por_peso),
+            ),
         )
         # Si este código estaba en la lista de "no encontrados", ya dejó de estarlo.
         repo_codigos.marcar_resuelto(conexion, codigo)
@@ -121,24 +154,38 @@ def actualizar_producto(
     codigo: str,
     nombre: str,
     precio_clp: int,
-    stock: int,
+    stock: int | None,
+    por_peso: bool | None = None,
 ) -> Producto:
-    """Modifica un producto existente. Solo administradores."""
+    """Modifica un producto existente. Solo administradores.
+
+    `por_peso` None lo deja como estaba. Cambiarlo no toca las ventas pasadas: cada línea
+    guarda si se vendió por peso.
+
+    `stock` None también lo deja como está **en la base en este momento**, y es lo que debe
+    mandar quien no lo cambió. El formulario se abre con el stock de cuando se cargó la lista;
+    si lo devolviera tal cual, cambiarle el precio a un producto borraría lo que las cajas
+    vendieron mientras tanto (fase 22). Por eso el producto se lee dentro de la transacción.
+    """
     from .auth import exigir_admin
 
     exigir_admin(usuario, "modificar productos")
-    codigo, nombre = _validar_datos(codigo, nombre, precio_clp, stock)
-
-    existente = repo_productos.obtener_por_id(conexion, producto_id)
-    if existente is None:
-        raise DatosInvalidos("El producto que intenta modificar ya no existe.")
-
-    existente.codigo_barras = codigo
-    existente.nombre = nombre
-    existente.precio_clp = precio_clp
-    existente.stock = stock
-
     with transaccion(conexion):
+        existente = repo_productos.obtener_por_id(conexion, producto_id)
+        if existente is None:
+            raise DatosInvalidos("El producto que intenta modificar ya no existe.")
+        if not cb.normalizar(codigo):
+            codigo = existente.codigo_barras
+        if stock is None:
+            stock = existente.stock
+        codigo, nombre = _validar_datos(codigo, nombre, precio_clp, stock, existente.stock)
+        if por_peso is not None:
+            existente.por_peso = bool(por_peso)
+
+        existente.codigo_barras = codigo
+        existente.nombre = nombre
+        existente.precio_clp = precio_clp
+        existente.stock = stock
         repo_productos.actualizar(conexion, existente)
     return existente
 

@@ -295,7 +295,44 @@ class TestCierreDeVenta:
         with pytest.raises(CarritoVacio):
             servicio_venta.cerrar_venta(conexion, Carrito(), cajero)
 
-    def test_se_rechaza_si_no_alcanza_el_stock(self, conexion, productos, cajero) -> None:
+    @pytest.fixture
+    def stock_estricto(self, monkeypatch):
+        # En la tienda se permite vender sin stock (D-009, 2026-09-25); aquí se prueba la regla
+        # estricta, que sigue disponible cambiando la constante.
+        from tienda_pos import config
+
+        monkeypatch.setattr(config, "PERMITIR_STOCK_NEGATIVO", False)
+
+    def test_por_defecto_se_vende_aunque_no_alcance_el_stock(self, conexion, productos, cajero) -> None:
+        carrito = Carrito()
+        carrito.agregar(productos["agua"], 5)  # solo hay 1
+        servicio_venta.cerrar_venta(conexion, carrito, cajero)
+        assert repo_productos.obtener_por_id(conexion, productos["agua"].id).stock == -4
+
+    def test_un_producto_en_negativo_se_puede_editar(self, conexion, productos, cajero, admin) -> None:
+        from tienda_pos.services import catalogo
+
+        carrito = Carrito()
+        carrito.agregar(productos["agua"], 3)
+        servicio_venta.cerrar_venta(conexion, carrito, cajero)
+        agua = repo_productos.obtener_por_id(conexion, productos["agua"].id)
+        catalogo.actualizar_producto(conexion, admin, agua.id, agua.codigo_barras, agua.nombre, 1290, -2)
+        assert repo_productos.obtener_por_id(conexion, agua.id).precio_clp == 1290
+        with pytest.raises(DatosInvalidos):
+            catalogo.actualizar_producto(conexion, admin, agua.id, agua.codigo_barras, agua.nombre, 1290, -9)
+
+    def test_un_negativo_se_puede_subir_hacia_cero(self, conexion, productos, cajero, admin) -> None:
+        """Fase 22: si entra una unidad y había -2, queda -1; eso no es escribir un negativo."""
+        from tienda_pos.services import catalogo
+
+        carrito = Carrito()
+        carrito.agregar(productos["agua"], 3)
+        servicio_venta.cerrar_venta(conexion, carrito, cajero)
+        agua = repo_productos.obtener_por_id(conexion, productos["agua"].id)
+        catalogo.actualizar_producto(conexion, admin, agua.id, agua.codigo_barras, agua.nombre, 1190, -1)
+        assert repo_productos.obtener_por_id(conexion, agua.id).stock == -1
+
+    def test_se_rechaza_si_no_alcanza_el_stock(self, conexion, productos, cajero, stock_estricto) -> None:
         carrito = Carrito()
         carrito.agregar(productos["agua"], 5)  # solo hay 1
 
@@ -303,7 +340,7 @@ class TestCierreDeVenta:
             servicio_venta.cerrar_venta(conexion, carrito, cajero)
         assert "Agua Mineral" in str(error.value)
 
-    def test_un_rechazo_por_stock_no_deja_rastro(self, conexion, productos, cajero) -> None:
+    def test_un_rechazo_por_stock_no_deja_rastro(self, conexion, productos, cajero, stock_estricto) -> None:
         carrito = Carrito()
         carrito.agregar(productos["leche"])
         carrito.agregar(productos["agua"], 5)

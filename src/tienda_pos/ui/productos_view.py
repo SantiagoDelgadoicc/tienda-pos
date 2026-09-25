@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QHBoxLayout,
     QHeaderView,
+    QCheckBox,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -24,10 +25,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..domain.errors import ErrorDominio
+from ..domain.errors import ErrorDominio, ProductoNoEncontrado
 from ..domain.models import Producto, Usuario
 from ..red.sesion import Sesion
-from ..utils.money import formatear_clp, parsear_clp
+from ..utils.money import formatear_clp, formatear_peso, parsear_clp
 from . import dialogos, movimiento, tablas
 
 _COLUMNAS = ("Código de barras", "Producto", "Precio", "Stock")
@@ -55,20 +56,36 @@ class DialogoProducto(QDialog):
         self.campo_codigo = QLineEdit(producto.codigo_barras if producto else "")
         self.campo_codigo.setPlaceholderText("Escanéelo con el lector o escríbalo")
         columna.addWidget(self.campo_codigo)
+        nota_codigo = QLabel("Si no tiene código, como el pan, déjelo vacío: el sistema le pone uno.")
+        nota_codigo.setObjectName("subtitulo")
+        nota_codigo.setWordWrap(True)
+        columna.addWidget(nota_codigo)
 
         columna.addWidget(QLabel("Nombre del producto"))
         self.campo_nombre = QLineEdit(producto.nombre if producto else "")
         columna.addWidget(self.campo_nombre)
 
-        columna.addWidget(QLabel("Precio de venta"))
+        # Venta por peso (D-037): el precio es el del kilo y en la caja se teclean los gramos.
+        self.casilla_peso = QCheckBox("Se vende por peso (pan, pollo, jamón...)")
+        self.casilla_peso.setChecked(bool(producto and producto.por_peso))
+        self.casilla_peso.toggled.connect(self._rotular)
+        columna.addWidget(self.casilla_peso)
+
+        self.rotulo_precio = QLabel("Precio de venta")
+        columna.addWidget(self.rotulo_precio)
         self.campo_precio = QLineEdit(str(producto.precio_clp) if producto else "")
         self.campo_precio.setPlaceholderText("Solo el número, por ejemplo 1290")
         columna.addWidget(self.campo_precio)
 
-        columna.addWidget(QLabel("Stock"))
+        self.rotulo_stock = QLabel("Stock")
+        columna.addWidget(self.rotulo_stock)
         self.campo_stock = QLineEdit(str(producto.stock) if producto else "0")
-        self.campo_stock.setValidator(QIntValidator(0, 999999, self))
+        # El mínimo es cero, o el stock negativo que ya tenía (D-009): si no, el validador daría
+        # por inválido lo que el propio formulario muestra.
+        minimo = min(0, producto.stock) if producto else 0
+        self.campo_stock.setValidator(QIntValidator(minimo, 9_999_999, self))
         columna.addWidget(self.campo_stock)
+        self._rotular(self.casilla_peso.isChecked())
 
         self.error = QLabel()
         self.error.setObjectName("mensajeError")
@@ -90,10 +107,17 @@ class DialogoProducto(QDialog):
         # precio, porque cambiar precios es el 90% de las ediciones reales.
         (self.campo_precio if producto else self.campo_codigo).setFocus()
 
+    def _rotular(self, por_peso: bool) -> None:
+        """Los rótulos dicen en qué unidad va cada número, que es lo fácil de confundir."""
+        if por_peso:
+            self.rotulo_precio.setText("Precio de un kilo")
+            self.rotulo_stock.setText("Stock en gramos  (no impide vender)")
+        else:
+            self.rotulo_precio.setText("Precio de venta")
+            self.rotulo_stock.setText("Stock")
+
     def _validar(self) -> None:
         """Valida el formato antes de cerrar; las reglas de negocio las revisa el servicio."""
-        if not self.campo_codigo.text().strip():
-            return self._fallar("Escanee o escriba el código de barras.")
         if not self.campo_nombre.text().strip():
             return self._fallar("Escriba el nombre del producto.")
         try:
@@ -109,12 +133,20 @@ class DialogoProducto(QDialog):
         self.error.show()
 
     @property
-    def datos(self) -> tuple[str, str, int, int]:
+    def datos(self) -> tuple[str, str, int, int | None, bool]:
+        """Lo escrito. Al editar, el stock es None si no se tocó: así el servicio conserva el
+        de la base, que pudo bajar con las ventas mientras el formulario estaba abierto."""
+        texto_stock = self.campo_stock.text().strip()
+        if self._producto is not None and texto_stock == str(self._producto.stock):
+            stock = None
+        else:
+            stock = int(texto_stock or 0)
         return (
             self.campo_codigo.text().strip(),
             self.campo_nombre.text().strip(),
             parsear_clp(self.campo_precio.text()),
-            int(self.campo_stock.text() or 0),
+            stock,
+            self.casilla_peso.isChecked(),
         )
 
 
@@ -132,6 +164,8 @@ class DialogoStock(QDialog):
 
     #: Saltos de los botones rápidos. Van de menor a mayor y en los dos sentidos.
     _SALTOS = (-10, -1, 1, 10)
+    #: Los mismos para un producto por peso, en gramos: un kilo y cien gramos (D-037).
+    _SALTOS_PESO = (-1000, -100, 100, 1000)
 
     def __init__(self, producto: Producto, padre: QWidget | None = None) -> None:
         super().__init__(padre)
@@ -154,25 +188,33 @@ class DialogoStock(QDialog):
         columna.addWidget(nombre)
         columna.addSpacing(14)
 
-        actual = QLabel(f"AHORA HAY {producto.stock}")
+        self._por_peso = producto.por_peso
+        saltos = self._SALTOS_PESO if self._por_peso else self._SALTOS
+        actual = QLabel(
+            f"AHORA HAY {formatear_peso(producto.stock)}" if self._por_peso
+            else f"AHORA HAY {producto.stock}"
+        )
         actual.setObjectName("etiquetaTotal")
         columna.addWidget(actual)
         columna.addSpacing(6)
 
         fila = QHBoxLayout()
         fila.setSpacing(8)
-        for salto in self._SALTOS[:2]:
+        for salto in saltos[:2]:
             fila.addWidget(self._boton_salto(salto))
 
         self.campo = QLineEdit(str(producto.stock))
-        self.campo.setValidator(QIntValidator(0, 999999, self))
+        # Como en el formulario: cero, o el negativo que ya tenía. Sin eso, Enter no hace nada
+        # sobre un stock negativo, porque Qt no confirma un texto que su validador rechaza.
+        self._minimo = min(0, producto.stock)
+        self.campo.setValidator(QIntValidator(self._minimo, 9_999_999, self))
         self.campo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.campo.setMinimumWidth(110)
         self.campo.textChanged.connect(self._actualizar_resumen)
         self.campo.returnPressed.connect(self.accept)
         fila.addWidget(self.campo, stretch=1)
 
-        for salto in self._SALTOS[2:]:
+        for salto in saltos[2:]:
             fila.addWidget(self._boton_salto(salto))
         columna.addLayout(fila)
         columna.addSpacing(10)
@@ -205,18 +247,24 @@ class DialogoStock(QDialog):
         return boton
 
     def _sumar(self, salto: int) -> None:
-        # El tope de abajo es cero: un stock negativo no existe, y dejar que la resta lo
-        # cruce solo serviría para que el validador rechace el texto después.
-        self.campo.setText(str(max(0, self.stock + salto)))
+        # El tope de abajo es cero, o el negativo que ya tenía (D-009): restar nunca lo deja
+        # más negativo, y un −1 sobre −3 no puede saltar a cero, que sería sumar tres.
+        self.campo.setText(str(max(self._minimo, self.stock + salto)))
 
     def _actualizar_resumen(self) -> None:
         diferencia = self.stock - self._producto.stock
         if diferencia == 0:
             self.resumen.setText("Sin cambios")
-        elif diferencia > 0:
-            self.resumen.setText(f"Entran {diferencia} unidades")
+        elif self._por_peso:
+            # El número del campo son gramos: el resumen lo dice en kilos para que se lea.
+            verbo = "Entran" if diferencia > 0 else "Salen"
+            self.resumen.setText(f"{verbo} {formatear_peso(abs(diferencia))}  ·  gramos en el campo")
         else:
-            self.resumen.setText(f"Salen {abs(diferencia)} unidades")
+            verbo = "Entran" if diferencia > 0 else "Salen"
+            if abs(diferencia) == 1:
+                verbo = verbo[:-1]  # "Entra 1 unidad", no "Entran 1 unidades"
+            unidades = "unidad" if abs(diferencia) == 1 else "unidades"
+            self.resumen.setText(f"{verbo} {abs(diferencia)} {unidades}")
 
     @property
     def stock(self) -> int:
@@ -332,13 +380,17 @@ class ProductosView(QWidget):
             self.tabla.setItem(fila, 0, QTableWidgetItem(producto.codigo_barras))
             self.tabla.setItem(fila, 1, QTableWidgetItem(producto.nombre))
 
-            precio = QTableWidgetItem(formatear_clp(producto.precio_clp))
+            texto_precio = formatear_clp(producto.precio_clp)
+            precio = QTableWidgetItem(f"{texto_precio}/kg" if producto.por_peso else texto_precio)
             precio.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.tabla.setItem(fila, 2, precio)
 
-            stock = QTableWidgetItem(str(producto.stock))
+            stock = QTableWidgetItem(
+                formatear_peso(producto.stock) if producto.por_peso else str(producto.stock)
+            )
             stock.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            if producto.stock <= _STOCK_BAJO:
+            # El stock de un producto por peso no impide vender: no se marca como bajo.
+            if not producto.por_peso and producto.stock <= _STOCK_BAJO:
                 from PySide6.QtGui import QBrush, QColor
 
                 from . import estilos
@@ -367,27 +419,49 @@ class ProductosView(QWidget):
         dialogo = DialogoProducto(self)
         if not dialogo.exec():
             return
-        codigo, nombre, precio, stock = dialogo.datos
+        codigo, nombre, precio, stock, por_peso = dialogo.datos
         try:
-            self._sesion.crear_producto(self.usuario, codigo, nombre, precio, stock)
+            self._sesion.crear_producto(self.usuario, codigo, nombre, precio, stock, por_peso)
         except ErrorDominio as error:
             dialogos.mostrar_error(self, str(error))
             return
         self.recargar()
+
+    def _al_dia(self, producto: Producto) -> Producto | None:
+        """El producto como está ahora en la base, no como se cargó la lista.
+
+        La lista se carga al entrar en la pantalla, y las cajas siguen vendiendo mientras
+        tanto: un formulario abierto con esos datos mostraría un stock que ya no es (fase 22).
+        """
+        try:
+            return self._sesion.consultar_por_codigo(
+                producto.codigo_barras, registrar_faltante=False
+            )
+        except ProductoNoEncontrado:
+            dialogos.mostrar_error(
+                self, f"{producto.nombre} ya no está en el catálogo. Se actualizó la lista."
+            )
+        except ErrorDominio as error:
+            dialogos.mostrar_error(self, str(error))
+        self.recargar()
+        return None
 
     def editar(self) -> None:
         producto = self._seleccionado()
         if producto is None:
             dialogos.mostrar_error(self, "Seleccione primero un producto de la lista.")
             return
+        producto = self._al_dia(producto)
+        if producto is None:
+            return
 
         dialogo = DialogoProducto(self, producto)
         if not dialogo.exec():
             return
-        codigo, nombre, precio, stock = dialogo.datos
+        codigo, nombre, precio, stock, por_peso = dialogo.datos
         try:
             self._sesion.actualizar_producto(
-                self.usuario, producto.id, codigo, nombre, precio, stock
+                self.usuario, producto.id, codigo, nombre, precio, stock, por_peso
             )
         except ErrorDominio as error:
             dialogos.mostrar_error(self, str(error))
@@ -399,6 +473,9 @@ class ProductosView(QWidget):
         producto = self._seleccionado()
         if producto is None:
             dialogos.mostrar_error(self, "Seleccione primero un producto de la lista.")
+            return
+        producto = self._al_dia(producto)
+        if producto is None:
             return
 
         dialogo = DialogoStock(producto, self)

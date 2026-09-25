@@ -118,6 +118,32 @@ def catalogo_demo() -> list[Producto]:
             stock=stock,
         )
         for i, (nombre, precio, stock) in enumerate(_PRODUCTOS)
+    ] + _por_peso_demo()
+
+
+def _por_peso_demo() -> list[Producto]:
+    """Tres productos por peso (D-037): el precio es el del kilo y el stock, gramos.
+
+    Van después de los demás para no mover los códigos de `codigo_demo`, que usan las capturas.
+    El pan lleva un código interno, como uno que se cargara sin código de barras.
+    """
+    siguiente = len(_PRODUCTOS)
+    return [
+        Producto(codigo_barras="2000001", nombre="Pan batido", precio_clp=2490, stock=0, por_peso=True),
+        Producto(
+            codigo_barras=codigo_demo(siguiente),
+            nombre="Jamón pierna",
+            precio_clp=7990,
+            stock=3000,
+            por_peso=True,
+        ),
+        Producto(
+            codigo_barras=codigo_demo(siguiente + 1),
+            nombre="Pollo entero",
+            precio_clp=3990,
+            stock=8000,
+            por_peso=True,
+        ),
     ]
 
 

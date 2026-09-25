@@ -27,6 +27,11 @@ VERSION = "0.1.0"
 #: Cuántos respaldos automáticos se conservan antes de borrar el más antiguo.
 RESPALDOS_A_CONSERVAR = 7
 
+#: Además de esos, se guarda el último respaldo de cada uno de estos días hacia atrás. Hace
+#: falta porque se respalda al abrir y al cerrar: siete copias eran solo tres o cuatro días, y
+#: un error que se descubre el lunes suele venir de la semana anterior (fase 22).
+RESPALDOS_DIAS = 30
+
 #: Longitud mínima y máxima del PIN de acceso.
 PIN_LONGITUD_MIN = 4
 PIN_LONGITUD_MAX = 8
@@ -48,10 +53,23 @@ LONGITUD_PIN_GENERADO = 4
 #: Si es False, una venta que dejaría el stock en negativo se rechaza.
 #: Se deja como constante y no como opción de interfaz porque cambiarlo es una decisión
 #: de negocio del cliente, no del cajero. Ver D-009 en docs/DECISIONES.md.
-PERMITIR_STOCK_NEGATIVO = False
+#:
+#: **True desde el 2026-09-25** (Santiago, añadido a D-009): las cantidades del catálogo de la
+#: tienda no están contadas, y una caja que se niega a cobrar lo que el cliente tiene en la mano
+#: es peor que un stock que queda en negativo. El negativo avisa de que falta cargar mercadería.
+PERMITIR_STOCK_NEGATIVO = True
 
 #: Longitud máxima aceptada para un código de barras leído.
 CODIGO_LONGITUD_MAX = 32
+
+#: Tope del peso de una línea vendida por peso (D-037): 50 kg. Un tope, y no un límite del
+#: negocio: sirve para que un cero de más al teclear los gramos no cobre una fortuna.
+GRAMOS_MAX_POR_LINEA = 50_000
+
+#: Prefijo de los códigos internos que el sistema da a un producto por peso sin código de
+#: barras, como el pan (D-037). El 2 inicial es el que el estándar EAN reserva para uso
+#: interno de cada tienda, así que no choca con ningún código de fábrica.
+PREFIJO_CODIGO_INTERNO = "2"
 
 # --------------------------------------------------------------------------- red (D-015)
 

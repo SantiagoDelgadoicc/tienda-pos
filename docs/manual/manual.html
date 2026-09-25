@@ -239,19 +239,20 @@
     <li data-ir="entrar"><span class="num">3</span><span class="nombre">Entrar al programa</span><span class="pag"></span></li>
     <li data-ir="abrir"><span class="num">4</span><span class="nombre">Abrir la caja</span><span class="pag"></span></li>
     <li data-ir="vender"><span class="num">5</span><span class="nombre">Vender y cobrar</span><span class="pag"></span></li>
-    <li data-ir="corregir"><span class="num">6</span><span class="nombre">Corregir una venta y hacer descuentos</span><span class="pag"></span></li>
-    <li data-ir="consultar"><span class="num">7</span><span class="nombre">Consultar un precio · Cuando un producto no aparece</span><span class="pag"></span></li>
-    <li data-ir="efectivo"><span class="num">8</span><span class="nombre">Plata que sale o entra del cajón</span><span class="pag"></span></li>
-    <li data-ir="cerrar"><span class="num">9</span><span class="nombre">Cerrar la caja</span><span class="pag"></span></li>
+    <li data-ir="peso"><span class="num">6</span><span class="nombre">Vender por peso: pan, pollo, jamón</span><span class="pag"></span></li>
+    <li data-ir="corregir"><span class="num">7</span><span class="nombre">Corregir una venta y hacer descuentos</span><span class="pag"></span></li>
+    <li data-ir="consultar"><span class="num">8</span><span class="nombre">Consultar un precio · Cuando un producto no aparece</span><span class="pag"></span></li>
+    <li data-ir="efectivo"><span class="num">9</span><span class="nombre">Plata que sale o entra del cajón</span><span class="pag"></span></li>
+    <li data-ir="cerrar"><span class="num">10</span><span class="nombre">Cerrar la caja</span><span class="pag"></span></li>
     <li class="grupo">Solo el dueño</li>
-    <li data-ir="cierre"><span class="num">10</span><span class="nombre">El cierre de caja</span><span class="pag"></span></li>
-    <li data-ir="cuentas"><span class="num">11</span><span class="nombre">Las cuentas del efectivo y las ventas del día</span><span class="pag"></span></li>
-    <li data-ir="usuarios"><span class="num">12</span><span class="nombre">Empleados y claves</span><span class="pag"></span></li>
-    <li data-ir="productos"><span class="num">13</span><span class="nombre">Productos y precios</span><span class="pag"></span></li>
+    <li data-ir="cierre"><span class="num">11</span><span class="nombre">Ventas por caja: el cierre del día</span><span class="pag"></span></li>
+    <li data-ir="cuentas"><span class="num">12</span><span class="nombre">Las cuentas del efectivo y las ventas del día</span><span class="pag"></span></li>
+    <li data-ir="usuarios"><span class="num">13</span><span class="nombre">Empleados y claves</span><span class="pag"></span></li>
+    <li data-ir="productos"><span class="num">14</span><span class="nombre">Productos y precios</span><span class="pag"></span></li>
     <li class="grupo">Referencia</li>
-    <li data-ir="configuracion"><span class="num">14</span><span class="nombre">Configuración y cambio de usuario</span><span class="pag"></span></li>
-    <li data-ir="atajos"><span class="num">15</span><span class="nombre">Atajos de teclado</span><span class="pag"></span></li>
-    <li data-ir="cuidados"><span class="num">16</span><span class="nombre">Cuidados, respaldos y soporte</span><span class="pag"></span></li>
+    <li data-ir="configuracion"><span class="num">15</span><span class="nombre">Configuración y cambio de usuario</span><span class="pag"></span></li>
+    <li data-ir="atajos"><span class="num">16</span><span class="nombre">Atajos de teclado</span><span class="pag"></span></li>
+    <li data-ir="cuidados"><span class="num">17</span><span class="nombre">Cuidados, respaldos y soporte</span><span class="pag"></span></li>
   </ul>
 </section>
 
@@ -283,13 +284,13 @@
     <tr><td>Anotar un pago a proveedor o un ingreso de sencillo</td><td>Sí</td><td>Sí</td></tr>
     <tr><td>Anotar un retiro de plata</td><td>No</td><td>Sí, con su PIN</td></tr>
     <tr><td>Ver cuánto debería haber en el cajón</td><td>No</td><td>Sí</td></tr>
-    <tr><td>Cierre de caja y ventas del día</td><td>No</td><td>Sí</td></tr>
+    <tr><td>Ventas por caja y ventas del día</td><td>No</td><td>Sí</td></tr>
     <tr><td>Productos, precios y empleados</td><td>No</td><td>Sí</td></tr>
   </table>
 
   <div class="aviso">
     <span class="titulo">Importante</span>
-    <p>La clave es personal. Quien presta la suya firma las ventas y los movimientos de plata del otro. Si alguien la olvida, el dueño le genera una nueva en un minuto (sección 12).</p>
+    <p>La clave es personal. Quien presta la suya firma las ventas y los movimientos de plata del otro. Si alguien la olvida, el dueño le genera una nueva en un minuto (sección 13).</p>
   </div>
 </section>
 
@@ -317,12 +318,12 @@
     <div class="momento">
       <div class="cuando">Cuando pase</div>
       <div class="que">Anotar la plata que sale</div>
-      <div class="como">Retiros, pagos a proveedores y sencillo. Sección 8.</div>
+      <div class="como">Retiros, pagos a proveedores y sencillo. Sección 9.</div>
     </div>
     <div class="momento fin">
       <div class="cuando">Al terminar</div>
       <div class="que">Cerrar la caja</div>
-      <div class="como">Contando otra vez el cajón. Sección 9.</div>
+      <div class="como">Contando otra vez el cajón. Sección 10.</div>
     </div>
   </div>
 
@@ -397,7 +398,7 @@
   <p>Aparece al intentar cobrar sin haberla abierto. La venta no se pierde: abra la caja en el aviso que aparece y cobre a continuación.</p>
 
   <h2>El monto con que se propone abrir</h2>
-  <p>Lo fija el dueño (sección 11). Sirve para dejar preparado el cajón con el mismo sencillo todas las mañanas. <strong>Aunque exista, quien abre siempre escribe lo que contó.</strong></p>
+  <p>Lo fija el dueño (sección 12). Sirve para dejar preparado el cajón con el mismo sencillo todas las mañanas. <strong>Aunque exista, quien abre siempre escribe lo que contó.</strong></p>
 </section>
 
 <!-- =============================================================== 5 VENDER -->
@@ -411,7 +412,7 @@
   </figure>
 
   <ol class="pasos">
-    <li><strong>Escanee cada producto</strong> con el lector. Si el código está borrado o no hay lector, escriba el número y pulse <kbd>Enter</kbd>. Si escanea dos veces el mismo, se suma en la misma línea.</li>
+    <li><strong>Escanee cada producto</strong> con el lector. Si el código está borrado o no hay lector, escriba el número y pulse <kbd>Enter</kbd>. Si escanea dos veces el mismo, se suma en la misma línea. Si el producto se vende por peso, el programa pide los gramos (sección 6).</li>
     <li><strong>Marque cómo paga el cliente</strong>, bajo el total: <span class="efectivo">Efectivo</span>, <span class="debito">Débito</span> o <span class="credito">Crédito</span>. Con <kbd>F11</kbd> se pasa de uno a otro sin el mouse. Si no toca nada, queda en efectivo.</li>
     <li><strong>Cobre con <kbd>F12</kbd></strong> o con el botón verde <strong>Cobrar</strong>, y confirme. La venta queda guardada a su nombre, en su caja y con su medio de pago, y la pantalla queda lista para el siguiente cliente.</li>
   </ol>
@@ -423,9 +424,40 @@
   <p style="font-size:9.4pt;color:var(--suave)">El sistema no calcula el vuelto ni imprime boleta. El vuelto se da como siempre; el cajón cuadra igual, porque lo que entra es el total de la venta.</p>
 </section>
 
+<!-- =============================================================== 6 PESO -->
+<section class="hoja" id="peso">
+  <h1 class="seccion"><span class="n">6</span>Vender por peso</h1>
+  <p class="entrada">El pan, el pollo o el jamón tienen un precio por kilo. En la caja se pesan y se escriben los gramos: el programa calcula el precio.</p>
+
+  <figure style="width:150mm">
+    <img src="../img/16-venta-por-peso.png" alt="Venta con productos por peso">
+    <figcaption>Una venta con jamón y pan: en la línea se ven los gramos y el precio del kilo.</figcaption>
+  </figure>
+
+  <div class="dos-desigual" style="grid-template-columns:62mm 1fr">
+    <figure style="margin:0;width:62mm">
+      <img src="../img/17-peso.png" alt="Ventana del peso">
+      <figcaption>El precio aparece mientras se escribe.</figcaption>
+    </figure>
+    <ol class="pasos">
+      <li><strong>Pese el producto</strong> en la balanza.</li>
+      <li><strong>Escanéelo</strong> si tiene código. Si no tiene, como el pan, búsquelo por nombre con <kbd>F3</kbd>.</li>
+      <li>Se abre una ventana: <strong>escriba los gramos</strong>, por ejemplo 350, y pulse <kbd>Enter</kbd>. El precio se ve antes de aceptar.</li>
+    </ol>
+  </div>
+
+  <h2>Corregir el peso</h2>
+  <p>Con el <strong>+</strong> de la línea, o la flecha <kbd>→</kbd>, se vuelve a pesar: escriba el peso correcto. Con el <strong>−</strong>, la flecha <kbd>←</kbd> o <kbd>F5</kbd> se quita la línea entera. Si se escanea otra vez el mismo producto, los gramos se suman en la misma línea.</p>
+
+  <div class="aviso nota">
+    <span class="titulo">Bueno saber</span>
+    <p>El precio se redondea al peso más cercano: 350 g de jamón a $7.990 el kilo son $2.797. Cada línea por peso cuenta como un artículo, y el máximo es 50 kg por producto.</p>
+  </div>
+</section>
+
 <!-- =============================================================== 6 CORREGIR -->
 <section class="hoja" id="corregir">
-  <h1 class="seccion"><span class="n">6</span>Corregir una venta y hacer descuentos</h1>
+  <h1 class="seccion"><span class="n">7</span>Corregir una venta y hacer descuentos</h1>
   <p class="entrada">Todo se puede corregir antes de cobrar. Una vez cobrada, la venta queda registrada tal como se hizo.</p>
 
   <div class="dos">
@@ -458,7 +490,7 @@
 
 <!-- =============================================================== 7 CONSULTAR -->
 <section class="hoja" id="consultar">
-  <h1 class="seccion"><span class="n">7</span>Consultar un precio</h1>
+  <h1 class="seccion"><span class="n">8</span>Consultar un precio</h1>
   <p class="entrada">Para responder "¿cuánto cuesta esto?" sin tocar la venta que está armando.</p>
 
   <div class="dos-desigual">
@@ -485,14 +517,14 @@
     </figure>
     <div>
       <p><strong>Si el producto existe pero el código no se lee</strong>, pulse <em>Buscar por nombre</em> (<kbd>F3</kbd>) y elíjalo de la lista.</p>
-      <p><strong>Si el producto no está cargado</strong>, no hace falta anotarlo en un papel: el sistema guarda el código en una lista de pendientes, y el dueño lo carga después (sección 13).</p>
+      <p><strong>Si el producto no está cargado</strong>, no hace falta anotarlo en un papel: el sistema guarda el código en una lista de pendientes, y el dueño lo carga después (sección 14).</p>
     </div>
   </div>
 </section>
 
 <!-- =============================================================== 8 EFECTIVO -->
 <section class="hoja" id="efectivo">
-  <h1 class="seccion"><span class="n">8</span>Plata que sale o entra del cajón</h1>
+  <h1 class="seccion"><span class="n">9</span>Plata que sale o entra del cajón</h1>
   <p class="entrada">Todo lo que sale o entra del cajón sin ser una venta se anota en <strong>Efectivo</strong>, en la barra lateral, en el momento en que pasa.</p>
 
   <figure>
@@ -515,7 +547,7 @@
 
 <!-- =============================================================== 9 CERRAR -->
 <section class="hoja" id="cerrar">
-  <h1 class="seccion"><span class="n">9</span>Cerrar la caja</h1>
+  <h1 class="seccion"><span class="n">10</span>Cerrar la caja</h1>
   <p class="entrada">Al terminar el día, cada caja se cierra contando la plata del cajón. Es lo que permite saber si la caja cuadró.</p>
 
   <ol class="pasos">
@@ -532,7 +564,7 @@
 
   <h2>Cosas que conviene saber</h2>
   <ul>
-    <li>Cerrar la caja <strong>no borra nada ni bloquea el programa</strong>: solo guarda la cuenta. Las ventas siguen viéndose en el cierre de caja.</li>
+    <li>Cerrar la caja <strong>no borra nada ni bloquea el programa</strong>: solo guarda la cuenta. Las ventas siguen viéndose en <strong>Ventas por caja</strong>.</li>
     <li>Todo lo vendido desde que se abrió la caja cuenta para ese cierre, <strong>aunque pase la medianoche</strong>.</li>
     <li>Si un computador no enciende y su caja quedó abierta, el dueño puede cerrarla desde el otro.</li>
     <li>Si el conteo no cuadra, el programa lo anota igual. Qué hacer con la diferencia lo decide el dueño.</li>
@@ -552,12 +584,12 @@
 <!-- =============================================================== 10 CIERRE -->
 <section class="hoja" id="cierre">
   <span class="etiqueta-dueno">Solo el dueño</span>
-  <h1 class="seccion"><span class="n">10</span>El cierre de caja</h1>
-  <p class="entrada">Lo vendido en una caja durante un día: el total, separado por forma de pago y por empleado, con cada venta y sus productos.</p>
+  <h1 class="seccion"><span class="n">11</span>Ventas por caja</h1>
+  <p class="entrada">El cierre del día: lo vendido en una caja durante un día, el total separado por forma de pago y por empleado, con cada venta y sus productos.</p>
 
   <figure>
-    <img src="../img/14-cierre.png" alt="Cierre de caja">
-    <figcaption>El cierre de la Caja 1. Cada forma de pago tiene su color, el mismo que en la pantalla de venta.</figcaption>
+    <img src="../img/14-cierre.png" alt="Ventas por caja">
+    <figcaption>Ventas por caja, de la Caja 1. Cada forma de pago tiene su color, el mismo que en la pantalla de venta.</figcaption>
   </figure>
 
   <div class="dos">
@@ -573,7 +605,7 @@
     <div>
       <h2>Bueno saber</h2>
       <ul>
-        <li>El informe se puede mirar las veces que quiera: <strong>mirarlo no cierra nada</strong>. La caja se cierra en <strong>Efectivo</strong> (sección 9).</li>
+        <li>El informe se puede mirar las veces que quiera: <strong>mirarlo no cierra nada</strong>. La caja se cierra en <strong>Efectivo</strong> (sección 10).</li>
         <li>Si la tienda vende pasada la medianoche, lo vendido después de las 00:00 aparece en el día siguiente de este informe. El conteo del cajón en <strong>Efectivo</strong> no cambia por eso.</li>
         <li>Las ventas anteriores a esta versión aparecen como "Sin caja registrada" y con la forma de pago "Sin registrar".</li>
       </ul>
@@ -584,11 +616,11 @@
 <!-- =============================================================== 11 CUENTAS -->
 <section class="hoja" id="cuentas">
   <span class="etiqueta-dueno">Solo el dueño</span>
-  <h1 class="seccion"><span class="n">11</span>Las cuentas del efectivo y las ventas del día</h1>
+  <h1 class="seccion"><span class="n">12</span>Las cuentas del efectivo y las ventas del día</h1>
   <p class="entrada">En <strong>Efectivo</strong>, el dueño ve lo que el cajero no ve: cuánto debería haber y cómo terminaron los cierres.</p>
 
   <h2>Ver cuánto debería haber</h2>
-  <p>Si entró como administrador, lo ve directamente. Si está atendiendo un cajero, pulse <span class="boton">Ver las cuentas</span> y escriba su PIN: el cajero sigue en su sesión, y las cuentas se ocultan al salir de la pantalla.</p>
+  <p>Si entró como administrador, lo ve directamente. Si está atendiendo un cajero, pulse <span class="boton">Ver las cuentas</span> y escriba su PIN: el cajero sigue en su sesión. Las cuentas se ocultan solas a los dos minutos o al salir de la pantalla; si se va antes, pulse <span class="boton">Ocultar las cuentas</span>.</p>
 
   <h2>Cierres anteriores</h2>
   <p>Abajo, en <strong>Efectivo</strong>, cada cierre de las dos cajas: cuánto debía haber, cuánto se contó, si <strong>sobró o faltó</strong> y quién cerró. Una caja que sigue abierta aparece como "Abierta".</p>
@@ -607,7 +639,7 @@
     </figure>
     <div>
       <p>Pulse <kbd>F8</kbd>. Muestra lo vendido hoy <strong>entre las dos cajas</strong>: el total, cuántas ventas y cuántos artículos.</p>
-      <p>Al elegir una venta, a la derecha se ve lo que llevaba. Para el detalle de una sola caja, use el cierre de caja.</p>
+      <p>Al elegir una venta, a la derecha se ve lo que llevaba. Para el detalle de una sola caja, use <strong>Ventas por caja</strong>.</p>
     </div>
   </div>
 </section>
@@ -615,7 +647,7 @@
 <!-- =============================================================== 12 USUARIOS -->
 <section class="hoja" id="usuarios">
   <span class="etiqueta-dueno">Solo el dueño</span>
-  <h1 class="seccion"><span class="n">12</span>Empleados y claves</h1>
+  <h1 class="seccion"><span class="n">13</span>Empleados y claves</h1>
   <p class="entrada">En <strong>Usuarios</strong>, en la barra lateral, se da de alta a cada persona que atiende.</p>
 
   <figure style="width:138mm">
@@ -643,16 +675,16 @@
     <span class="titulo">El PIN se ve una sola vez</span>
     <p>Cuando el sistema genera un PIN, lo enseña en pantalla una única vez. <strong>Que el empleado lo anote en ese momento.</strong> Si lo pierde, se le genera otro con <span class="boton">PIN nuevo</span>.</p>
   </div>
-  <p style="font-size:9.4pt;color:var(--suave)">Si el dueño olvida su propio PIN, se recupera en la Caja 1 con ayuda de soporte (sección 16). El sistema no deja dar de baja al último administrador ni a uno mismo.</p>
+  <p style="font-size:9.4pt;color:var(--suave)">Si el dueño olvida su propio PIN, se recupera en la Caja 1 con ayuda de soporte (sección 17). El sistema no deja dar de baja al último administrador ni a uno mismo.</p>
 </section>
 
 <!-- =============================================================== 13 PRODUCTOS -->
 <section class="hoja" id="productos">
   <span class="etiqueta-dueno">Solo el dueño</span>
-  <h1 class="seccion"><span class="n">13</span>Productos y precios</h1>
+  <h1 class="seccion"><span class="n">14</span>Productos y precios</h1>
   <p class="entrada">Pulse <kbd>F7</kbd>. Si está atendiendo un cajero, el programa pide el PIN del dueño, sin cambiar quién está en la caja.</p>
 
-  <figure>
+  <figure style="width:146mm">
     <img src="../img/06-productos.png" alt="Catálogo de productos">
     <figcaption>El catálogo. El stock se marca en rojo cuando quedan 5 unidades o menos.</figcaption>
   </figure>
@@ -661,6 +693,7 @@
     <tr><th>Acción</th><th>Cómo</th></tr>
     <tr><td>Buscar</td><td>Escriba parte del nombre o del código en el filtro.</td></tr>
     <tr><td>Nuevo producto</td><td>Lo más cómodo es escanear el código dentro del formulario. Luego el nombre, el precio y el stock.</td></tr>
+    <tr><td>Producto por peso</td><td>Marque <strong>Se vende por peso</strong>: el precio pasa a ser el del kilo y el stock se anota en gramos. Al llegar a cero se queda en cero. Si no tiene código, como el pan, déjelo vacío y el sistema le pone uno.</td></tr>
     <tr><td>Cambiar un precio</td><td><strong>Editar</strong>, o doble clic en el producto. El precio nuevo se ve al instante en las dos cajas. Las ventas pasadas conservan el precio al que se vendieron.</td></tr>
     <tr><td>Dar de baja</td><td>El producto deja de venderse, pero <strong>no se borra</strong>: las ventas antiguas siguen correctas.</td></tr>
     <tr><td>Códigos pendientes</td><td>Los códigos que se escanearon en la caja y no están cargados, ordenados por cuántas veces se intentaron.</td></tr>
@@ -668,13 +701,13 @@
 
   <div class="aviso nota">
     <span class="titulo">Bueno saber</span>
-    <p>El stock baja solo con cada venta. Si al contar la mercadería no coincide, corríjalo editando el producto.</p>
+    <p>El stock baja solo con cada venta. <strong>Que no haya stock nunca impide vender</strong>: si se vende más de lo que había, el stock queda en negativo (por ejemplo −3) y avisa de que falta cargar mercadería. Si al contar la mercadería no coincide, corríjalo con <span class="boton">Stock</span> o editando el producto.</p>
   </div>
 </section>
 
 <!-- =============================================================== 14 CONFIG -->
 <section class="hoja" id="configuracion">
-  <h1 class="seccion"><span class="n">14</span>Configuración y cambio de usuario</h1>
+  <h1 class="seccion"><span class="n">15</span>Configuración y cambio de usuario</h1>
   <p class="entrada">Pulse <kbd>F9</kbd>, o <strong>Configuración</strong> al pie de la barra lateral. Los ajustes se guardan en cada computador.</p>
 
   <div class="dos-desigual" style="grid-template-columns: 70mm 1fr">
@@ -702,7 +735,7 @@
 
 <!-- =============================================================== 15 ATAJOS -->
 <section class="hoja" id="atajos">
-  <h1 class="seccion"><span class="n">15</span>Atajos de teclado</h1>
+  <h1 class="seccion"><span class="n">16</span>Atajos de teclado</h1>
   <p class="entrada">Con estas teclas se trabaja sin tocar el mouse. <kbd>F1</kbd> muestra esta lista dentro del programa.</p>
 
   <div class="atajos">
@@ -741,7 +774,7 @@
 
 <!-- =============================================================== 16 CUIDADOS -->
 <section class="hoja" id="cuidados">
-  <h1 class="seccion"><span class="n">16</span>Cuidados, respaldos y soporte</h1>
+  <h1 class="seccion"><span class="n">17</span>Cuidados, respaldos y soporte</h1>
   <p class="entrada">Todo lo de la tienda está guardado en la Caja 1. Estos cuidados lo protegen.</p>
 
   <div class="dos">
@@ -774,7 +807,7 @@
   </table>
 
   <h2>Lo que este sistema no hace</h2>
-  <p style="font-size:9.6pt">No emite boletas ni facturas y no está conectado al SII. No imprime comprobantes ni calcula el vuelto. No vende por peso o a granel. No anula ventas ya cobradas.</p>
+  <p style="font-size:9.6pt">No emite boletas ni facturas y no está conectado al SII. No imprime comprobantes ni calcula el vuelto. No anula ventas ya cobradas.</p>
 
   <h2>Soporte</h2>
   <div class="firma">

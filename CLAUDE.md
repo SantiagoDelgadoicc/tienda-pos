@@ -13,8 +13,10 @@ instalador. Ver las fases 8 a 14 de `docs/PLAN.md`.
 Desde el 2026-09-18 hay una **tercera etapa**, también pedida por el cliente: un usuario por
 empleado, cierre diario por caja y medio de pago. Son las fases 15 a 20 de `docs/PLAN.md`, que
 empiezan con un apartado **"Cómo retomar"**: qué está hecho, qué falta y qué espera al cliente.
-Las fases 15 a 19 están hechas; la 19 es el arqueo de caja, siempre activo (D-036). **Lo
-siguiente es la fase 20**, el manual.
+Las fases 15 a 19 están hechas; la 19 es el arqueo de caja, siempre activo (D-036). El manual
+(fase 20) está hecho, en PDF. El 2026-09-25 se agregó la **venta por peso** (fase 21, D-037),
+pedida por el cliente. Esa misma tarde, víspera de instalar, una revisión del código encontró y
+arregló ocho errores (fase 22); el protocolo entre cajas pasó a la **versión 8**.
 
 ## 2. Contexto del cliente
 
@@ -103,6 +105,12 @@ parte la caja:
 - → **Cuadrar el efectivo del cajón pasa a ser requisito del cliente** (fase 19, D-036). Queda
   sin contestar quién cuenta al cerrar y qué hacen si no cuadra (H1d).
 
+De lo que contó el 2026-09-25, que se le había olvidado:
+
+- **Vender por peso** el pan, el pollo o el jamón: se fija el precio del kilo y en la caja se
+  teclean los gramos, escaneando si tiene código y buscándolo por nombre si no (D-037). Cómo se
+  lleva el stock de esos productos lo decidió Santiago: en gramos y sin impedir vender.
+
 ### 3.2 Decidido por Santiago (dueño del proyecto)
 
 - Alcance: POS con venta e inventario mínimo, no solo consulta de precios.
@@ -132,7 +140,8 @@ parte la caja:
   de ejemplo solo se cargan con `--demo`.
 - Funcionamiento **sin internet**. *(Lo que decía antes esta línea —"local en un solo PC, sin red"—
   queda superado por D-015: sigue sin internet, pero ahora hay una red local entre las dos cajas.)*
-- Venta solo por unidad (nada a granel ni por peso).
+- ~~Venta solo por unidad~~. *Retirado el 2026-09-25:* el cliente pidió vender por peso (ver 3.1 y
+  D-037). Sigue sin haber venta a granel sin pesar.
 - Rubro asumido para el catálogo demo: almacén / minimarket.
 - Reportes mínimos: ventas del día.
 - Descuento manual aplicable a la venta entera o a un producto concreto.
@@ -161,8 +170,10 @@ Añadido tras la reunión del 2026-09-13:
 - El multipuesto se resuelve con **un proceso servidor dueño del archivo**, no con la base en una
   carpeta compartida de red (D-015).
 - Criterios de rendimiento **medidos**, con catálogo sintético de 20.000 productos (D-022).
-- **Movimientos de inventario**: el stock no cambia sin dejar rastro (D-018). Sigue en pie tras la
+- **Movimientos de inventario**: que el stock no cambie sin dejar rastro (D-018). Sigue en pie tras la
   retirada de D-016 y D-017: no es un atributo del producto y no depende de ninguno de los dos.
+  **Decidido, pero sin construir**: es la fase 9, pendiente. Hoy el stock baja con cada venta y se
+  corrige a mano sin historial de por qué cambió. No prometérselo al cliente como hecho.
 - Importación y exportación **solo CSV**, con la biblioteca estándar (D-019).
 
 ### 3.3 Supuestos (a validar, no confirmados por nadie)
@@ -266,7 +277,7 @@ src/tienda_pos/
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    586 pruebas
+tests/                    659 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -303,7 +314,7 @@ python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
 python main.py --demo                 # con el catálogo y los usuarios de ejemplo, en una base vacía
 python main.py --reiniciar-admin      # recuperar un administrador; solo en el PC de la base
-pytest                                # pruebas (586, dos minutos)
+pytest                                # pruebas (659, dos minutos)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

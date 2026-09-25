@@ -99,6 +99,49 @@ class TestPantalla:
         cajera.mostrar_efectivo()
         assert vista.panel_cuentas.isHidden()
 
+    @pytest.fixture
+    def cuentas_prestadas(self, cajera, conexion, monkeypatch):
+        """La cajera opera y el dueño puso su PIN en "Ver las cuentas"."""
+        admin = auth.autenticar(conexion, "Administrador", "1234")
+        monkeypatch.setattr(main_window.DialogoLogin, "pedir", staticmethod(lambda *a, **k: admin))
+        cajera.mostrar_efectivo()
+        cajera.vista_efectivo.boton_ver_cuentas.click()
+        return cajera.vista_efectivo
+
+    def test_las_cuentas_prestadas_se_pueden_ocultar(self, cuentas_prestadas) -> None:
+        vista = cuentas_prestadas
+        assert not vista.boton_ocultar_cuentas.isHidden()
+        vista.boton_ocultar_cuentas.click()
+        assert vista.panel_cuentas.isHidden() and vista.panel_cierres.isHidden()
+        assert not vista.boton_ver_cuentas.isHidden()
+        assert vista.boton_ocultar_cuentas.isHidden()
+
+    def test_las_cuentas_prestadas_se_ocultan_solas(self, cuentas_prestadas) -> None:
+        """Fase 22: si el dueño se va, el conteo vuelve a ser a ciegas."""
+        vista = cuentas_prestadas
+        assert vista._temporizador_cuentas.isActive()
+        assert vista._temporizador_cuentas.interval() == efectivo_view.CUENTAS_PRESTADAS_MS
+        vista._temporizador_cuentas.timeout.emit()
+        assert vista.panel_cuentas.isHidden()
+        vista.recargar()  # "Actualizar" tampoco las devuelve
+        assert vista.panel_cuentas.isHidden()
+
+    def test_al_administrador_en_su_caja_no_se_le_ocultan(self, como_admin, conexion) -> None:
+        como_admin.establecer_usuario(auth.autenticar(conexion, "Administrador", "1234"))
+        como_admin.mostrar_efectivo()
+        vista = como_admin.vista_efectivo
+        assert not vista._temporizador_cuentas.isActive()
+        assert vista.boton_ocultar_cuentas.isHidden()
+        assert not vista.panel_cuentas.isHidden()
+
+    def test_si_cierra_la_cajera_con_el_dueno_mirando_el_ve_la_diferencia(
+        self, cuentas_prestadas, respuestas, avisos
+    ) -> None:
+        respuestas((500, ""))
+        cuentas_prestadas.boton_cerrar.click()
+        (mensaje,) = avisos
+        assert "Debería haber: $0" in mensaje and "Sobran $500" in mensaje
+
     def test_sin_pin_siguen_ocultas(self, cajera, sin_autorizacion) -> None:
         cajera.mostrar_efectivo()
         cajera.vista_efectivo.boton_ver_cuentas.click()

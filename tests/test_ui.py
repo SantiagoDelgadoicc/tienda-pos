@@ -403,6 +403,103 @@ class TestCobrar:
         assert repo_ventas.resumen_del_dia(conexion)["cantidad_ventas"] == 0
 
 
+class TestCobroSinRespuesta:
+    """Un cobro que se registra pero cuya respuesta no llega, como en la caja 2 (fase 22).
+
+    Antes, cancelar esa venta dejaba el intento de cobro guardado, y el cliente siguiente se
+    cobraba con él: el servidor devolvía la venta vieja y la nueva no se registraba.
+    """
+
+    @pytest.fixture
+    def pierde_la_respuesta(self, ventana, monkeypatch):
+        from tienda_pos.red.cliente import ServidorNoDisponible
+
+        sesion = ventana.vista_venta._sesion
+        original = sesion.cerrar_venta
+        pendientes = [True]
+
+        def cerrar_venta(*args, **kwargs):
+            venta = original(*args, **kwargs)
+            if pendientes:
+                pendientes.pop()
+                raise ServidorNoDisponible("sin respuesta")
+            return venta
+
+        monkeypatch.setattr(sesion, "cerrar_venta", cerrar_venta)
+        return ventana.vista_venta
+
+    @staticmethod
+    def _errores(monkeypatch) -> list[str]:
+        mensajes: list[str] = []
+        monkeypatch.setattr(dialogos, "mostrar_error", lambda _p, texto, *a, **k: mensajes.append(texto))
+        return mensajes
+
+    def test_cancelar_no_se_come_la_venta_del_cliente_siguiente(
+        self, pierde_la_respuesta, conexion
+    ) -> None:
+        vista = pierde_la_respuesta
+        vista.agregar_por_codigo(COLA)
+        vista.cobrar()
+        vista.cancelar_venta()
+        vista.agregar_por_codigo(LECHE)
+        vista.agregar_por_codigo(LECHE)
+        vista.cobrar()
+
+        ventas = repo_ventas.del_dia(conexion)
+        assert len(ventas) == 2  # la primera quedó registrada, y la segunda también
+        assert ventas[0].total_clp == 2 * 1290
+        assert vista.mensaje.text().startswith(f"Venta N° {ventas[0].folio} ")
+
+    def test_cambiar_de_usuario_tambien_olvida_el_intento(self, pierde_la_respuesta, ventana, monkeypatch) -> None:
+        vista = pierde_la_respuesta
+        vista.agregar_por_codigo(COLA)
+        vista.cobrar()
+        assert vista._intento_cobro is not None
+        monkeypatch.setattr(
+            "tienda_pos.ui.main_window.DialogoLogin.pedir",
+            staticmethod(lambda *a, **k: vista.usuario),
+        )
+        ventana.cambiar_usuario()
+        assert vista._intento_cobro is None
+
+    def test_reintentar_el_mismo_carrito_no_cobra_dos_veces(
+        self, pierde_la_respuesta, conexion, monkeypatch
+    ) -> None:
+        errores = self._errores(monkeypatch)
+        vista = pierde_la_respuesta
+        vista.agregar_por_codigo(COLA)
+        vista.cobrar()
+        vista.cobrar()
+        assert len(repo_ventas.del_dia(conexion)) == 1
+        assert vista.carrito.esta_vacio
+        assert len(errores) == 1  # solo el "sin conexión" del primer intento
+
+    def test_si_el_carrito_cambio_se_avisa_que_la_venta_es_la_anterior(
+        self, pierde_la_respuesta, conexion, monkeypatch
+    ) -> None:
+        errores = self._errores(monkeypatch)
+        vista = pierde_la_respuesta
+        vista.agregar_por_codigo(COLA)
+        vista.cobrar()
+        vista.agregar_por_codigo(LECHE)
+        vista.cobrar()
+
+        (venta,) = repo_ventas.del_dia(conexion)
+        assert venta.total_clp == 2290
+        assert "intento anterior" in errores[-1] and "$2.290" in errores[-1]
+
+    def test_un_rechazo_del_servidor_olvida_el_intento(self, ventana, conexion) -> None:
+        from tienda_pos.repositories import productos as repo_productos
+
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(COLA)
+        producto = repo_productos.obtener_por_codigo(conexion, COLA)
+        repo_productos.desactivar(conexion, producto.id)
+        vista.cobrar()  # "ya no está disponible": el servidor contestó, no hay venta
+        assert vista._intento_cobro is None
+        assert repo_ventas.del_dia(conexion) == []
+
+
 class TestConsultaDePrecio:
     def test_muestra_nombre_y_precio(self, ventana) -> None:
         ventana.mostrar_consulta()

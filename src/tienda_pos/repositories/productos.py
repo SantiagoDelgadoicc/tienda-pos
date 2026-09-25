@@ -12,7 +12,9 @@ import sqlite3
 from ..domain.errors import ProductoDuplicado
 from ..domain.models import Producto
 
-_COLUMNAS = "id, codigo_barras, nombre, precio_clp, stock, activo, creado_en, actualizado_en"
+_COLUMNAS = (
+    "id, codigo_barras, nombre, precio_clp, stock, activo, creado_en, actualizado_en, por_peso"
+)
 
 
 def _a_producto(fila: sqlite3.Row) -> Producto:
@@ -25,6 +27,7 @@ def _a_producto(fila: sqlite3.Row) -> Producto:
         activo=bool(fila["activo"]),
         creado_en=fila["creado_en"],
         actualizado_en=fila["actualizado_en"],
+        por_peso=bool(fila["por_peso"]),
     )
 
 
@@ -87,14 +90,15 @@ def crear(conexion: sqlite3.Connection, producto: Producto) -> Producto:
     """
     try:
         cursor = conexion.execute(
-            "INSERT INTO producto (codigo_barras, nombre, precio_clp, stock, activo) "
-            "VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO producto (codigo_barras, nombre, precio_clp, stock, activo, por_peso) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
             (
                 producto.codigo_barras,
                 producto.nombre,
                 producto.precio_clp,
                 producto.stock,
                 int(producto.activo),
+                int(producto.por_peso),
             ),
         )
     except sqlite3.IntegrityError as exc:
@@ -110,13 +114,14 @@ def actualizar(conexion: sqlite3.Connection, producto: Producto) -> None:
     try:
         conexion.execute(
             "UPDATE producto SET codigo_barras = ?, nombre = ?, precio_clp = ?, stock = ?, "
-            "activo = ?, actualizado_en = datetime('now', 'localtime') WHERE id = ?",
+            "activo = ?, por_peso = ?, actualizado_en = datetime('now', 'localtime') WHERE id = ?",
             (
                 producto.codigo_barras,
                 producto.nombre,
                 producto.precio_clp,
                 producto.stock,
                 int(producto.activo),
+                int(producto.por_peso),
                 producto.id,
             ),
         )
@@ -138,8 +143,32 @@ def desactivar(conexion: sqlite3.Connection, producto_id: int) -> None:
     )
 
 
-def descontar_stock(conexion: sqlite3.Connection, producto_id: int, cantidad: int) -> None:
-    """Resta unidades del stock. Debe llamarse dentro de una transacción."""
+def ultimo_codigo_interno(conexion: sqlite3.Connection, prefijo: str) -> str | None:
+    """El mayor código interno ya dado: `prefijo` seguido de seis cifras (D-037)."""
+    fila = conexion.execute(
+        "SELECT codigo_barras FROM producto WHERE codigo_barras GLOB ? "
+        "ORDER BY codigo_barras DESC LIMIT 1",
+        (prefijo + "[0-9]" * 6,),
+    ).fetchone()
+    return fila["codigo_barras"] if fila else None
+
+
+def descontar_stock(
+    conexion: sqlite3.Connection, producto_id: int, cantidad: int, sin_bajar_de_cero: bool = False
+) -> None:
+    """Resta del stock (unidades, o gramos si es por peso). Dentro de una transacción.
+
+    `sin_bajar_de_cero` es para los productos por peso (D-037): su stock no impide vender,
+    porque el pan o el pollo casi nunca se pesan al llegar, y un stock negativo no le diría
+    nada útil a nadie.
+    """
+    if sin_bajar_de_cero:
+        conexion.execute(
+            "UPDATE producto SET stock = MAX(stock - ?, 0), "
+            "actualizado_en = datetime('now', 'localtime') WHERE id = ?",
+            (cantidad, producto_id),
+        )
+        return
     conexion.execute(
         "UPDATE producto SET stock = stock - ?, "
         "actualizado_en = datetime('now', 'localtime') WHERE id = ?",

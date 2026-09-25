@@ -42,8 +42,9 @@ _FORMATO_FECHA_HORA = "%Y-%m-%d %H:%M:%S"
 #:
 #: Historia: 1, dos cajas (fase 13) · 2, administración de usuarios (fase 15) · 3, cada venta
 #: dice de qué caja viene (fase 16) · 4, y con qué se pagó (fase 17) · 5, el cierre por caja
-#: (fase 18) · 6, el arqueo de caja (fase 19).
-VERSION_PROTOCOLO = 6
+#: (fase 18) · 6, el arqueo de caja (fase 19) · 7, la venta por peso (D-037) · 8, editar un
+#: producto sin mandar el stock lo deja como está (fase 22): un servidor de la 7 fallaría con él.
+VERSION_PROTOCOLO = 8
 
 
 # --------------------------------------------------------------------------- dominio → JSON
@@ -59,6 +60,7 @@ def de_producto(p: Producto) -> dict[str, Any]:
         "activo": p.activo,
         "creado_en": p.creado_en,
         "actualizado_en": p.actualizado_en,
+        "por_peso": p.por_peso,
     }
 
 
@@ -79,6 +81,7 @@ def de_linea_venta(linea: LineaVenta) -> dict[str, Any]:
         "cantidad": linea.cantidad,
         "subtotal_clp": linea.subtotal_clp,
         "descuento_clp": linea.descuento_clp,
+        "gramos": linea.gramos,
     }
 
 
@@ -124,6 +127,7 @@ def a_producto(d: dict[str, Any]) -> Producto:
         activo=d["activo"],
         creado_en=d.get("creado_en"),
         actualizado_en=d.get("actualizado_en"),
+        por_peso=bool(d.get("por_peso", False)),
     )
 
 
@@ -142,6 +146,7 @@ def a_linea_venta(d: dict[str, Any]) -> LineaVenta:
         cantidad=d["cantidad"],
         subtotal_clp=d["subtotal_clp"],
         descuento_clp=d.get("descuento_clp", 0),
+        gramos=d.get("gramos"),
     )
 
 

@@ -47,7 +47,7 @@ _ADMINISTRACION = (
     ("reportes", "Ventas del día", "informe", "F8"),
     # Sin tecla, como Usuarios: F1 a F12 están tomadas. Se mira una vez al día, al cerrar, y
     # se llega también desde las ventas del día (F8), que es donde el dueño lo va a buscar.
-    ("cierre", "Cierre de caja", "registradora", ""),
+    ("cierre", "Ventas por caja", "registradora", ""),
     # Sin tecla: F1 a F12 están tomadas, y es una pantalla que se abre cuando entra o se va
     # alguien, no varias veces al día.
     ("usuarios", "Usuarios", "usuario", ""),

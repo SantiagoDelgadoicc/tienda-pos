@@ -12,12 +12,14 @@ from datetime import datetime
 from ..config import PERMITIR_STOCK_NEGATIVO
 from ..db.connection import transaccion
 from ..domain.errors import (
+    CajaCerrada,
     CarritoVacio,
     DatosInvalidos,
     DescuentoInvalido,
     StockInsuficiente,
 )
 from ..domain.models import LineaCarrito, LineaVenta, MedioPago, Producto, Usuario, Venta
+from ..repositories import arqueo as repo_arqueo
 from ..repositories import productos as repo_productos
 from ..repositories import ventas as repo_ventas
 from ..utils.money import porcentaje_de
@@ -285,6 +287,7 @@ def cerrar_venta(
     *,
     caja: str | None = None,
     medio_pago: MedioPago | str | None = MedioPago.EFECTIVO,
+    exigir_turno: bool = False,
 ) -> Venta:
     """Registra la venta y descuenta el stock, todo dentro de una única transacción.
 
@@ -308,9 +311,13 @@ def cerrar_venta(
         medio_pago: con qué pagó el cliente (fase 17). Por defecto efectivo, que es el caso
             dominante. Se acepta el texto porque por la red llega texto; uno que no sea un medio
             conocido se rechaza. None deja la venta con el medio sin registrar.
+        exigir_turno: si es True y la caja no está abierta, no se cobra (fase 19, D-036). Lo
+            pone la sesión, que es la aplicación; el servicio a secas no lo exige, para no
+            obligar a abrir caja a quien lo usa sin interfaz. Con o sin él, la venta queda en
+            el turno abierto de su caja, si lo hay: es lo que la cuenta en el arqueo.
 
     Raises:
-        CarritoVacio, StockInsuficiente, DatosInvalidos
+        CarritoVacio, StockInsuficiente, DatosInvalidos, CajaCerrada
     """
     if carrito.esta_vacio:
         raise CarritoVacio()
@@ -330,7 +337,16 @@ def cerrar_venta(
 
     try:
         venta = _registrar(
-            conexion, carrito, usuario, intento_id, subtotal, descuento, total, caja, medio
+            conexion,
+            carrito,
+            usuario,
+            intento_id,
+            subtotal,
+            descuento,
+            total,
+            caja,
+            medio,
+            exigir_turno,
         )
     except sqlite3.IntegrityError:
         # Dos cobros con el mismo intento llegaron a la vez y este perdió la carrera contra el
@@ -369,10 +385,17 @@ def _registrar(
     total: int,
     caja: str | None = None,
     medio_pago: MedioPago | None = None,
+    exigir_turno: bool = False,
 ) -> Venta:
     """Cuerpo transaccional de `cerrar_venta`. Separado solo para que el manejo del reintento
     duplicado quede legible y fuera de la transacción."""
     with transaccion(conexion):
+        # Dentro de la transacción: si la caja se cerrara entre medias desde la otra caja, el
+        # bloqueo de escritura hace que esto vea el estado de verdad.
+        turno_id = repo_arqueo.id_turno_abierto(conexion, caja) if caja else None
+        if exigir_turno and caja and turno_id is None:
+            raise CajaCerrada(caja)
+
         for linea in carrito.lineas:
             producto = repo_productos.obtener_por_id(conexion, linea.producto_id)
             if producto is None or not producto.activo:
@@ -393,6 +416,7 @@ def _registrar(
             intento_id=intento_id,
             caja=caja,
             medio_pago=medio_pago,
+            turno_id=turno_id,
             lineas=[
                 LineaVenta(
                     producto_id=linea.producto_id,

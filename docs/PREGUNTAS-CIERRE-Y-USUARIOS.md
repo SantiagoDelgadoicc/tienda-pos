@@ -9,10 +9,13 @@ misma conversación.
 
 ---
 
-> **Actualización del 2026-09-24.** El cliente contestó una parte por WhatsApp el 2026-09-23. Las
-> respuestas están en la columna de la derecha, con lo que se decidió a partir de ellas. Siguen
-> abiertas, por orden de lo que cuestan: **H10** (medianoche), **H8** (nombre de las cajas), la
-> ambigüedad de **H1b** (retiros) y el resto del bloque del arqueo, que condicionan la fase 19.
+> **Actualización del 2026-09-24.** El cliente contestó una parte por WhatsApp el 2026-09-23, y
+> **el 2026-09-24 aclaró el bloque del efectivo** (H1, H1b, H1c): anota todos los retiros, saca
+> plata seguido de cada caja y paga proveedores desde ella, y quiere hacerlo todo en el sistema.
+> Con eso **el arqueo pasa a ser requisito suyo** y Santiago quita el interruptor (D-036). Las
+> respuestas están en la columna de la derecha. Siguen abiertas, por orden de lo que cuestan:
+> **H10** (medianoche), **H8** (nombre de las cajas) y **H1d** (quién cuenta y qué hacen si no
+> cuadra).
 
 ## 1. De dónde salen estas preguntas
 
@@ -39,6 +42,9 @@ decisiones se tomaron por nosotros y el cliente tiene derecho a desmentirlas:
   precisamente lo que H1 pone en duda: si cuentan el efectivo, este punto decae entero.*
 - **No hay turnos.** El empleado entra con su clave y cada venta queda a su nombre; el cierre
   agrupa por caja y desglosa por empleado. No se abre ni se cierra ningún turno.
+  *(Superado el 2026-09-24: con el arqueo, cada caja **sí** se abre con el efectivo que tiene y
+  se cierra contándolo. Los empleados siguen entrando y saliendo con su clave dentro de una
+  misma caja abierta. Ver D-036.)*
 - El medio de pago **lo marca el cajero en pantalla** antes de cobrar. El sistema no habla con la
   máquina de Mercado Pago.
 - Al dar de alta a un empleado, **el sistema le genera una clave al azar** y la muestra una sola
@@ -57,10 +63,10 @@ Si la conversación se corta, estas tres tienen que estar contestadas.
 
 | # | Pregunta | Por qué importa | Respuesta |
 |---|---|---|---|
-| H1 | **Damos por hecho que cuentan la plata del cajón al cerrar y la anotan en un cuaderno.** ¿Es así? | **La más cara del documento, y desde el 2026-09-23 la respuesta probable es que sí.** Si cuentan, el cierre deja de ser un informe calculado y pasa a ser un registro guardado: fondo inicial, conteo real, diferencia y quién cerró. Es una fase entera más, no un ajuste. **Pedir una foto de una página del cuaderno**: las columnas que ya anotan a mano son la especificación, dicha en sus palabras y probada por el uso. | **Sí cuentan** en un cuaderno. **Si quiere que el sistema cuadre el cajón, no lo dijo claro** (respondió "exacto, algo que diga ventas en efectivo y en débito y crédito"). → Santiago: el arqueo es un **modo activable** (fase 19). *2026-09-23* |
-| H1b | Durante el día, ¿**sacan o meten plata** del cajón? Pagar al proveedor, mandar a comprar, sacar para depositar, agregar sencillo. | **Es la que decide si el arqueo sirve para algo.** Si sacan plata y el sistema no lo sabe, el cierre muestra diferencia todos los días, el dueño deja de mirarlo en dos semanas, y entonces ya no detecta el caso que importa: que falte plata de verdad. Si la respuesta es sí, hace falta además una pantalla de entradas y salidas de efectivo, y eso es parte del mismo trabajo, no un extra. | Escribió *"Si se anotan todos los retiros en efectivo"*: sin tilde puede ser "sí, se anotan" o un condicional. **Confirmar.** *2026-09-23* |
-| H1c | ¿Con cuánta plata empieza el día la caja? ¿Queda sencillo de un día para otro o lo pone alguien cada mañana? ¿Es siempre el mismo monto? | Define si el fondo inicial se teclea cada día, se arrastra del cierre anterior o es una constante. Cambia la pantalla de apertura. | |
-| H1d | ¿Quién cuenta el dinero, y qué hacen hoy si no cuadra? | El sistema tiene que hacer lo que ya hacen ellos, no inventar un procedimiento. Define si la diferencia se anota y se sigue, si exige una nota, o si bloquea algo. | |
+| H1 | **Damos por hecho que cuentan la plata del cajón al cerrar y la anotan en un cuaderno.** ¿Es así? | **La más cara del documento, y desde el 2026-09-23 la respuesta probable es que sí.** Si cuentan, el cierre deja de ser un informe calculado y pasa a ser un registro guardado: fondo inicial, conteo real, diferencia y quién cerró. Es una fase entera más, no un ajuste. **Pedir una foto de una página del cuaderno**: las columnas que ya anotan a mano son la especificación, dicha en sus palabras y probada por el uso. | **Sí cuentan** en un cuaderno. **Si quiere que el sistema cuadre el cajón, no lo dijo claro** (respondió "exacto, algo que diga ventas en efectivo y en débito y crédito"). → Santiago: el arqueo es un **modo activable** (fase 19). *2026-09-23* · **Aclarado el 2026-09-24:** quiere que el sistema anote retiros y pagos y le dé "cifras exactas". → Santiago: **arqueo siempre activo, sin interruptor**, para que ningún cajero pueda apagarlo (D-036). *2026-09-24* |
+| H1b | Durante el día, ¿**sacan o meten plata** del cajón? Pagar al proveedor, mandar a comprar, sacar para depositar, agregar sencillo. | **Es la que decide si el arqueo sirve para algo.** Si sacan plata y el sistema no lo sabe, el cierre muestra diferencia todos los días, el dueño deja de mirarlo en dos semanas, y entonces ya no detecta el caso que importa: que falte plata de verdad. Si la respuesta es sí, hace falta además una pantalla de entradas y salidas de efectivo, y eso es parte del mismo trabajo, no un extra. | Escribió *"Si se anotan todos los retiros en efectivo"*: sin tilde puede ser "sí, se anotan" o un condicional. *2026-09-23* · **Era un sí** (*2026-09-24*): "siempre se debe anotar absolutamente todo, porque si no le robarían un montón". Él retira seguido de cada caja (ej. $150.000 de la caja dos, $200.000), y paga en efectivo desde la caja a los proveedores que lo piden. Hoy va a un cuaderno; quiere hacerlo en el sistema. → Pantalla de salidas y entradas de efectivo: retiros con PIN de administrador, pagos a proveedor por el cajero (D-036). |
+| H1c | ¿Con cuánta plata empieza el día la caja? ¿Queda sencillo de un día para otro o lo pone alguien cada mañana? ¿Es siempre el mismo monto? | Define si el fondo inicial se teclea cada día, se arrastra del cierre anterior o es una constante. Cambia la pantalla de apertura. | **Hoy es un monto distinto cada día** (*2026-09-24*). Si el sistema le indica cuánto debe haber, él lo deja preparado antes de abrir. → Se teclea al abrir, con un monto sugerido que fija el administrador (D-036). |
+| H1d | ¿Quién cuenta el dinero, y qué hacen hoy si no cuadra? | El sistema tiene que hacer lo que ya hacen ellos, no inventar un procedimiento. Define si la diferencia se anota y se sigue, si exige una nota, o si bloquea algo. | **Sin respuesta.** Mientras tanto: cierra quien esté en la caja, la diferencia se guarda con una nota opcional y a nombre de quien cerró, y no bloquea nada (D-036). |
 | H1e | ¿Quiere que el sistema **calcule el vuelto**? | Retira la parte de D-006 que dice "sin cálculo de vuelto". **Ojo con el razonamiento**: el vuelto NO afecta al arqueo, porque entra y sale del mismo cajón y el neto es el total de la venta. Es comodidad para quien atiende, sobre todo alguien nuevo, no un dato contable. Vale la pena decírselo así al cliente, porque suele ser justo lo que le preocupa. | Sin respuesta. No se ha construido. |
 | H2 | La máquina de Mercado Pago, ¿le sirve que el cajero **marque en pantalla** si fue efectivo o máquina, o esperaba que el sistema hable solo con la máquina? | Que el sistema hable con la máquina necesita internet permanente y la API de Mercado Pago, y el sistema hoy funciona a propósito sin internet. Marcar a mano es una tecla. Conviene que lo oiga de nosotros antes de que se lo imagine de otra forma. | Sin respuesta directa. Se construyó **a mano**, con tres botones y F11 (D-034). |
 | H10 | ¿A qué hora cierra la tienda? Si venden **pasada la medianoche**, esas ventas ¿son del día que termina o del que empieza? | En una botillería esto no es teórico. Hoy el informe corta a las 00:00, así que una venta de la 01:30 del sábado aparecería en el cierre del sábado y no en el del viernes. Se arregla ahora con una constante; después hay que rehacer las consultas. | **Sin respuesta.** Queda preparado: cambiar `config.HORA_CORTE_DIA` (D-035). |
@@ -107,7 +113,8 @@ Tres frases para decir en voz alta en la misma reunión, para que no se las imag
 
 - **El cierre que vamos a construir no cierra nada.** Es un informe que puede mirar las veces que
   quiera. No bloquea la caja ni cuadra el cajón — salvo que conteste que sí a H1, que es lo
-  probable, y entonces hablamos de otra cosa y de otro presupuesto.
+  probable, y entonces hablamos de otra cosa y de otro presupuesto. *(Contestó que sí el
+  2026-09-24: el cuadre del cajón va aparte, en la pantalla de efectivo, D-036.)*
 - **El sistema no emite boletas ni está conectado al SII**, y hoy funciona a propósito sin internet.
   Si eso es lo que quiere, está en el otro documento y es otro presupuesto.
 - **Esta actualización obliga a una visita a la tienda**, con los dos computadores parados un rato.

@@ -25,6 +25,8 @@ from tienda_pos.repositories import ventas as repo_ventas
 from tienda_pos.services import auth, reportes
 from tienda_pos.services import venta as servicio_venta
 
+from .conftest import abrir_cajas
+
 #: Un día cualquiera de la tienda, para no depender de la hora a la que corren las pruebas.
 DIA = date(2026, 9, 18)
 
@@ -442,6 +444,7 @@ class TestPorLaRed:
             marta = auth.crear_usuario(conexion, "Marta", Rol.CAJERO, "5706")
             rosa = auth.crear_usuario(conexion, "Rosa", Rol.CAJERO, "8342")
         principal = SesionLocal(conexion, caja="Principal")
+        abrir_cajas(conexion, marta, "Principal", "Secundaria")
         puerto = _puerto_libre()
         with ServidorTienda(principal, host="127.0.0.1", puerto=puerto):
             yield principal, SesionRemota("127.0.0.1", puerto, caja="Secundaria"), marta, rosa

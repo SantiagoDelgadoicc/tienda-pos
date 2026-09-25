@@ -8,6 +8,8 @@ programa se ve como un sistema y no como cuatro ventanas distintas pegadas.
 
 from __future__ import annotations
 
+import weakref
+
 
 from PySide6.QtCore import QDateTime, Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
@@ -24,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import NOMBRE_COMERCIAL, VERSION
+from ..domain.errors import ErrorDominio
 from ..domain.models import Usuario
 from ..red.sesion import Sesion
 from ..services import preferencias as servicio_preferencias
@@ -34,6 +37,7 @@ from .barra_lateral import BarraLateral
 from .cierre_view import CierreView
 from .configuracion_dialog import DialogoConfiguracion
 from .consulta_view import ConsultaView
+from .efectivo_view import EfectivoView, pedir_apertura
 from .login_dialog import DialogoLogin
 from .productos_view import ProductosView
 from .usuarios_view import UsuariosView
@@ -44,6 +48,7 @@ from .venta_view import VentaView
 _CABECERAS = {
     "venta": ("Venta", "Escanee los productos y cobre cuando termine."),
     "consulta": ("Consulta de precio", "Para mirar un precio sin abrir una venta."),
+    "efectivo": ("Efectivo", "Abrir la caja, lo que entra y sale del cajón, y el cierre."),
     "productos": ("Productos", "El catálogo completo de la tienda."),
     "reportes": ("Ventas del día", "Lo que se vendió hoy, venta por venta."),
     "cierre": ("Cierre de caja", "Lo vendido en una caja, por medio de pago y por empleado."),
@@ -141,9 +146,18 @@ class VentanaPrincipal(QMainWindow):
         self.vista_reportes = ReportesView(self._sesion)
         self.vista_cierre = CierreView(self._sesion)
         self.vista_usuarios = UsuariosView(self._sesion)
+        self.vista_efectivo = EfectivoView(self._sesion)
+        # Por una referencia débil: si la vista guardara el método de la ventana, habría un ciclo
+        # y la ventana no se liberaría al cerrarse. Las ventanas que quedaban vivas hacían que
+        # cada cambio de tema tardara más que el anterior.
+        asegurar_admin = weakref.WeakMethod(self._asegurar_admin)
+        self.vista_efectivo.autorizar_admin = lambda accion: (
+            metodo(accion) if (metodo := asegurar_admin()) is not None else None
+        )
         for vista in (
             self.vista_venta,
             self.vista_consulta,
+            self.vista_efectivo,
             self.vista_productos,
             self.vista_reportes,
             self.vista_cierre,
@@ -162,6 +176,8 @@ class VentanaPrincipal(QMainWindow):
         self.vista_cierre.resumen_cambiado.connect(self._resumen_de_cierre)
         self.vista_usuarios.salir_solicitado.connect(self.mostrar_venta)
         self.vista_usuarios.resumen_cambiado.connect(self._resumen_de_usuarios)
+        self.vista_efectivo.salir_solicitado.connect(self.mostrar_venta)
+        self.vista_efectivo.resumen_cambiado.connect(self._resumen_de_efectivo)
         return contenido
 
     def _cabecera(self) -> QWidget:
@@ -231,6 +247,7 @@ class VentanaPrincipal(QMainWindow):
         destinos = {
             "venta": self.mostrar_venta,
             "consulta": self.mostrar_consulta,
+            "efectivo": self.mostrar_efectivo,
             "productos": self.mostrar_productos,
             "reportes": self.mostrar_reportes,
             "cierre": self.mostrar_cierre,
@@ -248,6 +265,10 @@ class VentanaPrincipal(QMainWindow):
 
     def _resumen_de_usuarios(self, texto: str) -> None:
         if self.pantallas.currentWidget() is self.vista_usuarios:
+            self.subtitulo_pantalla.setText(texto)
+
+    def _resumen_de_efectivo(self, texto: str) -> None:
+        if self.pantallas.currentWidget() is self.vista_efectivo:
             self.subtitulo_pantalla.setText(texto)
 
     def _resumen_de_cierre(self, texto: str) -> None:
@@ -295,6 +316,31 @@ class VentanaPrincipal(QMainWindow):
             return
         self._ir_a("reportes", self.vista_reportes)
         self.vista_reportes.recargar()
+
+    def mostrar_efectivo(self) -> None:
+        """El cajón de esta caja (fase 19). Para cualquier empleado: las cuentas y el retiro
+        piden el PIN de un administrador dentro de la propia pantalla."""
+        self.vista_efectivo.usuario = self.usuario
+        self._ir_a("efectivo", self.vista_efectivo)
+        self.vista_efectivo.al_entrar()
+
+    def proponer_apertura(self) -> None:
+        """Al arrancar: si la caja está cerrada, ofrece abrirla antes de la primera venta.
+
+        Se puede dejar para después —se vuelve a pedir al cobrar—, pero así el cajón se cuenta
+        con calma y no con un cliente esperando.
+        """
+        if self.usuario is None:
+            return
+        try:
+            abierta = self._sesion.turno_abierto(self.usuario) is not None
+        except ErrorDominio:
+            return
+        if not abierta:
+            pedir_apertura(
+                self._sesion, self.usuario, self, motivo="La caja está cerrada. Para cobrar hay que abrirla."
+            )
+        self._devolver_foco()
 
     def mostrar_cierre(self) -> None:
         """Cierre diario por caja (fase 18). Reservado al administrador, como las ventas del
@@ -466,12 +512,14 @@ class VentanaPrincipal(QMainWindow):
         self.vista_usuarios.repintar()
         self.vista_reportes.repintar()
         self.vista_cierre.repintar()
+        self.vista_efectivo.repintar()
 
     # ------------------------------------------------------------------ sesión
 
     def establecer_usuario(self, usuario: Usuario | None) -> None:
         self.usuario = usuario
         self.vista_venta.usuario = usuario
+        self.vista_efectivo.usuario = usuario
         self.barra_lateral.establecer_usuario(usuario, self._sesion.caja)
 
     def _actualizar_reloj(self) -> None:

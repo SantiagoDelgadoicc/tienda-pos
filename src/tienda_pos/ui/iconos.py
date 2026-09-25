@@ -187,6 +187,17 @@ def _registradora(pintor: QPainter, color: QColor) -> None:
     pintor.drawLine(QPointF(10, 17.8), QPointF(14, 17.8))
 
 
+def _billete(pintor: QPainter, color: QColor) -> None:
+    """Un billete: el efectivo del cajón (fase 19)."""
+    _trazo(pintor, color)
+    cuerpo = QPainterPath()
+    cuerpo.addRoundedRect(QRectF(2.5, 6.5, 19, 11), 2, 2)
+    pintor.drawPath(cuerpo)
+    pintor.drawEllipse(QPointF(12, 12), 2.6, 2.6)
+    pintor.drawLine(QPointF(5.5, 9.5), QPointF(6.5, 9.5))
+    pintor.drawLine(QPointF(17.5, 14.5), QPointF(18.5, 14.5))
+
+
 def _enlace(pintor: QPainter, color: QColor) -> None:
     """Dos nodos unidos: el estado de la conexión entre las dos cajas."""
     _trazo(pintor, color)
@@ -211,6 +222,7 @@ _DIBUJOS = {
     "desplegar": _desplegar,
     "caja": _caja,
     "registradora": _registradora,
+    "billete": _billete,
 }
 
 NOMBRES = tuple(_DIBUJOS)

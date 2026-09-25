@@ -1258,3 +1258,46 @@ botón en las ventas del día. Por debajo de unos 1300 píxeles de ancho los nom
 abrevian (el nombre entero sale al pasar el ratón); a 1366×768 cabe todo, también con la letra más
 grande.
 
+---
+
+## D-036 — El arqueo de caja está siempre activo, por turno de caja, y el conteo es a ciegas
+
+**Fecha:** 2026-09-24 · **Estado:** aceptada e implementada (fase 19) · **Decide:** Santiago
+
+**Contexto.** El 2026-09-23 el cliente no dejó claro si quería cuadrar el efectivo del cajón, y
+Santiago decidió que el arqueo fuera un modo activable. El 2026-09-24 el cliente lo aclaró: anota
+todos los retiros "porque si no le robarían un montón", saca plata seguido de cada caja (por
+ejemplo $150.000 de la caja dos), paga en efectivo desde la caja a algunos proveedores, y quiere
+hacerlo en el sistema para tener cifras exactas. Hoy cada caja parte con un monto distinto, y dijo
+que podría dejar uno fijo si el sistema se lo indica.
+
+**Decisión.**
+
+1. **Sin interruptor.** El arqueo está siempre activo. Si se pudiera apagar, un cajero podría
+   apagarlo. Se retira lo decidido el 2026-09-23 (modo en `meta`, pantalla en F9, dos caminos).
+2. **Turno de caja**: se abre con el efectivo que hay en el cajón y se cierra contándolo. Es de la
+   caja, no del empleado, y no depende del día: la pregunta de la medianoche (H10) no le afecta.
+   Una sola caja abierta a la vez por nombre, garantizado por un índice único parcial.
+3. **No se cobra con la caja cerrada**, y lo impide la sesión (`SesionLocal`, que es también el
+   servidor), no la pantalla. El servicio de venta mantiene su comportamiento para quien lo llame
+   sin sesión —pruebas, herramientas— y una venta sin caja (anterior a D-033) no necesita turno.
+4. **Cada venta guarda su turno** (`venta.turno_id`), asignado por el servidor dentro de la misma
+   transacción del cobro. El esperado se calcula por turno, no comparando horas de dos PC.
+5. **Salidas y entradas de efectivo**, que nunca se borran: *retiro* (solo administrador),
+   *pago a proveedor* (cualquier empleado, con el nombre del proveedor; queda a su nombre) e
+   *ingreso* de sencillo. Todo con identificador de intento, como el cobro (D-024).
+6. **Debería haber** = apertura + ventas en efectivo del turno + ingresos − retiros − pagos. El
+   vuelto no entra: sale del mismo cajón y el neto de la venta es su total.
+7. **Conteo a ciegas** (propuesto por nosotros, aprobado por Santiago el 2026-09-24). Quien cierra escribe lo contado sin ver el
+   esperado. El esperado y la diferencia solo los recibe un administrador: el servidor no se los
+   manda a un cajero, así que tampoco se ven desde la otra caja. Se retira quitando esa condición.
+8. **Cerrar no bloquea nada** ni exige explicación: guarda el esperado de ese momento, lo contado,
+   quién y una nota opcional (H1d sin respuesta). Un administrador puede cerrar la caja de otro PC,
+   por si ese equipo no enciende; un cajero, solo la suya.
+9. **Monto sugerido de apertura** en `meta`, fijado por el administrador. Se propone al abrir;
+   se guarda lo que se escribió.
+
+**Consecuencias.** Esquema a la versión 6 y protocolo a la 6: las dos cajas se actualizan en la
+misma visita, como siempre. El primer cobro tras actualizar pide abrir la caja. Riesgo aceptado:
+el pago a proveedor lo anota el propio cajero, así que un pago inventado baja el esperado; queda a
+su nombre y con el proveedor, a la vista del dueño en los cierres.

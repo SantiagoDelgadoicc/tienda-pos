@@ -13,8 +13,8 @@ instalador. Ver las fases 8 a 14 de `docs/PLAN.md`.
 Desde el 2026-09-18 hay una **tercera etapa**, también pedida por el cliente: un usuario por
 empleado, cierre diario por caja y medio de pago. Son las fases 15 a 20 de `docs/PLAN.md`, que
 empiezan con un apartado **"Cómo retomar"**: qué está hecho, qué falta y qué espera al cliente.
-Las fases 15 a 18 están hechas. **Lo siguiente es la fase 19**, el modo arqueo, que espera a que el
-cliente conteste los detalles del dinero del cajón; después, la 20.
+Las fases 15 a 19 están hechas; la 19 es el arqueo de caja, siempre activo (D-036). **Lo
+siguiente es la fase 20**, el manual.
 
 ## 2. Contexto del cliente
 
@@ -86,11 +86,22 @@ De sus respuestas por WhatsApp del 2026-09-23:
 - **"Que los números y letras sean un poquito más grandes."** → Tamaño de letra ajustable (D-031).
 - **"Mi logo sería ideal"**, y entregó el archivo. → Logotipo y rojo de la marca (D-030).
 - **"Ponerle un poco de color y recuadros."** Santiago concede el color y descarta los recuadros.
-- Sobre los retiros de efectivo escribió *"Si se anotan todos los retiros en efectivo"*. Sin
-  tilde puede ser "sí, se anotan" o un condicional. **Se lee como un sí, pero no está
-  confirmado**, y de ello depende que el arqueo sirva: ver el modo arqueo en el plan.
-- **No contestó con claridad si quiere cuadrar el efectivo del cajón.** Por eso Santiago decidió
-  que el arqueo sea un modo que se activa o se desactiva, y no un requisito.
+- Sobre los retiros de efectivo escribió *"Si se anotan todos los retiros en efectivo"*, que sin
+  tilde era ambiguo. **Lo aclaró el 2026-09-24**, abajo: era un sí.
+
+De su respuesta por WhatsApp del 2026-09-24, a la pregunta de si anotan los retiros y con cuánto
+parte la caja:
+
+- **Los retiros de efectivo se anotan todos, siempre**: "si no, le robarían un montón". Hoy van a
+  un cuaderno.
+- **El dueño retira seguido montos grandes de cada caja**, por ejemplo $150.000 de la caja dos o
+  $200.000, y **quiere hacerlo desde el sistema**, para que le dé "cifras exactas" de lo vendido.
+- **Paga a proveedores en efectivo, sacando de la caja**, porque algunos lo piden así, y quiere
+  anotarlo también en el sistema.
+- **Hoy cada caja parte el día con un monto distinto.** Si el sistema le indica cuánto debe haber
+  al abrir, él lo deja preparado antes de empezar.
+- → **Cuadrar el efectivo del cajón pasa a ser requisito del cliente** (fase 19, D-036). Queda
+  sin contestar quién cuenta al cerrar y qué hacen si no cuadra (H1d).
 
 ### 3.2 Decidido por Santiago (dueño del proyecto)
 
@@ -99,6 +110,13 @@ De sus respuestas por WhatsApp del 2026-09-23:
 - Aplicación de **escritorio Windows**. Explícitamente **no web**: el cliente abre un acceso
   directo y el programa arranca. Sin navegador ni `localhost`.
 - Entrada manual del código además de la pistola lectora.
+- **Arqueo de caja siempre activo, sin interruptor** (D-036, 2026-09-24): así ningún cajero puede
+  apagarlo. Cada caja se abre con el efectivo que tiene, se anota cada salida y entrada de
+  dinero, y se cierra contando. **Los retiros del dueño exigen PIN de administrador; los pagos a
+  proveedor los puede anotar el cajero**, con el nombre del proveedor y a su nombre. El monto de
+  apertura lo teclea quien abre, con un monto sugerido que fija el administrador. **El conteo es
+  a ciegas** (2026-09-24): quien cierra escribe lo que contó sin ver cuánto debería haber; eso y
+  la diferencia los ve solo el administrador.
 - La venta se cierra con su total, **el medio de pago** —efectivo, débito o crédito, que lo
   marca el cajero— y **la caja donde se hizo**, y queda registrada (D-033, D-034; los dos,
   pedidos por el cliente). Sigue sin vuelto, sin comprobante impreso y sin boleta electrónica
@@ -160,6 +178,11 @@ categoría por accidente, así que va aparte y explícito:
 - Que el **descuento de stock al vender** lo pidió él. En la conversación apareció como propuesta
   de Santiago. Ya está implementado desde la fase 1 (`services/venta.py`, D-009), así que basta
   con confirmárselo.
+- Que **cada caja se cuenta por separado**. Lo da a entender ("de la caja dos"), pero no lo dijo;
+  cada PC tiene su cajón. El arqueo se construye por caja (D-036).
+- Que el **monto sugerido de apertura** le sirve. Dijo que *podría* dejar un monto fijo si el
+  sistema se lo indica: es una disposición suya, no un requisito, y por eso el monto se teclea
+  igual cada mañana.
 - Que de LocalShop le gustó **lo completo que se ve**, y no la nube ni la boleta electrónica.
   Preguntas G15 a G17. Si fuera lo segundo, es otro proyecto.
 
@@ -234,11 +257,12 @@ src/tienda_pos/
     barra_lateral.py      la navegación
     usuarios_view.py      usuarios por empleado y el PIN generado (D-032)
     cierre_view.py        cierre diario por caja (D-035)
+    efectivo_view.py      arqueo: abrir la caja, retiros y pagos, cerrar contando (D-036)
     iconos.py             los iconos, dibujados con QPainter
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    494 pruebas
+tests/                    583 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -275,7 +299,7 @@ python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
 python main.py --demo                 # con el catálogo y los usuarios de ejemplo, en una base vacía
 python main.py --reiniciar-admin      # recuperar un administrador; solo en el PC de la base
-pytest                                # pruebas (494, minuto y medio)
+pytest                                # pruebas (583, dos minutos)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

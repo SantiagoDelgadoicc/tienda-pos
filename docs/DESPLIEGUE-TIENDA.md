@@ -245,6 +245,16 @@ usuarios de sus empleados.
    aviso. Sin esa línea se usa el nombre del PC, que funciona pero no se lee bien.
 7. Comprobar en el PC 2 que cada empleado entra con su PIN, y que **al pie de la barra lateral**
    de cada caja aparece su nombre (por ejemplo "Cajero · Caja 2").
+8. **Arqueo de caja** (fase 19, D-036). Desde esta versión **no se cobra con la caja cerrada**.
+   - Con el dueño, fijar el **monto de apertura**: en **Efectivo**, abajo, "Cierres anteriores" →
+     **Cambiar**. Es el monto con que se propone abrir cada caja; el cliente dijo que lo dejaría
+     preparado cada mañana si el sistema se lo indica.
+   - Abrir cada caja contando el cajón: el programa lo propone al arrancar, y si se deja para
+     después, lo vuelve a pedir en el primer cobro.
+   - Enseñarle al dueño a anotar un **retiro** (pide su PIN y queda a su nombre) y a los
+     empleados un **pago a proveedor** (con el nombre del proveedor, queda a su nombre).
+   - Al cerrar, quien cuenta **no ve cuánto debería haber**; el dueño lo ve en Efectivo con su
+     PIN, "Ver las cuentas". Decírselo en voz alta, para que nadie crea que es un fallo.
 
 **Lo que no hay que hacer:**
 
@@ -323,6 +333,11 @@ puede cancelar. Solo si se agota esa espera aparece un diálogo con un botón de
 
 Lo único manual es escribir el PIN, y no se puede quitar: es lo que permite saber quién
 vendió qué.
+
+**El efectivo** (fase 19): cada caja se abre por la mañana con el efectivo que tiene y se cierra
+al final contándolo, en la pantalla **Efectivo**. Entre medias, cada retiro del dueño y cada pago
+a proveedor se anota ahí. Una caja cerrada no cobra: al intentarlo, ofrece abrirla. Si se cambia
+de turno a mitad de día, se cierra y se vuelve a abrir con lo que quede en el cajón.
 
 ### Reglas para quien atiende
 

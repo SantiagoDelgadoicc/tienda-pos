@@ -6,8 +6,8 @@ cada una. Reservada al administrador, como las ventas del día (pregunta H4 pend
 
 **Es un informe que se calcula al pedirlo, no un registro.** No cierra nada ni bloquea la caja:
 se puede mirar a media tarde y volver a mirar después. Lo dice al pie, para que nadie crea que
-ha "cerrado" algo. El dinero del cajón —fondo inicial, conteo, diferencia— es la fase 19, y va
-detrás de un interruptor porque el cliente no contestó claro si lo quiere.
+ha "cerrado" algo. El dinero del cajón —apertura, conteo, diferencia— va en la pantalla de
+Efectivo (fase 19, D-036).
 """
 
 from __future__ import annotations
@@ -144,8 +144,8 @@ class CierreView(QWidget):
         columna.addLayout(cuerpo, stretch=1)
 
         pie = QLabel(
-            "Este informe se calcula al pedirlo. No cierra nada ni bloquea la caja: puede "
-            "consultarse las veces que haga falta."
+            "Este informe se calcula al pedirlo y puede consultarse las veces que haga falta. "
+            "El efectivo del cajón se abre, se anota y se cuenta en Efectivo."
         )
         pie.setObjectName("subtitulo")
         pie.setWordWrap(True)

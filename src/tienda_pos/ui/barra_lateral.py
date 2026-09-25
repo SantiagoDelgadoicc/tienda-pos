@@ -39,6 +39,8 @@ from . import estilos, iconos, movimiento
 _PRINCIPALES = (
     ("venta", "Venta", "escanear", "Esc"),
     ("consulta", "Consulta de precio", "etiqueta", "F2"),
+    # En CAJA y no en ADMINISTRACIÓN: el pago a un proveedor y el cierre los hace quien atiende.
+    ("efectivo", "Efectivo", "billete", ""),
 )
 _ADMINISTRACION = (
     ("productos", "Productos", "catalogo", "F7"),

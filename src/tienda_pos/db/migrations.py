@@ -15,7 +15,7 @@ import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 
-VERSION_ESQUEMA = 5
+VERSION_ESQUEMA = 6
 
 _RUTA_ESQUEMA = Path(__file__).with_name("schema.sql")
 
@@ -123,6 +123,63 @@ def _medio_de_pago(conexion: sqlite3.Connection) -> None:
     conexion.execute("ALTER TABLE venta ADD COLUMN medio_pago TEXT")
 
 
+def _arqueo_de_caja(conexion: sqlite3.Connection) -> None:
+    """Añade el arqueo de caja (fase 19, D-036): turnos, salidas y entradas de efectivo.
+
+    Un **turno** se abre con el efectivo que hay en el cajón y se cierra contándolo. El índice
+    único parcial garantiza en la propia base que una caja no tenga dos turnos abiertos a la vez,
+    aunque las dos cajas pidan abrir en el mismo instante. Al cerrar se guarda el esperado de ese
+    momento: es lo que se comparó con lo contado, y no debe cambiar si mañana algo se recalcula.
+
+    Los **movimientos** no se borran ni se editan: un retiro anotado mal se compensa con otro. El
+    tipo va sin `CHECK`, por lo mismo que el medio de pago (fase 17): la lista es de las que el
+    cliente puede ampliar, y el servicio es quien la valida. Su
+    `intento_id` es único, igual que el de la venta, para que un reintento por la red no anote dos
+    veces el mismo retiro (D-024).
+
+    `venta.turno_id` queda en NULL en las ventas anteriores: no se abrieron con arqueo, y
+    asignarlas a un turno sería inventar de qué cajón salió el dinero.
+    """
+    conexion.execute(
+        """
+        CREATE TABLE turno_caja (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            caja                TEXT    NOT NULL,
+            abierto_en          TEXT    NOT NULL,
+            abierto_por         INTEGER NOT NULL REFERENCES usuario (id),
+            apertura_clp        INTEGER NOT NULL CHECK (apertura_clp >= 0),
+            intento_apertura    TEXT    UNIQUE,
+            cerrado_en          TEXT,
+            cerrado_por         INTEGER REFERENCES usuario (id),
+            esperado_clp        INTEGER,
+            contado_clp         INTEGER CHECK (contado_clp IS NULL OR contado_clp >= 0),
+            nota                TEXT
+        )
+        """
+    )
+    conexion.execute(
+        "CREATE UNIQUE INDEX idx_turno_abierto ON turno_caja (caja) WHERE cerrado_en IS NULL"
+    )
+    conexion.execute("CREATE INDEX idx_turno_abierto_en ON turno_caja (abierto_en)")
+    conexion.execute(
+        """
+        CREATE TABLE movimiento_efectivo (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            turno_id    INTEGER NOT NULL REFERENCES turno_caja (id),
+            tipo        TEXT    NOT NULL,
+            monto_clp   INTEGER NOT NULL CHECK (monto_clp > 0),
+            motivo      TEXT    NOT NULL DEFAULT '',
+            usuario_id  INTEGER NOT NULL REFERENCES usuario (id),
+            fecha_hora  TEXT    NOT NULL,
+            intento_id  TEXT    UNIQUE
+        )
+        """
+    )
+    conexion.execute("CREATE INDEX idx_movimiento_turno ON movimiento_efectivo (turno_id)")
+    conexion.execute("ALTER TABLE venta ADD COLUMN turno_id INTEGER REFERENCES turno_caja (id)")
+    conexion.execute("CREATE INDEX idx_venta_turno ON venta (turno_id)")
+
+
 # Versión de destino -> función que lleva la base desde la versión anterior hasta ella.
 _MIGRACIONES: dict[int, Callable[[sqlite3.Connection], None]] = {
     1: _crear_esquema_inicial,
@@ -130,6 +187,7 @@ _MIGRACIONES: dict[int, Callable[[sqlite3.Connection], None]] = {
     3: _intento_de_cobro,
     4: _caja_de_la_venta,
     5: _medio_de_pago,
+    6: _arqueo_de_caja,
 }
 
 

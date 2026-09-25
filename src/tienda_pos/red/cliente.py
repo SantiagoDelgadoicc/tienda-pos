@@ -21,8 +21,11 @@ from ..domain.models import (
     CierreCaja,
     CodigoNoEncontrado,
     MedioPago,
+    MovimientoEfectivo,
     Producto,
     Rol,
+    TipoMovimiento,
+    TurnoCaja,
     Usuario,
     Venta,
 )
@@ -311,4 +314,77 @@ class SesionRemota(Sesion):
         """Una sola petición con todo: ventas con sus líneas y la lista de cajas del día."""
         return protocolo.a_cierre(
             self._llamar("cierre_de_caja", {"dia": protocolo.de_fecha(dia), "caja": caja})
+        )
+
+    # ------------------------------------------------------------------ arqueo
+    #
+    # Todas dicen de qué caja vienen, como el cobro: el servidor no puede saberlo. Las que
+    # escriben llevan identificador de intento, para que un reintento no anote dos veces.
+
+    def turno_abierto(self, usuario: Usuario | None) -> TurnoCaja | None:
+        datos = self._llamar(
+            "turno_abierto", {"usuario": self._admin(usuario), "caja": self._caja}
+        )
+        return protocolo.a_turno(datos) if datos else None
+
+    def abrir_turno(
+        self, usuario: Usuario | None, apertura_clp: int, intento_id: str | None = None
+    ) -> TurnoCaja:
+        datos = self._llamar(
+            "abrir_turno",
+            {
+                "usuario": self._admin(usuario),
+                "caja": self._caja,
+                "apertura_clp": apertura_clp,
+                "intento_id": intento_id,
+            },
+        )
+        return protocolo.a_turno(datos)
+
+    def registrar_movimiento(
+        self,
+        usuario: Usuario | None,
+        tipo: TipoMovimiento,
+        monto_clp: int,
+        motivo: str = "",
+        intento_id: str | None = None,
+    ) -> MovimientoEfectivo:
+        datos = self._llamar(
+            "registrar_movimiento",
+            {
+                "usuario": self._admin(usuario),
+                "caja": self._caja,
+                "tipo": str(tipo),
+                "monto_clp": monto_clp,
+                "motivo": motivo,
+                "intento_id": intento_id,
+            },
+        )
+        return protocolo.a_movimiento(datos)
+
+    def cerrar_turno(
+        self, usuario: Usuario | None, turno_id: int, contado_clp: int, nota: str | None = None
+    ) -> TurnoCaja:
+        datos = self._llamar(
+            "cerrar_turno",
+            {
+                "usuario": self._admin(usuario),
+                "caja": self._caja,
+                "turno_id": turno_id,
+                "contado_clp": contado_clp,
+                "nota": nota,
+            },
+        )
+        return protocolo.a_turno(datos)
+
+    def turnos_recientes(self, admin: Usuario | None) -> list[TurnoCaja]:
+        datos = self._llamar("turnos_recientes", {"usuario": self._admin(admin)})
+        return [protocolo.a_turno(d) for d in datos]
+
+    def monto_sugerido(self) -> int | None:
+        return self._llamar("monto_sugerido")
+
+    def fijar_monto_sugerido(self, admin: Usuario | None, monto_clp: int | None) -> None:
+        self._llamar(
+            "fijar_monto_sugerido", {"usuario": self._admin(admin), "monto_clp": monto_clp}
         )

@@ -402,26 +402,24 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 | 16 | Identidad de caja (D-033) | ✅ 2026-09-24 |
 | 17 | Medio de pago: efectivo, débito y crédito (D-034) | ✅ 2026-09-24 |
 | 18 | Informe de cierre diario por caja (D-035) | ✅ 2026-09-24 |
-| 19 | Modo arqueo, activable | pendiente |
+| 19 | Arqueo de caja, siempre activo (D-036) | ✅ 2026-09-24 |
 | 20 | Documentación y manual | pendiente |
 
 ### Cómo retomar (estado al 2026-09-24)
 
-**Dónde está todo:** rama `diseño`. 494 pruebas en verde. Esquema de la base en la versión 5 y
-protocolo entre cajas en la 5. El `.exe` del escritorio está construido en la fase 15: hay que
+**Dónde está todo:** rama `diseño`. 583 pruebas en verde. Esquema de la base en la versión 6 y
+protocolo entre cajas en la 6. El `.exe` del escritorio está construido en la fase 15: hay que
 reconstruirlo (`python tools/construir.py`) para ver las fases 16 a 18.
 
-**Lo siguiente es la fase 19**, el modo arqueo. Antes de construirla hay que cerrar lo que el
-cliente no ha contestado del dinero del cajón (abajo, y en la propia fase): cambia las tablas de
-la migración 6. Después, la 20.
+**Lo siguiente es la fase 20**, la documentación y el manual, escrito con todo hecho.
 
 **Pendiente del cliente** (detalle en `docs/PREGUNTAS-CIERRE-Y-USUARIOS.md`):
 
 - **H10, la medianoche.** Si venden pasada la medianoche, ¿de qué día son esas ventas? Responderla
   es cambiar `config.HORA_CORTE_DIA`. Es la que puede salir cara si se olvida.
 - **H8, cómo se llaman las cajas.** Se escribe en `red.json` de cada PC el día de la visita.
-- Si los retiros "se anotan" (sí) o "si se anotan" (condicional), y los detalles del arqueo (H1c,
-  H1d): condicionan la fase 19.
+- H1d: quién cuenta al cerrar y qué hacen si no cuadra. Mientras tanto, la diferencia se anota y
+  no bloquea nada.
 - H3 (otros medios, fiado), H11 (anular ventas), H9, H4 (quién ve el cierre), H5 (imprimirlo),
   D1 (quién cambia precios), y si quiere que se calcule el vuelto.
 - A las dos semanas de uso: ¿se marcan bien débito y crédito? Si no, se funden en "tarjeta".
@@ -537,38 +535,79 @@ del proyecto, y ahora hace las capturas en una caja con nombre, como las de verd
 A 1366×768 cabe todo, también con "Muy grande". Se suma a comprobar la resolución de los PC en la
 visita a la tienda.
 
-## Fase 19 — Modo arqueo, activable · pendiente
+## Fase 19 — Arqueo de caja, siempre activo (D-036) ✅
 
-El dinero del cajón **detrás de un interruptor**, porque el cliente no contestó claro si quiere
-cuadrar el efectivo (dijo que cuentan la plata en un cuaderno, y que "si se anotan todos los retiros
-en efectivo", que puede ser un sí o un condicional). Decidido por Santiago el 2026-09-23.
+*Rehecha el 2026-09-24.* El cliente aclaró por WhatsApp que **anota todos los retiros**, que saca
+plata seguido de cada caja (ej. $150.000 de la caja dos) y paga en efectivo a algunos proveedores
+desde la caja, y que quiere hacerlo en el sistema para tener cifras exactas. Con eso el arqueo es
+requisito suyo, y **Santiago quita el interruptor**: si existiera, un cajero podría apagarlo.
 
-**El interruptor no ahorra trabajo, lo aumenta:** hay que construir el arqueo entero igual, más el
-modo, más probar y documentar los dos caminos.
+Lo que se deja de hacer respecto al diseño del 2026-09-23: el interruptor en `meta`, su pantalla
+en F9, el "hueco sin declarar" al reactivarlo y probar los dos caminos.
 
-- **Desactivado** (por defecto): el cierre es el de la fase 18, sin nada del cajón.
-- **Activado**: apertura con fondo inicial, conteo al cerrar, diferencia, registro guardado de
-  quién cerró, y **pantalla de entradas y salidas de efectivo** (retiros para pagar a un
-  proveedor, sencillo que se agrega). Sin esa pantalla el arqueo muestra diferencia todos los días
-  y se deja de mirar a las dos semanas.
+Diseño:
 
-Diseño ya pensado:
+- **Turno de caja**: se abre con el efectivo que hay en el cajón y se cierra contándolo. Es por
+  caja, no por empleado: los empleados entran y salen con su clave dentro de una caja abierta. No
+  depende del día —una caja abierta a las 23:00 y cerrada a la 01:00 es un solo turno—, así que
+  la pregunta de la medianoche (H10) no le afecta. Una sola caja abierta a la vez por nombre de
+  caja, con un índice único parcial en la base.
+- **No se cobra con la caja cerrada.** Lo impide la sesión, del lado del servidor, no un botón:
+  la caja secundaria tampoco puede saltárselo. Al intentarlo se ofrece abrirla ahí mismo, y al
+  arrancar el programa se propone abrirla si está cerrada.
+- **Cada venta guarda en qué turno se hizo** (`venta.turno_id`), y eso decide cuánto efectivo
+  debería haber, sin comparar horas entre dos PC.
+- **Salidas y entradas de efectivo**: *retiro* (el dueño saca plata; **solo con PIN de
+  administrador**), *pago a proveedor* (lo anota el cajero, con el nombre del proveedor, y queda
+  a su nombre), *ingreso* (sencillo que se agrega). Nunca se borran.
+- **Debería haber** = efectivo al abrir + ventas en efectivo del turno + ingresos − retiros −
+  pagos. **El vuelto no entra**: sale del mismo cajón y el neto es el total de la venta.
+- **Conteo a ciegas** (aprobado por Santiago): quien
+  cierra escribe lo que contó sin ver cuánto debería haber. El esperado y la diferencia los ve
+  solo el administrador, y el servidor ni siquiera se los manda a un cajero. Al cerrar se guarda
+  el esperado de ese momento, lo contado, la diferencia, quién y una nota opcional. No bloquea
+  nada (H1d sin respuesta).
+- **Monto sugerido de apertura**, en `meta`, lo fija el administrador. Se propone al abrir; quien
+  abre escribe lo que de verdad hay.
+- Pantalla **Efectivo**, en la sección CAJA de la barra lateral, para cualquier empleado: estado
+  de la caja, las salidas y entradas del turno, y los botones. El administrador ve además la
+  cuenta del esperado y los cierres anteriores con su diferencia.
+- Por la red viaja todo con identificador de intento, como el cobro (D-024): un reintento no
+  anota dos veces un retiro.
 
-- **El interruptor va en la tabla `meta`, no en `preferencias.json`.** Es configuración del
-  negocio y arrastra datos que comparten las dos cajas; si una lo tuviera activado y la otra no, los
-  datos quedarían a medias. `meta` ya existe y no necesita migración. Solo administrador, con
-  confirmación, en la pantalla F9.
-- **Activarlo exige un punto de partida**: abre directamente la apertura de caja (cuánto efectivo
-  hay ahora). **Desactivarlo no borra nada**; si se reactiva, el informe tiene que decir que hubo un
-  hueco sin declarar, en vez de fingir continuidad.
-- Tablas nuevas (migración 6): aperturas/cierres de caja con fondo, conteo, diferencia, quién y
-  cuándo; y movimientos de efectivo con monto, motivo, quién y caja.
-- El efectivo esperado = fondo inicial + ventas en efectivo − retiros + ingresos. **El vuelto no
-  entra en la cuenta**: sale del mismo cajón y el neto es el total de la venta.
-- Las dos cajas leen siempre el mismo valor del interruptor, servido por el servidor.
+- [x] Migración 6: `turno_caja` (con índice único parcial: una caja abierta por nombre),
+      `movimiento_efectivo` y `venta.turno_id`. **Esquema a la versión 6**
+- [x] Dominio (`TurnoCaja`, `MovimientoEfectivo`, `TipoMovimiento`), `repositories/arqueo.py` y
+      `services/arqueo.py` con sus reglas; error nuevo `CajaCerrada`
+- [x] La venta toma el turno abierto de su caja dentro de su transacción; `SesionLocal` —que es
+      también el servidor— no cobra con la caja cerrada
+- [x] Siete operaciones nuevas (26 en total), **protocolo a la versión 6**
+- [x] Pantalla **Efectivo** en la sección CAJA, diálogo de montos, apertura al cobrar y al arrancar
+- [x] Pruebas: `tests/test_arqueo.py` (64, servicio y red contra un servidor real) y
+      `tests/test_ui_efectivo.py` (25). La ventana de las pruebas trabaja ahora en "Caja 1", abierta
+- [x] Mirada a 1600×1000, 1366×768 y 1080×680, normal y "Muy grande", en los dos temas.
+      Captura `docs/img/15-efectivo.png`. `DESPLIEGUE-TIENDA.md` con los pasos de la visita
 
-Pendiente del cliente: quién cuenta el dinero y qué se hace hoy si no cuadra (H1d); si el fondo
-inicial es fijo o se arrastra (H1c); si cada caja se cuenta por separado.
+**Criterio de aceptación:** al cerrar una caja, el administrador ve cuánto debería haber en el
+cajón —con los retiros y pagos del día descontados— y cuánto se contó, y ningún cajero puede
+anotar un retiro, cobrar con la caja sin abrir ni apagar el arqueo. **Cumplido.**
+
+Notas de la construcción:
+
+- **"Debería haber" va en el color del texto, no en el verde de los totales**: no es algo que
+  "salió bien". En negativo va en rojo: en un cajón es imposible, y señala una salida mal anotada.
+- **La cuenta se enseña como en un cuaderno**: una tarjeta con los cuatro renglones y otra con el
+  resultado. Cinco tarjetas en fila no cabían a 1080 con la letra más grande.
+- Una fuga encontrada por las pruebas: la pantalla guardaba un método de la ventana y eso hacía un
+  ciclo que impedía liberarla al cerrarla; cada cambio de tema tardaba más que el anterior. Va por
+  referencia débil.
+- `tools/capturas.py` abre las dos cajas al empezar: si no, el primer cobro esperaría un clic.
+
+**Límite conocido:** a 1080×680 con "Muy grande", las dos tablas quedan con una fila visible cada
+una (se desplazan). Falta alto, no ancho; a 1366×768 se ve todo.
+
+**Conteo a ciegas aprobado por Santiago** el 2026-09-24 (D-036, punto 7). Si algún día se quiere
+quitar, basta con devolver el esperado a cualquier usuario en `services/arqueo.py::_visible_para`.
 
 ## Fase 20 — Documentación y manual · pendiente
 

@@ -1,9 +1,10 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal
 title Punto y Fama - PASO 1 - Respaldar el catalogo del PC 1
 
 if not defined DATOS set "DATOS=%LOCALAPPDATA%\TiendaPOS"
 set "DESTINO=%~dp0RESPALDOS"
+set "BUSCAR=%SystemRoot%\System32\find.exe"
 
 echo.
 echo ===========================================================
@@ -16,7 +17,13 @@ echo.
 echo   CIERRA EL PROGRAMA DE LA CAJA ANTES DE SEGUIR.
 echo   Con el programa abierto, la copia puede salir incompleta.
 echo.
-pause
+if not defined EN_CADENA pause
+
+rem Con el programa abierto, el .db y el -wal copiados pueden no cuadrar entre si.
+tasklist /FI "IMAGENAME eq PuntoYFamaCaja.exe" 2>nul | "%BUSCAR%" /I "PuntoYFamaCaja.exe" >nul
+if not errorlevel 1 goto abierto
+tasklist /FI "IMAGENAME eq TiendaPOS.exe" 2>nul | "%BUSCAR%" /I "TiendaPOS.exe" >nul
+if not errorlevel 1 goto abierto
 
 if not exist "%DATOS%\tienda.db" (
     echo.
@@ -46,9 +53,18 @@ copy /Y "%DATOS%\tienda.db-wal" "%CARPETA%\" >nul 2>&1
 copy /Y "%DATOS%\tienda.db-shm" "%CARPETA%\" >nul 2>&1
 if exist "%DATOS%\backups" xcopy "%DATOS%\backups" "%CARPETA%\backups\" /E /I /Y /Q >nul 2>&1
 
+rem Se compara byte a byte lo copiado con el original: un pendrive lleno o mal
+rem sacado deja archivos a medias que parecen buenos.
+fc /b "%DATOS%\tienda.db" "%CARPETA%\tienda.db" >nul 2>&1
+if errorlevel 1 goto mal_copiado
+if exist "%DATOS%\tienda.db-wal" (
+    fc /b "%DATOS%\tienda.db-wal" "%CARPETA%\tienda.db-wal" >nul 2>&1
+    if errorlevel 1 goto mal_copiado
+)
+
 echo.
 echo ===========================================================
-echo   RESPALDO HECHO
+echo   RESPALDO HECHO Y COMPROBADO
 echo ===========================================================
 echo.
 dir /b "%CARPETA%"
@@ -58,6 +74,30 @@ echo.
 echo   Si tienda.db son solo 4096 bytes, el catalogo esta en el
 echo   archivo -wal. Por eso se copian los dos. No borres ninguno.
 echo.
-echo   AHORA SI, sigue con PASO-2-ACTUALIZAR-PROGRAMA.bat
+if defined EN_CADENA (
+    echo   Ahora se actualiza el programa.
+) else (
+    echo   AHORA SI, sigue con PASO-2-ACTUALIZAR-PROGRAMA.bat
+)
+echo.
+if not defined EN_CADENA pause
+endlocal & set "ULTIMO_RESPALDO=%CARPETA%"
+exit /b 0
+
+
+:abierto
+echo.
+echo   El programa de la caja esta ABIERTO. Cierralo y vuelve a empezar.
+echo   No se ha copiado nada.
 echo.
 pause
+exit /b 1
+
+:mal_copiado
+echo.
+echo   *** EL RESPALDO NO SALIO BIEN ***
+echo   Lo copiado no es igual al original. Puede que el pendrive
+echo   este lleno o danado. NO SIGAS CON LA ACTUALIZACION.
+echo.
+pause
+exit /b 1

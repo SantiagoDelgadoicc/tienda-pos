@@ -26,7 +26,7 @@ echo   El catalogo y las ventas del PC 1 se quedan como estan.
 echo.
 echo   Cierra el programa de la caja antes de seguir.
 echo.
-pause
+if not defined EN_CADENA pause
 
 echo.
 echo -----------------------------------------------------------
@@ -109,6 +109,7 @@ echo.
 echo ===========================================================
 echo   LISTO. PROGRAMA ACTUALIZADO
 echo ===========================================================
+if defined EN_CADENA goto fin_ok
 echo.
 echo   Si es la primera vez en este PC, sigue con:
 echo     PC 1:  PASO-3-PC1-PRINCIPAL.bat
@@ -117,7 +118,8 @@ echo.
 echo   Si solo estas actualizando: haz este mismo PASO 2 en el
 echo   otro PC y despues abre el programa, PRIMERO EN EL PC 1.
 echo.
-pause
+:fin_ok
+if not defined EN_CADENA pause
 exit /b 0
 
 

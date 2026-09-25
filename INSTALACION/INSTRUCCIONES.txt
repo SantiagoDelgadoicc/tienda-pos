@@ -33,6 +33,10 @@
   PARTE A - ACTUALIZAR  (lo que toca en esta visita)
 ===============================================================================
 
+  ATAJO: ACTUALIZAR-ESTE-PC.bat hace los pasos 2 y 3 seguidos en el
+  PC 1, y el paso 5 en el PC 2. Es lo que dice LEEME-PRIMERO.txt.
+  Abajo esta lo mismo, paso a paso.
+
   EN EL PC 1
   ----------
   1. Cierra el programa.

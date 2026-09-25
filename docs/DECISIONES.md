@@ -1222,8 +1222,7 @@ que la columna vaya sin `CHECK` es justo lo que hace barata esa marcha atrás.
 
 ## D-035 — El cierre diario por caja es un informe que deriva sus totales de las ventas
 
-**Fecha:** 2026-09-24 · **Estado:** aceptada · **la pantalla está pendiente** (fase 18 en curso)
-· **Decide:** Santiago
+**Fecha:** 2026-09-24 · **Estado:** aceptada e implementada (fase 18) · **Decide:** Santiago
 
 **Contexto.** El cliente pidió un cierre diario por caja que diga qué empleados vendieron y qué
 ventas fueron, y el 2026-09-23 precisó: efectivo, débito y crédito por separado, y la lista de
@@ -1250,6 +1249,12 @@ ventas con los productos de cada una. No contestó claro si quiere cuadrar el ef
 6. Reservado al administrador en la pantalla, igual que las ventas del día. Quién más debería verlo
    es la pregunta H4, sin responder.
 
-**Consecuencias.** Protocolo a la versión 5. Queda por hacer, en `docs/PLAN.md` fase 18: las pruebas
-—sobre todo la de que las tres sumas cuadran, los dos empleados en una caja y los bordes del día con
-corte distinto de cero—, conectar la pantalla, y mirarla con letra grande.
+**Consecuencias.** Protocolo a la versión 5. Las pruebas cubren lo que más importa: que las tres
+sumas cuadran en un día revuelto, los dos empleados en una misma caja y los bordes del día con un
+corte a las 6, además de la secundaria pidiendo el cierre de la principal contra un servidor real.
+La hora de corte se lee de `config` en cada llamada, no se copia al importar: si no, cambiarla no
+alcanzaría a las consultas ya cargadas. Se llega a la pantalla desde la barra lateral y desde un
+botón en las ventas del día. Por debajo de unos 1300 píxeles de ancho los nombres de empleado se
+abrevian (el nombre entero sale al pasar el ratón); a 1366×768 cabe todo, también con la letra más
+grande.
+

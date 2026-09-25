@@ -31,6 +31,7 @@ from ..services.preferencias import Preferencias
 from ..utils import sonido
 from . import dialogos, estilos, iconos, movimiento
 from .barra_lateral import BarraLateral
+from .cierre_view import CierreView
 from .configuracion_dialog import DialogoConfiguracion
 from .consulta_view import ConsultaView
 from .login_dialog import DialogoLogin
@@ -45,6 +46,7 @@ _CABECERAS = {
     "consulta": ("Consulta de precio", "Para mirar un precio sin abrir una venta."),
     "productos": ("Productos", "El catálogo completo de la tienda."),
     "reportes": ("Ventas del día", "Lo que se vendió hoy, venta por venta."),
+    "cierre": ("Cierre de caja", "Lo vendido en una caja, por medio de pago y por empleado."),
     "usuarios": ("Usuarios", "Un usuario por empleado, cada uno con su PIN."),
 }
 
@@ -137,12 +139,14 @@ class VentanaPrincipal(QMainWindow):
         self.vista_consulta = ConsultaView(self._sesion)
         self.vista_productos = ProductosView(self._sesion)
         self.vista_reportes = ReportesView(self._sesion)
+        self.vista_cierre = CierreView(self._sesion)
         self.vista_usuarios = UsuariosView(self._sesion)
         for vista in (
             self.vista_venta,
             self.vista_consulta,
             self.vista_productos,
             self.vista_reportes,
+            self.vista_cierre,
             self.vista_usuarios,
         ):
             self.pantallas.addWidget(vista)
@@ -153,6 +157,9 @@ class VentanaPrincipal(QMainWindow):
         self.vista_productos.salir_solicitado.connect(self.mostrar_venta)
         self.vista_productos.resumen_cambiado.connect(self._resumen_de_productos)
         self.vista_reportes.salir_solicitado.connect(self.mostrar_venta)
+        self.vista_reportes.cierre_solicitado.connect(self.mostrar_cierre)
+        self.vista_cierre.salir_solicitado.connect(self.mostrar_venta)
+        self.vista_cierre.resumen_cambiado.connect(self._resumen_de_cierre)
         self.vista_usuarios.salir_solicitado.connect(self.mostrar_venta)
         self.vista_usuarios.resumen_cambiado.connect(self._resumen_de_usuarios)
         return contenido
@@ -226,6 +233,7 @@ class VentanaPrincipal(QMainWindow):
             "consulta": self.mostrar_consulta,
             "productos": self.mostrar_productos,
             "reportes": self.mostrar_reportes,
+            "cierre": self.mostrar_cierre,
             "usuarios": self.mostrar_usuarios,
             "configuracion": self.abrir_configuracion,
             "usuario": self.cambiar_usuario,
@@ -240,6 +248,11 @@ class VentanaPrincipal(QMainWindow):
 
     def _resumen_de_usuarios(self, texto: str) -> None:
         if self.pantallas.currentWidget() is self.vista_usuarios:
+            self.subtitulo_pantalla.setText(texto)
+
+    def _resumen_de_cierre(self, texto: str) -> None:
+        """Qué caja y qué día se está mirando. Cambia al elegir otro de los dos."""
+        if self.pantallas.currentWidget() is self.vista_cierre:
             self.subtitulo_pantalla.setText(texto)
 
     def _ir_a(self, clave: str, vista: QWidget) -> None:
@@ -282,6 +295,14 @@ class VentanaPrincipal(QMainWindow):
             return
         self._ir_a("reportes", self.vista_reportes)
         self.vista_reportes.recargar()
+
+    def mostrar_cierre(self) -> None:
+        """Cierre diario por caja (fase 18). Reservado al administrador, como las ventas del
+        día: quién más debería verlo es la pregunta H4, sin responder."""
+        if self._asegurar_admin("ver el cierre de caja") is None:
+            return
+        self._ir_a("cierre", self.vista_cierre)
+        self.vista_cierre.al_entrar()
 
     def mostrar_usuarios(self) -> None:
         """Usuarios de la tienda. Si quien opera no es administrador, se le pide el PIN de uno."""
@@ -444,6 +465,7 @@ class VentanaPrincipal(QMainWindow):
         self.vista_productos.repintar()
         self.vista_usuarios.repintar()
         self.vista_reportes.repintar()
+        self.vista_cierre.repintar()
 
     # ------------------------------------------------------------------ sesión
 

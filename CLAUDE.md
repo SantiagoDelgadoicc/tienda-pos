@@ -13,8 +13,8 @@ instalador. Ver las fases 8 a 14 de `docs/PLAN.md`.
 Desde el 2026-09-18 hay una **tercera etapa**, también pedida por el cliente: un usuario por
 empleado, cierre diario por caja y medio de pago. Son las fases 15 a 20 de `docs/PLAN.md`, que
 empiezan con un apartado **"Cómo retomar"**: qué está hecho, qué falta y qué espera al cliente.
-**La fase 18 quedó a medias el 2026-09-24** —backend hecho y sin pruebas, pantalla en borrador— y
-es lo siguiente.
+Las fases 15 a 18 están hechas. **Lo siguiente es la fase 19**, el modo arqueo, que espera a que el
+cliente conteste los detalles del dinero del cajón; después, la 20.
 
 ## 2. Contexto del cliente
 
@@ -233,12 +233,12 @@ src/tienda_pos/
     estilos.py            paletas, radios, sombras y la hoja de estilos entera
     barra_lateral.py      la navegación
     usuarios_view.py      usuarios por empleado y el PIN generado (D-032)
-    cierre_view.py        cierre diario por caja (D-035). BORRADOR sin conectar ni probar
+    cierre_view.py        cierre diario por caja (D-035)
     iconos.py             los iconos, dibujados con QPainter
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    429 pruebas
+tests/                    494 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -275,7 +275,7 @@ python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
 python main.py --demo                 # con el catálogo y los usuarios de ejemplo, en una base vacía
 python main.py --reiniciar-admin      # recuperar un administrador; solo en el PC de la base
-pytest                                # pruebas (429, un minuto)
+pytest                                # pruebas (494, minuto y medio)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

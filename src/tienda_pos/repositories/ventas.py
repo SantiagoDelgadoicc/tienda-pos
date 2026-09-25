@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import date, datetime, time, timedelta
 
-from ..config import HORA_CORTE_DIA
+from .. import config
 from ..domain.models import EstadoVenta, LineaVenta, MedioPago, Venta
 
 _FORMATO_FECHA_HORA = "%Y-%m-%d %H:%M:%S"
@@ -171,7 +171,7 @@ def dia_comercial(ahora: datetime | None = None) -> date:
     dueño cuenta como del viernes.
     """
     ahora = ahora or datetime.now()
-    return (ahora - timedelta(hours=HORA_CORTE_DIA)).date()
+    return (ahora - timedelta(hours=config.HORA_CORTE_DIA)).date()
 
 
 def rango_del_dia(dia: date) -> tuple[str, str]:
@@ -180,8 +180,11 @@ def rango_del_dia(dia: date) -> tuple[str, str]:
     Un rango y no `date(fecha_hora) = ?` por dos motivos: permite que el día no empiece a
     medianoche (`HORA_CORTE_DIA`, pregunta H10), y compara el texto ISO tal cual, que es lo
     que deja usar el índice por fecha en lugar de recorrer la tabla entera.
+
+    La hora se lee de `config` en cada llamada, no se copia al importar: así cambiarla afecta
+    a todas las consultas a la vez, y las pruebas pueden probar otro corte.
     """
-    desde = datetime.combine(dia, time(HORA_CORTE_DIA))
+    desde = datetime.combine(dia, time(config.HORA_CORTE_DIA))
     hasta = desde + timedelta(days=1)
     return desde.strftime(_FORMATO_FECHA_HORA), hasta.strftime(_FORMATO_FECHA_HORA)
 

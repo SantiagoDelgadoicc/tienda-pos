@@ -307,7 +307,7 @@ publicados en el manual.
 
 - [x] Pantalla de usuarios: crear, cambiar el PIN, dar de baja *(fase 15)*
 - [x] ~~Obligar a cambiar el PIN de fábrica la primera vez~~ → el PIN lo genera el sistema *(D-032)*
-- [ ] Ventas del día por cajero → *fase 18*
+- [x] Ventas del día por cajero → *hecho en la fase 18*, en el cierre de caja
 
 **Criterio de aceptación:** se puede poner el sistema en una tienda sin que ningún PIN publicado en
 la documentación sirva para entrar.
@@ -401,18 +401,19 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 | 15 | Usuarios por empleado y sesión obligatoria (D-032) | ✅ 2026-09-24 |
 | 16 | Identidad de caja (D-033) | ✅ 2026-09-24 |
 | 17 | Medio de pago: efectivo, débito y crédito (D-034) | ✅ 2026-09-24 |
-| 18 | Informe de cierre diario por caja (D-035) | **en curso**: backend hecho, sin pruebas; pantalla en borrador |
+| 18 | Informe de cierre diario por caja (D-035) | ✅ 2026-09-24 |
 | 19 | Modo arqueo, activable | pendiente |
 | 20 | Documentación y manual | pendiente |
 
 ### Cómo retomar (estado al 2026-09-24)
 
-**Dónde está todo:** rama `diseño`. 429 pruebas en verde. Esquema de la base en la versión 5 y
+**Dónde está todo:** rama `diseño`. 494 pruebas en verde. Esquema de la base en la versión 5 y
 protocolo entre cajas en la 5. El `.exe` del escritorio está construido en la fase 15: hay que
-reconstruirlo (`python tools/construir.py`) para ver las fases 16 y 17.
+reconstruirlo (`python tools/construir.py`) para ver las fases 16 a 18.
 
-**Lo siguiente es terminar la fase 18**, que quedó a medias: su lista de pendientes está abajo, en
-orden. Después la 19 y la 20.
+**Lo siguiente es la fase 19**, el modo arqueo. Antes de construirla hay que cerrar lo que el
+cliente no ha contestado del dinero del cajón (abajo, y en la propia fase): cambia las tablas de
+la migración 6. Después, la 20.
 
 **Pendiente del cliente** (detalle en `docs/PREGUNTAS-CIERRE-Y-USUARIOS.md`):
 
@@ -489,58 +490,52 @@ Efectivo, débito y crédito, separados como pidió el cliente. Lo marca el caje
 cicla, siempre visible y sin estorbar el cobro con F12. Vuelve a efectivo tras cada venta.
 Modifica D-006. Revisar con el cliente a las dos semanas si débito y crédito se marcan bien.
 
-## Fase 18 — Informe de cierre diario por caja (D-035) · **EN CURSO**
+## Fase 18 — Informe de cierre diario por caja (D-035) ✅
 
-*Cortada el 2026-09-24 a pedido de Santiago, a mitad de camino.* El backend está hecho y la suite
-pasa, pero **no tiene pruebas propias** y la pantalla es un borrador sin conectar. No se da por
-terminada hasta cumplir lo de abajo.
-
-**Hecho:**
-
-- [x] `domain/models.py`: `CierreCaja`, `TotalPorMedio`, `TotalPorEmpleado`. Los totales **se
-      derivan de la lista de ventas** (propiedades), así que suma por medio = suma por empleado =
-      total por construcción, y por la red viaja una sola cosa.
-- [x] `config.HORA_CORTE_DIA = 0` y `repositories/ventas.py::rango_del_dia` / `dia_comercial`: el
-      día de la tienda es un rango con hora de corte. **"Ventas del día" usa ya el mismo rango**, así
-      que al responder H10 se cambia un número y cambian las dos pantallas a la vez.
-- [x] `repositories/ventas.py`: `del_dia_de_caja(dia, caja)` —con `caja IS ?`, que sirve para el
-      grupo sin caja— y `cajas_del_dia(dia)`.
-- [x] `services/reportes.py::cierre_de_caja(dia, caja)`: ventas con sus líneas y lista de cajas, en
-      tres consultas.
-- [x] Operación `cierre_de_caja` en `Sesion` (19 operaciones), `SesionRemota` y el servidor;
-      `protocolo.de_cierre` / `a_cierre`. **Protocolo a la versión 5.**
-- [x] `ui/cierre_view.py`: **borrador**. Día seleccionable, caja (desplegable solo si ese día vendió
-      más de una), tarjetas de total y de cada medio con su color, árbol de ventas desplegables con
-      sus productos, tabla por empleado, y el pie de "no cierra nada". Importa; nada más probado.
-
-**Pendiente, en este orden:**
-
-- [ ] **Pruebas del backend** (`tests/test_cierre.py`): caja sin ventas → ceros y sin error; dos
-      cajas el mismo día → cada cierre ve solo lo suyo y la suma de ambos es el total del día;
-      ventas sin caja → solo en el grupo "sin caja"; ventas sin usuario → "sin usuario" y el total
-      cuadra; **dos empleados en la misma caja**, que es el caso literal del cliente; anuladas
-      excluidas; **suma por medio = suma por empleado = total**; bordes del día (00:00 y 23:59
-      dentro, el día anterior fuera) y **con `HORA_CORTE_DIA` distinto de 0**; `dia_comercial` a
-      las 01:30 con corte 6 → el día anterior; ida y vuelta por el protocolo; por la red contra un
-      servidor real, pidiendo desde la secundaria el cierre de la principal.
-- [ ] **Conectar la pantalla**: entrada "Cierre de caja" en `barra_lateral.py::_ADMINISTRACION`
-      (icono `caja`, sin tecla), `_CABECERAS["cierre"]`, `vista_cierre` en `main_window.py`,
-      `mostrar_cierre()` con `_asegurar_admin("ver el cierre de caja")` que llama a
-      `vista_cierre.al_entrar()`, su `resumen_cambiado` a la cabecera, y `repintar()` al cambiar de
-      tema.
-- [ ] Un botón **"Cierre de caja"** en la cabecera de "Ventas del día", que es donde el dueño lo va a
-      buscar.
-- [ ] `ui/reportes_view.py::recargar` usa `date.today()`: pasar a `reportes.dia_comercial()`.
-- [ ] **Pruebas de la pantalla**: el desplegable de caja no aparece con una sola; la tarjeta "Sin
-      registrar" solo si hay ventas así; cada tarjeta de medio con su color; las ventas plegadas al
-      abrir y el botón que las despliega todas; elegir otro día y otra caja recarga; un día sin
-      ventas enseña el aviso; un cajero sin autorización no entra.
-- [ ] Mirarla renderizada a 1600×1000 y con **letra "Muy grande"** (D-031): con cinco tarjetas y
-      dos paneles puede no caber. Añadir la captura `14-cierre.png` a `tools/capturas.py`.
-- [ ] Decisión D-035 al día, `CLAUDE.md` (árbol y recuento), manual en la fase 20.
+- [x] `CierreCaja` en el dominio, con los totales por medio y por empleado **derivados de la lista
+      de ventas**: suma por medio = suma por empleado = total por construcción, y por la red viaja
+      una sola cosa
+- [x] El día de la tienda es un rango con hora de corte (`config.HORA_CORTE_DIA`, pregunta H10),
+      leída en cada llamada. **Las ventas del día usan el mismo rango y el mismo "hoy"**
+      (`reportes.dia_comercial`, ya no `date.today()`)
+- [x] `del_dia_de_caja` —con `caja IS ?`, que sirve para el grupo sin caja— y `cajas_del_dia`;
+      operación `cierre_de_caja` por la red. **Protocolo a la versión 5**
+- [x] Pruebas del backend (`tests/test_cierre.py`, 32): caja sin ventas, dos cajas el mismo día,
+      ventas sin caja y sin usuario, **dos empleados en la misma caja**, anuladas fuera, las tres
+      sumas cuadran en un día revuelto, bordes del día con corte 0 y con corte 6, `dia_comercial`,
+      ida y vuelta por el protocolo y, contra un servidor real, la secundaria pidiendo el cierre
+      de la principal
+- [x] Pantalla conectada: entrada "Cierre de caja" en la barra lateral (sin tecla), cabecera que
+      dice caja, día y ventas, y un botón **"Cierre de caja"** en las ventas del día. Solo
+      administrador
+- [x] Pruebas de la pantalla (`tests/test_ui_cierre.py`, 33)
+- [x] Mirada renderizada a 1600×1000, a 1366×768 y a 1080×680, con letra normal y "Muy grande",
+      en los dos temas. Captura `docs/img/14-cierre.png`
+- [x] D-035, `CLAUDE.md` y `TECNICA.md` al día. **El manual, en la fase 20**
 
 **Criterio de aceptación:** el dueño ve, en una pantalla, cuánto se vendió en esa caja en efectivo,
-en débito y en crédito, qué empleado vendió cuánto, y los productos de cada venta.
+en débito y en crédito, qué empleado vendió cuánto, y los productos de cada venta. **Cumplido.**
+
+Cambios respecto a lo planificado, todos menores y reversibles:
+
+- **Icono propio, `registradora`**, en vez de `caja`: ese es una caja de cartón, el stock, y al lado
+  de "Cierre de caja" se leía como el inventario.
+- **"Ver productos" va junto al título de la lista de ventas**, con el botón sin marco de las
+  cabeceras, y no en la fila del día y la caja: allí, a 1080 de ancho, el texto salía cortado.
+- **Si el cierre no carga** (por ejemplo, la otra caja sin red), la pantalla se vacía y lo dice, en
+  vez de dejar las cifras de la vez anterior debajo del día nuevo.
+- El árbol de ventas dibuja él mismo la columna de la flecha: con la hoja de estilos, el filete
+  entre filas se cortaba antes de la flecha, y darle estilo a esa columna hace que Qt no la dibuje.
+
+Arreglos de paso, fuera de la pantalla: el carril de las barras de desplazamiento salía rayado en
+el tema oscuro, en cualquier lista larga (`estilos.py`); las entradas de la barra lateral sin
+tecla decían "()" al pasar el ratón; `tools/capturas.py` fallaba con una carpeta de destino fuera
+del proyecto, y ahora hace las capturas en una caja con nombre, como las de verdad.
+
+**Límite conocido:** por debajo de unos 1300 de ancho los nombres de empleado se abrevian ("Marta
+…"). El nombre entero sale al pasar el ratón, y plegar la barra lateral (Ctrl+B) devuelve sitio.
+A 1366×768 cabe todo, también con "Muy grande". Se suma a comprobar la resolución de los PC en la
+visita a la tienda.
 
 ## Fase 19 — Modo arqueo, activable · pendiente
 

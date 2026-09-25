@@ -161,10 +161,13 @@ construye sin ella.
 **Protocolo entre cajas.** Versión 1, dos cajas (fase 13) · 2, administración de usuarios
 (fase 15) · 3, cada venta dice de qué caja viene (fase 16) · 4, y con qué se pagó (fase 17) ·
 **5**, el cierre por caja (fase 18). **Esquema de la base: 5** (`venta.caja`, `venta.medio_pago`).
+Sube también cuando solo se añaden operaciones: así una actualización a medias se detecta al
+arrancar y no en mitad de una pantalla. Hay que actualizar las dos cajas a la vez.
 
 **El día de los informes** empieza a `config.HORA_CORTE_DIA` (hoy 0, medianoche; pregunta H10).
-Las ventas del día y el cierre lo leen de ahí, a través de `repositories/ventas.py::rango_del_dia`. Sube también cuando solo se añaden operaciones: así una actualización a medias
-se detecta al arrancar y no en mitad de una pantalla. Hay que actualizar las dos cajas a la vez.
+Las ventas del día y el cierre lo leen de ahí, a través de `repositories/ventas.py::rango_del_dia`
+y `dia_comercial`, que lo consultan en cada llamada: cambiar ese número cambia las dos pantallas a
+la vez. Las pruebas de `tests/test_cierre.py` lo comprueban con un corte a las 6.
 
 **Antivirus:** algunos marcan como sospechosos los ejecutables de PyInstaller. Conviene
 probarlo en el equipo del cliente antes de la demostración.

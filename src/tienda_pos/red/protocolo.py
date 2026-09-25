@@ -42,8 +42,9 @@ _FORMATO_FECHA_HORA = "%Y-%m-%d %H:%M:%S"
 #:
 #: Historia: 1, dos cajas (fase 13) · 2, administración de usuarios (fase 15) · 3, cada venta
 #: dice de qué caja viene (fase 16) · 4, y con qué se pagó (fase 17) · 5, el cierre por caja
-#: (fase 18) · 6, el arqueo de caja (fase 19) · 7, la venta por peso (D-037).
-VERSION_PROTOCOLO = 7
+#: (fase 18) · 6, el arqueo de caja (fase 19) · 7, la venta por peso (D-037) · 8, editar un
+#: producto sin mandar el stock lo deja como está (fase 22): un servidor de la 7 fallaría con él.
+VERSION_PROTOCOLO = 8
 
 
 # --------------------------------------------------------------------------- dominio → JSON

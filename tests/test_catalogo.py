@@ -163,6 +163,30 @@ class TestAdministracionDeProductos:
         )
         assert catalogo.consultar_por_codigo(conexion, "7801234000019").precio_clp == 1490
 
+    def test_sin_stock_conserva_el_de_la_base(self, conexion, productos, admin) -> None:
+        """Fase 22: el formulario abierto antes de una venta no puede devolver el stock viejo."""
+        from tienda_pos.repositories import productos as repo_productos
+
+        producto = catalogo.consultar_por_codigo(conexion, "7801234000019")
+        repo_productos.descontar_stock(conexion, producto.id, 3)  # una caja vende entre medio
+        catalogo.actualizar_producto(
+            conexion, admin, producto.id, producto.codigo_barras, producto.nombre, 1490, None
+        )
+        guardado = catalogo.consultar_por_codigo(conexion, "7801234000019")
+        assert guardado.precio_clp == 1490 and guardado.stock == producto.stock - 3
+
+    def test_sin_stock_se_puede_cambiar_el_precio_de_uno_en_negativo(
+        self, conexion, productos, admin
+    ) -> None:
+        from tienda_pos.repositories import productos as repo_productos
+
+        producto = catalogo.consultar_por_codigo(conexion, "7801234000019")
+        repo_productos.descontar_stock(conexion, producto.id, producto.stock + 4)
+        catalogo.actualizar_producto(
+            conexion, admin, producto.id, producto.codigo_barras, producto.nombre, 1490, None
+        )
+        assert catalogo.consultar_por_codigo(conexion, "7801234000019").stock == -4
+
     def test_no_se_puede_actualizar_algo_que_no_existe(self, conexion, admin) -> None:
         with pytest.raises(DatosInvalidos):
             catalogo.actualizar_producto(conexion, admin, 9999, "7801234000040", "X", 100, 1)

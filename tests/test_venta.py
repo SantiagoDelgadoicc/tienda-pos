@@ -321,6 +321,17 @@ class TestCierreDeVenta:
         with pytest.raises(DatosInvalidos):
             catalogo.actualizar_producto(conexion, admin, agua.id, agua.codigo_barras, agua.nombre, 1290, -9)
 
+    def test_un_negativo_se_puede_subir_hacia_cero(self, conexion, productos, cajero, admin) -> None:
+        """Fase 22: si entra una unidad y había -2, queda -1; eso no es escribir un negativo."""
+        from tienda_pos.services import catalogo
+
+        carrito = Carrito()
+        carrito.agregar(productos["agua"], 3)
+        servicio_venta.cerrar_venta(conexion, carrito, cajero)
+        agua = repo_productos.obtener_por_id(conexion, productos["agua"].id)
+        catalogo.actualizar_producto(conexion, admin, agua.id, agua.codigo_barras, agua.nombre, 1190, -1)
+        assert repo_productos.obtener_por_id(conexion, agua.id).stock == -1
+
     def test_se_rechaza_si_no_alcanza_el_stock(self, conexion, productos, cajero, stock_estricto) -> None:
         carrito = Carrito()
         carrito.agregar(productos["agua"], 5)  # solo hay 1

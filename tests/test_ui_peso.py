@@ -146,3 +146,14 @@ class TestDialogoPeso:
         assert not dialogo._aceptar.isEnabled()
         dialogo._confirmar()
         assert dialogo.gramos is None
+
+    def test_el_descuento_de_una_linea_por_peso_dice_los_gramos(self, ventana, pesos) -> None:
+        """Fase 22: decía "(1 unidad)", que en 350 g de jamón no significa nada."""
+        respuestas, _ = pesos
+        respuestas.append(350)
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(JAMON)
+        dialogo = dialogos.DialogoDescuento(
+            vista.carrito.base_descontable_clp, ventana, linea=vista.carrito.linea_de(JAMON)
+        )
+        assert dialogo.opcion_producto.text() == "Solo a Jamón pierna  (350 g)"

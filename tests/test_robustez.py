@@ -59,6 +59,28 @@ class TestRespaldos:
 
         assert len(listar_respaldos(carpeta)) == 3
 
+    def test_guarda_ademas_el_ultimo_de_cada_dia(self, tmp_path) -> None:
+        """Fase 22: dos respaldos por día (abrir y cerrar) no pueden dejar solo tres días."""
+        from tienda_pos.db.respaldo import _limpiar_antiguos
+
+        carpeta = tmp_path / "backups"
+        carpeta.mkdir()
+        for dia in range(1, 11):  # diez días, con respaldo al abrir y al cerrar
+            for hora in ("090000", "210000"):
+                (carpeta / f"tienda-202609{dia:02d}-{hora}.db").write_bytes(b"x")
+
+        _limpiar_antiguos(carpeta, conservar=4, dias=7)
+
+        nombres = [archivo.name for archivo in listar_respaldos(carpeta)]
+        # Los cuatro más recientes, y el último de cada uno de los siete días más recientes.
+        assert nombres[:4] == [
+            "tienda-20260910-210000.db",
+            "tienda-20260910-090000.db",
+            "tienda-20260909-210000.db",
+            "tienda-20260909-090000.db",
+        ]
+        assert nombres[4:] == [f"tienda-202609{d:02d}-210000.db" for d in range(8, 3, -1)]
+
     def test_un_fallo_al_respaldar_no_impide_arrancar(
         self, base_en_disco, tmp_path, monkeypatch, caplog
     ) -> None:

@@ -620,7 +620,7 @@
   <p class="entrada">En <strong>Efectivo</strong>, el dueño ve lo que el cajero no ve: cuánto debería haber y cómo terminaron los cierres.</p>
 
   <h2>Ver cuánto debería haber</h2>
-  <p>Si entró como administrador, lo ve directamente. Si está atendiendo un cajero, pulse <span class="boton">Ver las cuentas</span> y escriba su PIN: el cajero sigue en su sesión, y las cuentas se ocultan al salir de la pantalla.</p>
+  <p>Si entró como administrador, lo ve directamente. Si está atendiendo un cajero, pulse <span class="boton">Ver las cuentas</span> y escriba su PIN: el cajero sigue en su sesión. Las cuentas se ocultan solas a los dos minutos o al salir de la pantalla; si se va antes, pulse <span class="boton">Ocultar las cuentas</span>.</p>
 
   <h2>Cierres anteriores</h2>
   <p>Abajo, en <strong>Efectivo</strong>, cada cierre de las dos cajas: cuánto debía haber, cuánto se contó, si <strong>sobró o faltó</strong> y quién cerró. Una caja que sigue abierta aparece como "Abierta".</p>
@@ -693,7 +693,7 @@
     <tr><th>Acción</th><th>Cómo</th></tr>
     <tr><td>Buscar</td><td>Escriba parte del nombre o del código en el filtro.</td></tr>
     <tr><td>Nuevo producto</td><td>Lo más cómodo es escanear el código dentro del formulario. Luego el nombre, el precio y el stock.</td></tr>
-    <tr><td>Producto por peso</td><td>Marque <strong>Se vende por peso</strong>: el precio pasa a ser el del kilo y el stock se anota en gramos, y nunca impide vender. Si no tiene código, como el pan, déjelo vacío y el sistema le pone uno.</td></tr>
+    <tr><td>Producto por peso</td><td>Marque <strong>Se vende por peso</strong>: el precio pasa a ser el del kilo y el stock se anota en gramos. Al llegar a cero se queda en cero. Si no tiene código, como el pan, déjelo vacío y el sistema le pone uno.</td></tr>
     <tr><td>Cambiar un precio</td><td><strong>Editar</strong>, o doble clic en el producto. El precio nuevo se ve al instante en las dos cajas. Las ventas pasadas conservan el precio al que se vendieron.</td></tr>
     <tr><td>Dar de baja</td><td>El producto deja de venderse, pero <strong>no se borra</strong>: las ventas antiguas siguen correctas.</td></tr>
     <tr><td>Códigos pendientes</td><td>Los códigos que se escanearon en la caja y no están cargados, ordenados por cuántas veces se intentaron.</td></tr>
@@ -701,7 +701,7 @@
 
   <div class="aviso nota">
     <span class="titulo">Bueno saber</span>
-    <p>El stock baja solo con cada venta. Si al contar la mercadería no coincide, corríjalo editando el producto.</p>
+    <p>El stock baja solo con cada venta. <strong>Que no haya stock nunca impide vender</strong>: si se vende más de lo que había, el stock queda en negativo (por ejemplo −3) y avisa de que falta cargar mercadería. Si al contar la mercadería no coincide, corríjalo con <span class="boton">Stock</span> o editando el producto.</p>
   </div>
 </section>
 

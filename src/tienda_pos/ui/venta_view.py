@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
 
 from ..domain.errors import CajaCerrada, ErrorDominio, ProductoNoEncontrado
 from ..domain.models import MedioPago, Usuario
+from ..red.cliente import ServidorNoDisponible
 from ..red.sesion import Sesion
 from ..services import venta as servicio_venta
 from ..services.preferencias import Preferencias
@@ -524,8 +525,13 @@ class VentaView(QWidget):
 
         El medio vuelve a efectivo: un selector que se quedara en débito cobraría mal la
         primera venta de la mañana siguiente, que casi siempre es en efectivo.
+
+        Y el intento de cobro se olvida. Si se quedara, el cobro del cliente siguiente viajaría
+        con el identificador de un cobro anterior que quedó sin respuesta: el servidor lo
+        tomaría por un reintento, devolvería la venta vieja y la nueva no se registraría.
         """
         self.elegir_medio_pago(MedioPago.EFECTIVO)
+        self._intento_cobro = None
 
     @staticmethod
     def _renglon(etiqueta: QLabel, valor: QLabel) -> QHBoxLayout:
@@ -941,11 +947,19 @@ class VentaView(QWidget):
         if self._carrito.esta_vacio:
             self.enfocar_escaneo()
             return
+        # Un cobro que se quedó sin respuesta pudo registrarse igual. Cancelar no lo deshace, y
+        # quien cancela tiene que saberlo antes, no descubrirlo en el cierre.
+        sin_respuesta = (
+            "\n\nOjo: el último intento de cobro quedó sin respuesta de la caja principal y "
+            "puede que se haya registrado. Revíselo en Ventas del día."
+            if self._intento_cobro is not None
+            else ""
+        )
         if dialogos.confirmar(
             self,
             "Cancelar venta",
             f"Se quitarán los {self._carrito.cantidad_articulos} artículos del carrito.\n"
-            "¿Desea cancelar la venta?",
+            f"¿Desea cancelar la venta?{sin_respuesta}",
             texto_si="Sí, cancelar",
         ):
             self._carrito.vaciar()
@@ -999,20 +1013,21 @@ class VentaView(QWidget):
             if pedir_apertura(
                 self._sesion, self.usuario, self, motivo="La caja está cerrada. Para cobrar hay que abrirla."
             ) is None:
+                self._intento_cobro = None
                 self.enfocar_escaneo()
                 return
             try:
                 venta = self._cerrar_venta()
             except ErrorDominio as error:
-                dialogos.mostrar_error(self, str(error))
-                self.enfocar_escaneo()
+                self._cobro_fallido(error)
                 return
         except ErrorDominio as error:
-            dialogos.mostrar_error(self, str(error))
-            self.enfocar_escaneo()
+            self._cobro_fallido(error)
             return
 
-        self._intento_cobro = None
+        # Se compara antes de vaciar: en un reintento, la venta que devuelve el servidor es la del
+        # primer intento, y el carrito pudo cambiar entre medio.
+        es_lo_de_pantalla = self._es_el_carrito(venta)
         self._carrito.vaciar()
         self._empezar_venta_nueva()
         self._refrescar()
@@ -1025,7 +1040,38 @@ class VentaView(QWidget):
             exito=True,
         )
         self.venta_registrada.emit()
+        if not es_lo_de_pantalla:
+            dialogos.mostrar_error(
+                self,
+                f"La venta N° {venta.folio} ya había quedado registrada en el intento anterior, "
+                f"por {formatear_clp(venta.total_clp)}.\n\n"
+                "El carrito cambió después, y esos cambios no están en la venta. Revise con el "
+                "cliente: si falta cobrar algo, páselo como una venta nueva.",
+                "Venta registrada en el intento anterior",
+            )
         self.enfocar_escaneo()
+
+    def _cobro_fallido(self, error: ErrorDominio) -> None:
+        """Explica por qué no se cobró y decide si el próximo intento es el mismo cobro.
+
+        Solo un cobro **sin respuesta** pudo haber quedado registrado, y solo entonces se conserva
+        el intento para que reintentar no cobre dos veces (D-024). Cualquier otro error es el
+        servidor contestando que no: la venta no existe, y el intento se olvida.
+        """
+        if not isinstance(error, ServidorNoDisponible):
+            self._intento_cobro = None
+        dialogos.mostrar_error(self, str(error))
+        self.enfocar_escaneo()
+
+    def _es_el_carrito(self, venta) -> bool:
+        """Si la venta registrada es lo que está en pantalla: mismo total y mismas líneas."""
+
+        def lineas(pares) -> list[tuple]:
+            return sorted((l.codigo_barras, l.cantidad, l.gramos or 0) for l in pares)
+
+        return venta.total_clp == self._carrito.total_clp and lineas(venta.lineas) == lineas(
+            self._carrito.lineas
+        )
 
     def _cerrar_venta(self):
         return self._sesion.cerrar_venta(

@@ -420,6 +420,12 @@ el nombre de cada caja sin borrarlo nunca. Se probó entero contra una copia de 
 la tienda, con los fallos a mitad de copia incluidos; los pasos 3 y 4 solo se pueden probar en la
 tienda, porque cambian la dirección de red del equipo. Ver `DESPLIEGUE-TIENDA.md`, sección 5.
 
+**Fase 22 hecha** (2026-09-25): los ocho errores de la revisión de la víspera, arreglados, con el
+**protocolo en la versión 8**. 659 pruebas en verde. El `.exe` está construido y **el kit del
+pendrive (`E:\PUNTO-Y-FAMA`) está al día**, comprobado archivo por archivo. La visita se ensayó
+entera contra dos PC simulados como los de la tienda: actualización con el kit, migración de la
+base de la versión 3 a la 7 con el `.exe` instalado, y un día de venta con las dos cajas en red.
+
 **Lo siguiente es cerrar la fase 20**: el manual está hecho (PDF); faltan `GUION-DEMO.md` y `README.md`.
 
 **Pendiente del cliente** (detalle en `docs/PREGUNTAS-CIERRE-Y-USUARIOS.md`):
@@ -667,6 +673,67 @@ tecleados en la caja.
 gramos, el jamón escaneado igual, el precio es exacto al peso, y todo lo que se vendía por unidad
 sigue igual. **Cumplido.** Queda por ver en la tienda cómo pesan hoy: si la balanza imprime
 etiquetas con código, leerlas es un paso más (D-037, punto 9).
+
+---
+
+## Fase 22 — Errores encontrados antes de la visita (2026-09-25)
+
+Revisión completa del código la víspera de instalar en la tienda. Las 641 pruebas estaban en verde
+y la migración de una base como la de la tienda (versión 3) a la 7 recorre todas las pantallas sin
+fallos; lo que sigue lo encontró la lectura del código y se reprodujo con un script antes de
+tocarlo.
+
+**Graves: alteran datos sin avisar.**
+
+- [x] **1. En la caja 2 se puede perder una venta entera.** Si un cobro agota el tiempo límite
+      pero el servidor sí lo registró, y el cajero cancela la venta (F6) o cambia de usuario, el
+      identificador del intento de cobro (D-024) sigue guardado y se reutiliza con el cliente
+      siguiente. El servidor lo toma por un reintento y devuelve la venta anterior: la nueva no se
+      registra, el stock no baja y la pantalla anuncia el folio y el total de la anterior.
+      `ui/venta_view.py`, `cancelar_venta` y `cobrar`.
+      *Arreglo:* el intento se olvida al empezar una venta nueva (cobrada, cancelada o por cambio
+      de usuario) y cuando el servidor contesta que no; solo se conserva tras un cobro **sin
+      respuesta**, que es el único que pudo registrarse. Si en el reintento la venta registrada
+      no es lo que hay en pantalla porque el carrito cambió, se avisa al cajero. Y cancelar tras
+      un cobro sin respuesta avisa de que ese cobro pudo quedar registrado.
+- [x] **2. Editar un producto pisa su stock con el de cuando se abrió la pantalla.** La lista de
+      Productos se carga al entrar, y guardar un cambio de precio escribe también ese stock viejo:
+      lo que vendieron las cajas entre medio desaparece. Si el stock ya era negativo y cambió,
+      cambiar solo el precio da "El stock no puede ser negativo". `ui/productos_view.py`,
+      `services/catalogo.py::actualizar_producto`.
+      *Arreglo:* el formulario manda el stock solo si se tocó; sin él, el servicio conserva el de
+      la base, leído dentro de la transacción. Editar y "Stock" parten del producto tal como está
+      en la base al pulsarlos, no del de la lista. **Protocolo a la versión 8**: el stock puede
+      viajar vacío, y un servidor de la 7 fallaría con eso.
+
+**Medio.**
+
+- [x] **3. El conteo a ciegas se puede saltar.** Tras "Ver las cuentas" con el PIN del dueño en el
+      PC del cajero, "Debería haber" queda a la vista, y "Actualizar" lo refresca, hasta salir de
+      la pantalla. Y si con las cuentas a la vista cierra la caja el cajero, al dueño no se le
+      enseña la diferencia. `ui/efectivo_view.py`.
+      *Arreglo:* las cuentas vistas con un PIN prestado se ocultan solas a los dos minutos, y hay
+      un botón "Ocultar las cuentas" para hacerlo antes. Al administrador que opera su propia
+      caja no se le ocultan. Si la cajera cierra con el dueño mirando, él ve la diferencia.
+      Manual actualizado (sección de Efectivo) y PDF regenerado.
+
+**Menores.**
+
+- [x] 4. Ajustar stock con un stock negativo: "−1" sobre −3 salta a 0 y dice "Entran 3 unidades".
+      *Arreglo:* restar ya no baja de cero ni del negativo que había; un negativo se puede subir
+      hacia cero (el servicio lo acepta, precisado en D-009); Enter guarda también sobre un
+      negativo; y "Entra 1 unidad" en singular.
+- [x] 5. Descuento a un producto por peso: la opción dice "(1 unidad)" en vez de los gramos.
+- [x] 6. El stock por unidad puede quedar negativo (D-009, hoy) pero el de peso se corta en 0; y el
+      manual, al decir que el peso "nunca impide vender", da a entender que la unidad sí.
+      *Arreglo:* la diferencia **se mantiene**, porque la decidió D-037 (punto 5); queda
+      explicada en D-009. El manual dice ahora que la falta de stock nunca impide vender, y que
+      el negativo avisa de que falta cargar mercadería.
+- [x] 7. Siete respaldos, uno al abrir y otro al cerrar: cubren tres o cuatro días.
+      *Arreglo:* se guardan los 7 más recientes y, además, el último de cada uno de los últimos
+      30 días (`config.RESPALDOS_DIAS`).
+- [x] 8. `CLAUDE.md` da D-018 como en pie ("el stock no cambia sin dejar rastro"), pero la fase 9
+      no está hecha. No prometerlo en la visita. *Corregido en `CLAUDE.md`.*
 
 ---
 

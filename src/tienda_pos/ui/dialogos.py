@@ -275,6 +275,11 @@ class DialogoDescuento(QDialog):
     def _texto_opcion_producto(self) -> str:
         if self._linea is None:
             return "Solo a un producto  (seleccione antes una línea del carrito)"
+        if self._linea.gramos is not None:
+            # Por peso (D-037): su "1 unidad" no significa nada; lo que se descuenta son gramos.
+            from ..utils.money import formatear_peso
+
+            return f"Solo a {self._linea.nombre}  ({formatear_peso(self._linea.gramos)})"
         unidades = "unidad" if self._linea.cantidad == 1 else "unidades"
         return f"Solo a {self._linea.nombre}  ({self._linea.cantidad} {unidades})"
 

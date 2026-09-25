@@ -97,7 +97,7 @@ class Sesion(ABC):
         codigo: str,
         nombre: str,
         precio_clp: int,
-        stock: int,
+        stock: int | None,
         por_peso: bool | None = None,
     ) -> Producto: ...
 
@@ -300,7 +300,7 @@ class SesionLocal(Sesion):
         codigo: str,
         nombre: str,
         precio_clp: int,
-        stock: int,
+        stock: int | None,
         por_peso: bool | None = None,
     ) -> Producto:
         return catalogo.actualizar_producto(

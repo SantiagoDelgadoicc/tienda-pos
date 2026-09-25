@@ -187,7 +187,8 @@ def _actualizar_producto(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, An
         a["codigo"],
         a["nombre"],
         a["precio_clp"],
-        a["stock"],
+        # None: no se tocó, queda el de la base (fase 22).
+        a.get("stock"),
         a.get("por_peso"),
     )
     return protocolo.de_producto(producto)

@@ -100,9 +100,10 @@ def _validar_datos(
         raise DatosInvalidos(f"El nombre no puede superar los {_NOMBRE_LONGITUD_MAX} caracteres.")
     if precio_clp < 0:
         raise DatosInvalidos("El precio no puede ser negativo.")
-    # Un stock negativo sale de vender sin stock (D-009); se acepta si ya era así, para poder
-    # cambiarle el precio a ese producto. Lo que no se puede es escribir uno negativo.
-    if stock < 0 and stock != stock_anterior:
+    # Un stock negativo sale de vender sin stock (D-009). Se acepta si no baja del que había:
+    # igual, para poder cambiarle el precio a ese producto, o más alto, porque entró mercadería
+    # y el -3 pasa a -1 (fase 22). Lo que no se puede es escribir uno negativo de la nada.
+    if stock < 0 and (stock_anterior is None or stock < stock_anterior):
         raise DatosInvalidos("El stock no puede ser negativo.")
     return cb.normalizar(codigo), nombre
 
@@ -153,32 +154,38 @@ def actualizar_producto(
     codigo: str,
     nombre: str,
     precio_clp: int,
-    stock: int,
+    stock: int | None,
     por_peso: bool | None = None,
 ) -> Producto:
     """Modifica un producto existente. Solo administradores.
 
     `por_peso` None lo deja como estaba. Cambiarlo no toca las ventas pasadas: cada línea
     guarda si se vendió por peso.
+
+    `stock` None también lo deja como está **en la base en este momento**, y es lo que debe
+    mandar quien no lo cambió. El formulario se abre con el stock de cuando se cargó la lista;
+    si lo devolviera tal cual, cambiarle el precio a un producto borraría lo que las cajas
+    vendieron mientras tanto (fase 22). Por eso el producto se lee dentro de la transacción.
     """
     from .auth import exigir_admin
 
     exigir_admin(usuario, "modificar productos")
-    existente = repo_productos.obtener_por_id(conexion, producto_id)
-    if existente is None:
-        raise DatosInvalidos("El producto que intenta modificar ya no existe.")
-    if not cb.normalizar(codigo):
-        codigo = existente.codigo_barras
-    codigo, nombre = _validar_datos(codigo, nombre, precio_clp, stock, existente.stock)
-    if por_peso is not None:
-        existente.por_peso = bool(por_peso)
-
-    existente.codigo_barras = codigo
-    existente.nombre = nombre
-    existente.precio_clp = precio_clp
-    existente.stock = stock
-
     with transaccion(conexion):
+        existente = repo_productos.obtener_por_id(conexion, producto_id)
+        if existente is None:
+            raise DatosInvalidos("El producto que intenta modificar ya no existe.")
+        if not cb.normalizar(codigo):
+            codigo = existente.codigo_barras
+        if stock is None:
+            stock = existente.stock
+        codigo, nombre = _validar_datos(codigo, nombre, precio_clp, stock, existente.stock)
+        if por_peso is not None:
+            existente.por_peso = bool(por_peso)
+
+        existente.codigo_barras = codigo
+        existente.nombre = nombre
+        existente.precio_clp = precio_clp
+        existente.stock = stock
         repo_productos.actualizar(conexion, existente)
     return existente
 

@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..domain.errors import ErrorDominio
+from ..domain.errors import ErrorDominio, ProductoNoEncontrado
 from ..domain.models import Producto, Usuario
 from ..red.sesion import Sesion
 from ..utils.money import formatear_clp, formatear_peso, parsear_clp
@@ -80,7 +80,10 @@ class DialogoProducto(QDialog):
         self.rotulo_stock = QLabel("Stock")
         columna.addWidget(self.rotulo_stock)
         self.campo_stock = QLineEdit(str(producto.stock) if producto else "0")
-        self.campo_stock.setValidator(QIntValidator(0, 9_999_999, self))
+        # El mínimo es cero, o el stock negativo que ya tenía (D-009): si no, el validador daría
+        # por inválido lo que el propio formulario muestra.
+        minimo = min(0, producto.stock) if producto else 0
+        self.campo_stock.setValidator(QIntValidator(minimo, 9_999_999, self))
         columna.addWidget(self.campo_stock)
         self._rotular(self.casilla_peso.isChecked())
 
@@ -130,12 +133,19 @@ class DialogoProducto(QDialog):
         self.error.show()
 
     @property
-    def datos(self) -> tuple[str, str, int, int, bool]:
+    def datos(self) -> tuple[str, str, int, int | None, bool]:
+        """Lo escrito. Al editar, el stock es None si no se tocó: así el servicio conserva el
+        de la base, que pudo bajar con las ventas mientras el formulario estaba abierto."""
+        texto_stock = self.campo_stock.text().strip()
+        if self._producto is not None and texto_stock == str(self._producto.stock):
+            stock = None
+        else:
+            stock = int(texto_stock or 0)
         return (
             self.campo_codigo.text().strip(),
             self.campo_nombre.text().strip(),
             parsear_clp(self.campo_precio.text()),
-            int(self.campo_stock.text() or 0),
+            stock,
             self.casilla_peso.isChecked(),
         )
 
@@ -194,7 +204,10 @@ class DialogoStock(QDialog):
             fila.addWidget(self._boton_salto(salto))
 
         self.campo = QLineEdit(str(producto.stock))
-        self.campo.setValidator(QIntValidator(0, 9_999_999, self))
+        # Como en el formulario: cero, o el negativo que ya tenía. Sin eso, Enter no hace nada
+        # sobre un stock negativo, porque Qt no confirma un texto que su validador rechaza.
+        self._minimo = min(0, producto.stock)
+        self.campo.setValidator(QIntValidator(self._minimo, 9_999_999, self))
         self.campo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.campo.setMinimumWidth(110)
         self.campo.textChanged.connect(self._actualizar_resumen)
@@ -234,9 +247,9 @@ class DialogoStock(QDialog):
         return boton
 
     def _sumar(self, salto: int) -> None:
-        # El tope de abajo es cero: un stock negativo no existe, y dejar que la resta lo
-        # cruce solo serviría para que el validador rechace el texto después.
-        self.campo.setText(str(max(0, self.stock + salto)))
+        # El tope de abajo es cero, o el negativo que ya tenía (D-009): restar nunca lo deja
+        # más negativo, y un −1 sobre −3 no puede saltar a cero, que sería sumar tres.
+        self.campo.setText(str(max(self._minimo, self.stock + salto)))
 
     def _actualizar_resumen(self) -> None:
         diferencia = self.stock - self._producto.stock
@@ -246,10 +259,12 @@ class DialogoStock(QDialog):
             # El número del campo son gramos: el resumen lo dice en kilos para que se lea.
             verbo = "Entran" if diferencia > 0 else "Salen"
             self.resumen.setText(f"{verbo} {formatear_peso(abs(diferencia))}  ·  gramos en el campo")
-        elif diferencia > 0:
-            self.resumen.setText(f"Entran {diferencia} unidades")
         else:
-            self.resumen.setText(f"Salen {abs(diferencia)} unidades")
+            verbo = "Entran" if diferencia > 0 else "Salen"
+            if abs(diferencia) == 1:
+                verbo = verbo[:-1]  # "Entra 1 unidad", no "Entran 1 unidades"
+            unidades = "unidad" if abs(diferencia) == 1 else "unidades"
+            self.resumen.setText(f"{verbo} {abs(diferencia)} {unidades}")
 
     @property
     def stock(self) -> int:
@@ -412,10 +427,32 @@ class ProductosView(QWidget):
             return
         self.recargar()
 
+    def _al_dia(self, producto: Producto) -> Producto | None:
+        """El producto como está ahora en la base, no como se cargó la lista.
+
+        La lista se carga al entrar en la pantalla, y las cajas siguen vendiendo mientras
+        tanto: un formulario abierto con esos datos mostraría un stock que ya no es (fase 22).
+        """
+        try:
+            return self._sesion.consultar_por_codigo(
+                producto.codigo_barras, registrar_faltante=False
+            )
+        except ProductoNoEncontrado:
+            dialogos.mostrar_error(
+                self, f"{producto.nombre} ya no está en el catálogo. Se actualizó la lista."
+            )
+        except ErrorDominio as error:
+            dialogos.mostrar_error(self, str(error))
+        self.recargar()
+        return None
+
     def editar(self) -> None:
         producto = self._seleccionado()
         if producto is None:
             dialogos.mostrar_error(self, "Seleccione primero un producto de la lista.")
+            return
+        producto = self._al_dia(producto)
+        if producto is None:
             return
 
         dialogo = DialogoProducto(self, producto)
@@ -436,6 +473,9 @@ class ProductosView(QWidget):
         producto = self._seleccionado()
         if producto is None:
             dialogos.mostrar_error(self, "Seleccione primero un producto de la lista.")
+            return
+        producto = self._al_dia(producto)
+        if producto is None:
             return
 
         dialogo = DialogoStock(producto, self)

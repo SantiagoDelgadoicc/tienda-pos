@@ -93,13 +93,27 @@ def listar_respaldos(carpeta: Path | None = None) -> list[Path]:
     return sorted(carpeta.glob(f"{_PREFIJO}*.db"), reverse=True)
 
 
-def _limpiar_antiguos(carpeta: Path, conservar: int) -> None:
-    """Borra los respaldos que sobran, empezando por el más antiguo.
+def _limpiar_antiguos(carpeta: Path, conservar: int, dias: int | None = None) -> None:
+    """Borra los respaldos que sobran: se quedan los `conservar` más recientes y, además, el
+    último de cada uno de los `dias` días más recientes con respaldo.
+
+    Lo segundo existe porque se respalda al abrir y al cerrar el programa: con solo los últimos
+    siete, un día con varios arranques se llevaba por delante la semana entera.
 
     El nombre lleva la fecha en formato ordenable, así que ordenar por nombre equivale a
     ordenar por antigüedad sin tener que consultar el sistema de archivos.
     """
-    sobrantes = listar_respaldos(carpeta)[conservar:]
+    dias = config.RESPALDOS_DIAS if dias is None else dias
+    respaldos = listar_respaldos(carpeta)
+    quedan = set(respaldos[:conservar])
+    dias_vistos: set[str] = set()
+    for archivo in respaldos:  # del más reciente al más antiguo
+        dia = archivo.name[len(_PREFIJO) : len(_PREFIJO) + 8]
+        if dia not in dias_vistos and len(dias_vistos) < dias:
+            dias_vistos.add(dia)
+            quedan.add(archivo)
+
+    sobrantes = [archivo for archivo in respaldos if archivo not in quedan]
     for archivo in sobrantes:
         try:
             archivo.unlink()

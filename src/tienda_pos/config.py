@@ -27,6 +27,11 @@ VERSION = "0.1.0"
 #: Cuántos respaldos automáticos se conservan antes de borrar el más antiguo.
 RESPALDOS_A_CONSERVAR = 7
 
+#: Además de esos, se guarda el último respaldo de cada uno de estos días hacia atrás. Hace
+#: falta porque se respalda al abrir y al cerrar: siete copias eran solo tres o cuatro días, y
+#: un error que se descubre el lunes suele venir de la semana anterior (fase 22).
+RESPALDOS_DIAS = 30
+
 #: Longitud mínima y máxima del PIN de acceso.
 PIN_LONGITUD_MIN = 4
 PIN_LONGITUD_MAX = 8

@@ -15,7 +15,8 @@ empleado, cierre diario por caja y medio de pago. Son las fases 15 a 20 de `docs
 empiezan con un apartado **"Cómo retomar"**: qué está hecho, qué falta y qué espera al cliente.
 Las fases 15 a 19 están hechas; la 19 es el arqueo de caja, siempre activo (D-036). El manual
 (fase 20) está hecho, en PDF. El 2026-09-25 se agregó la **venta por peso** (fase 21, D-037),
-pedida por el cliente.
+pedida por el cliente. Esa misma tarde, víspera de instalar, una revisión del código encontró y
+arregló ocho errores (fase 22); el protocolo entre cajas pasó a la **versión 8**.
 
 ## 2. Contexto del cliente
 
@@ -169,8 +170,10 @@ Añadido tras la reunión del 2026-09-13:
 - El multipuesto se resuelve con **un proceso servidor dueño del archivo**, no con la base en una
   carpeta compartida de red (D-015).
 - Criterios de rendimiento **medidos**, con catálogo sintético de 20.000 productos (D-022).
-- **Movimientos de inventario**: el stock no cambia sin dejar rastro (D-018). Sigue en pie tras la
+- **Movimientos de inventario**: que el stock no cambie sin dejar rastro (D-018). Sigue en pie tras la
   retirada de D-016 y D-017: no es un atributo del producto y no depende de ninguno de los dos.
+  **Decidido, pero sin construir**: es la fase 9, pendiente. Hoy el stock baja con cada venta y se
+  corrige a mano sin historial de por qué cambió. No prometérselo al cliente como hecho.
 - Importación y exportación **solo CSV**, con la biblioteca estándar (D-019).
 
 ### 3.3 Supuestos (a validar, no confirmados por nadie)
@@ -274,7 +277,7 @@ src/tienda_pos/
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    639 pruebas
+tests/                    659 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -311,7 +314,7 @@ python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
 python main.py --demo                 # con el catálogo y los usuarios de ejemplo, en una base vacía
 python main.py --reiniciar-admin      # recuperar un administrador; solo en el PC de la base
-pytest                                # pruebas (639, dos minutos)
+pytest                                # pruebas (659, dos minutos)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

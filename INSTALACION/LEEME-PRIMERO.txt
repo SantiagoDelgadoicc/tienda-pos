@@ -35,7 +35,7 @@
 
 
 -------------------------------------------------------------------------------
-  LO QUE HAY QUE EXPLICARLE AL DUENO  (6 ideas)
+  LO QUE HAY QUE EXPLICARLE AL DUENO  (7 ideas)
 -------------------------------------------------------------------------------
 
   1. Cada empleado entra con SU clave. Asi se sabe quien vendio que.
@@ -52,6 +52,9 @@
      y se pone el precio del KILO. Al venderlo se escanea (o el
      pan se busca con F3) y se escriben los gramos.
      Conviene cargar el pan con el dueno ese mismo dia.
+  7. Aunque el sistema diga que no queda, SE VENDE IGUAL. El stock
+     queda en negativo (por ejemplo -3) y eso avisa que falta cargar
+     mercaderia. Se corrige en PRODUCTOS, con el boton "Stock".
 
 
 -------------------------------------------------------------------------------

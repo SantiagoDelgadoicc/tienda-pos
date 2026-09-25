@@ -18,7 +18,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Callable
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -59,6 +59,11 @@ NOMBRE_CORTO = {
 
 _COLUMNAS_MOVIMIENTOS = ("Hora", "Qué", "Monto", "Detalle", "Quién")
 _COLUMNAS_CIERRES = ("Caja", "Turno", "Debería haber", "Contado", "Resultado", "Cerró")
+
+#: Cuánto quedan a la vista las cuentas abiertas con el PIN de un administrador en la sesión de
+#: otro. Si el dueño las mira en el PC del cajero y se va, no pueden quedarse ahí: el cajero
+#: vería cuánto debería haber antes de contar, y el conteo dejaría de ser a ciegas (fase 22).
+CUENTAS_PRESTADAS_MS = 2 * 60 * 1000
 
 AVISO_A_CIEGAS = (
     "Cuánto debería haber en el cajón lo ve el administrador. Al cerrar, cuente el efectivo y "
@@ -268,6 +273,10 @@ class EfectivoView(QWidget):
         self._visor: Usuario | None = None
         self._turno: TurnoCaja | None = None
         self._turnos: list[TurnoCaja] = []
+        #: Oculta las cuentas vistas con un PIN prestado. Ver `CUENTAS_PRESTADAS_MS`.
+        self._temporizador_cuentas = QTimer(self)
+        self._temporizador_cuentas.setSingleShot(True)
+        self._temporizador_cuentas.timeout.connect(self.ocultar_cuentas)
         self._construir()
 
     # ------------------------------------------------------------------ construcción
@@ -339,6 +348,12 @@ class EfectivoView(QWidget):
         self.boton_ver_cuentas.setToolTip("Con el PIN de un administrador")
         self.boton_ver_cuentas.clicked.connect(self._ver_cuentas)
         fila.addWidget(self.boton_ver_cuentas)
+
+        self.boton_ocultar_cuentas = QPushButton("Ocultar las cuentas")
+        self.boton_ocultar_cuentas.setToolTip("Antes de dejar la caja al cajero")
+        self.boton_ocultar_cuentas.clicked.connect(self.ocultar_cuentas)
+        self.boton_ocultar_cuentas.hide()
+        fila.addWidget(self.boton_ocultar_cuentas)
 
         self.boton_abrir = QPushButton("Abrir la caja")
         self.boton_abrir.setObjectName("botonAccion")
@@ -457,7 +472,24 @@ class EfectivoView(QWidget):
 
     def al_entrar(self) -> None:
         """Al abrir la pantalla. Las cuentas se ven solo si quien opera es administrador."""
+        self._temporizador_cuentas.stop()
         self._visor = self.usuario if self.usuario is not None and self.usuario.es_admin else None
+        self.recargar()
+
+    @property
+    def _cuentas_prestadas(self) -> bool:
+        """Si las cuentas están a la vista con el PIN de alguien que no es quien opera."""
+        if self._visor is None:
+            return False
+        return self.usuario is None or self._visor.id != self.usuario.id
+
+    def ocultar_cuentas(self) -> None:
+        """Vuelve al conteo a ciegas. Solo aplica a unas cuentas vistas con PIN prestado: el
+        administrador que opera su propia caja las ve siempre."""
+        self._temporizador_cuentas.stop()
+        if not self._cuentas_prestadas:
+            return
+        self._visor = None
         self.recargar()
 
     def recargar(self) -> None:
@@ -552,6 +584,10 @@ class EfectivoView(QWidget):
             self.recargar()
             return
 
+        if cerrado.diferencia_clp is None and self._visor is not None:
+            # Cerró el cajero con el administrador mirando las cuentas: el resultado es para él,
+            # y se pide con su usuario, que es el que puede verlo (D-036).
+            cerrado = self._visto_por_el_administrador(cerrado)
         if cerrado.diferencia_clp is None:
             # Quien cerró no es administrador: el resultado no se le enseña (D-036).
             mensaje = f"Caja cerrada. Se anotaron {formatear_clp(contado)} contados."
@@ -564,10 +600,20 @@ class EfectivoView(QWidget):
         dialogos.mostrar_info(self, mensaje, "Caja cerrada")
         self.recargar()
 
+    def _visto_por_el_administrador(self, turno: TurnoCaja) -> TurnoCaja:
+        """El mismo turno, con las cifras que solo ve el administrador que está mirando."""
+        try:
+            recientes = self._sesion.turnos_recientes(self._visor)
+        except ErrorDominio:
+            return turno
+        return next((t for t in recientes if t.id == turno.id), turno)
+
     def _ver_cuentas(self) -> None:
         administrador = self.autorizar_admin("ver las cuentas del efectivo")
         if administrador is not None:
             self._visor = administrador
+            if self._cuentas_prestadas:
+                self._temporizador_cuentas.start(CUENTAS_PRESTADAS_MS)
             self.recargar()
 
     def cambiar_monto_sugerido(self) -> None:
@@ -619,6 +665,7 @@ class EfectivoView(QWidget):
 
         con_cuentas = self._visor is not None
         self.boton_ver_cuentas.setVisible(not con_cuentas)
+        self.boton_ocultar_cuentas.setVisible(self._cuentas_prestadas)
         self.panel_cuentas.setVisible(con_cuentas and abierta)
         self.aviso_ciego.setVisible(not con_cuentas and abierta)
         self.panel_cierres.setVisible(con_cuentas)

@@ -257,6 +257,58 @@ class TestPantallaDeProductos:
 
         assert catalogo.consultar_por_codigo(conexion, COLA).precio_clp == 2490
 
+    def test_cambiar_el_precio_no_pisa_lo_vendido_con_la_lista_abierta(
+        self, vista, conexion, monkeypatch
+    ) -> None:
+        """Fase 22: la lista se cargó antes de que la otra caja vendiera tres."""
+        from tienda_pos.repositories import productos as repo_productos
+
+        vista.seleccionar_codigo(COLA)
+        en_la_lista = vista._seleccionado().stock
+        repo_productos.descontar_stock(conexion, vista._seleccionado().id, 3)
+
+        real = productos_view.DialogoProducto
+
+        def formulario(padre, producto):
+            dialogo = real(padre, producto)
+            dialogo.campo_precio.setText("2490")
+            dialogo.exec = lambda: True
+            return dialogo
+
+        monkeypatch.setattr(productos_view, "DialogoProducto", formulario)
+        vista.editar()
+
+        guardado = catalogo.consultar_por_codigo(conexion, COLA)
+        assert guardado.precio_clp == 2490 and guardado.stock == en_la_lista - 3
+
+    def test_el_formulario_manda_el_stock_solo_si_se_toco(self, vista) -> None:
+        vista.seleccionar_codigo(COLA)
+        producto = vista._seleccionado()
+        dialogo = productos_view.DialogoProducto(vista, producto)
+        assert dialogo.datos[3] is None
+        dialogo.campo_stock.setText(str(producto.stock + 5))
+        assert dialogo.datos[3] == producto.stock + 5
+
+    def test_el_ajuste_de_stock_parte_de_lo_que_hay_ahora(self, vista, conexion, monkeypatch) -> None:
+        from tienda_pos.repositories import productos as repo_productos
+
+        vista.seleccionar_codigo(COLA)
+        producto = vista._seleccionado()
+        repo_productos.descontar_stock(conexion, producto.id, 2)
+        vistos: list[int] = []
+
+        class _Falso:
+            def __init__(self, producto, padre=None) -> None:
+                vistos.append(producto.stock)
+                self.stock = producto.stock
+
+            def exec(self) -> int:
+                return 0
+
+        monkeypatch.setattr(productos_view, "DialogoStock", _Falso)
+        vista.ajustar_stock()
+        assert vistos == [producto.stock - 2]
+
     def test_dar_de_baja_lo_saca_del_catalogo(self, vista, conexion) -> None:
         vista.campo_filtro.setText(COLA)
         vista.tabla.selectRow(0)
@@ -375,6 +427,19 @@ class TestAjusteDeStock:
         dialogo.campo.setText("3")
         dialogo._sumar(-10)
         assert dialogo.stock == 0
+
+    def test_con_stock_negativo_restar_no_salta_a_cero(self, app) -> None:
+        """Fase 22: antes, −1 sobre −3 dejaba 0 y decía "Entran 3 unidades"."""
+        from tienda_pos.domain.models import Producto
+
+        dialogo = productos_view.DialogoStock(Producto("7801", "Agua", 990, stock=-3, id=1))
+        assert dialogo.campo.hasAcceptableInput()  # Enter guarda también sobre un negativo
+        dialogo._sumar(-1)
+        assert dialogo.stock == -3 and dialogo.resumen.text() == "Sin cambios"
+        dialogo._sumar(1)
+        assert dialogo.stock == -2 and dialogo.resumen.text() == "Entra 1 unidad"
+        dialogo._sumar(10)
+        assert dialogo.stock == 8 and dialogo.resumen.text() == "Entran 11 unidades"
 
     def test_el_campo_vacio_vale_la_cantidad_actual(self, como_admin) -> None:
         vista, dialogo = self._dialogo(como_admin, COLA)

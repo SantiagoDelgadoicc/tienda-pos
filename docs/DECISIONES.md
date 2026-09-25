@@ -188,6 +188,13 @@ una caja que se niega a cobrar lo que el cliente tiene en la mano es peor que un
 negativo, que además avisa de que falta cargar mercadería. Un producto en negativo se puede
 seguir editando; lo que no se puede es escribir un stock negativo a mano. Volver a la regla
 estricta es cambiar esa constante, y las pruebas la cubren igual.
+
+*Precisado el mismo día (fase 22):* un negativo sí se puede **subir hacia cero** a mano —había
+−3, entran 2, queda −1—, porque eso no es inventar un negativo sino cargar mercadería; lo que
+sigue sin poderse es bajarlo más. Y **los productos por peso no cambian**: su stock se queda en
+cero y nunca pasa a negativo, como decidió D-037 (punto 5). La diferencia es deliberada, no un
+descuido: el negativo de una unidad dice "faltan tantas por cargar", y el de unos gramos de pan
+que nadie pesó al recibirlo no diría nada.
 ---
 
 ## D-010 — El ejecutable se distribuye en carpeta, no como archivo único

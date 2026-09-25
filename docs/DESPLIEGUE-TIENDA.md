@@ -45,7 +45,8 @@ Enlace                 cable de red directo, ~30 m por el techo
 | Registro | `%LOCALAPPDATA%\TiendaPOS\logs\tienda_pos.log` |
 
 Versión del esquema de base de datos: **3**. Versión del protocolo de red: **1**.
-*(Así quedó el 2026-09-15. La versión que se instala desde el pendrive lleva los dos a la **7**.)*
+*(Así quedó el 2026-09-15. La versión que se instala desde el pendrive lleva el esquema a la **7**
+y el protocolo a la **8**.)*
 
 Los dos equipos abren el programa solos al encender, mediante un acceso directo en la
 carpeta de Inicio de Windows.

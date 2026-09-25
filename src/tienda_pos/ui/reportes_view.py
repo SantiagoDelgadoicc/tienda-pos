@@ -6,8 +6,6 @@ calculadora: cuánto se vendió hoy, en cuántas ventas, y qué llevaba cada una
 
 from __future__ import annotations
 
-from datetime import date
-
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -24,6 +22,7 @@ from PySide6.QtWidgets import (
 
 from ..domain.models import Venta
 from ..red.sesion import Sesion
+from ..services import reportes
 from ..utils.money import formatear_clp
 from . import estilos, tablas
 
@@ -36,6 +35,8 @@ class ReportesView(QWidget):
     """Ventas del día, con el detalle de la venta seleccionada."""
 
     salir_solicitado = Signal()
+    #: El botón "Cierre de caja": es aquí donde el dueño lo va a buscar (fase 18).
+    cierre_solicitado = Signal()
 
     def __init__(self, sesion: Sesion, padre: QWidget | None = None) -> None:
         super().__init__(padre)
@@ -51,6 +52,11 @@ class ReportesView(QWidget):
         encabezado = QHBoxLayout()
         encabezado.setSpacing(10)
         encabezado.addStretch()
+
+        self.boton_cierre = QPushButton("Cierre de caja")
+        self.boton_cierre.setToolTip("Lo vendido en cada caja, por medio de pago y por empleado")
+        self.boton_cierre.clicked.connect(self.cierre_solicitado.emit)
+        encabezado.addWidget(self.boton_cierre)
 
         boton_actualizar = QPushButton("Actualizar")
         boton_actualizar.clicked.connect(self.recargar)
@@ -161,7 +167,9 @@ class ReportesView(QWidget):
     # ------------------------------------------------------------------ datos
 
     def recargar(self) -> None:
-        hoy = date.today()
+        # El día de la tienda y no el del calendario: con la hora de corte de la pregunta H10,
+        # a la una de la madrugada todavía es "hoy" el de ayer, igual que en el cierre.
+        hoy = reportes.dia_comercial()
         resumen = self._sesion.resumen_del_dia(hoy)
         self.valor_total.setText(formatear_clp(resumen["total_clp"]))
         self.valor_ventas.setText(str(resumen["cantidad_ventas"]))

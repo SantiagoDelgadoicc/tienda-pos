@@ -160,11 +160,21 @@ construye sin ella.
 
 **Protocolo entre cajas.** Versión 1, dos cajas (fase 13) · 2, administración de usuarios
 (fase 15) · 3, cada venta dice de qué caja viene (fase 16) · 4, y con qué se pagó (fase 17) ·
-**5**, el cierre por caja (fase 18). **Esquema de la base: 5** (`venta.caja`, `venta.medio_pago`).
+5, el cierre por caja (fase 18) · **6**, el arqueo de caja (fase 19). **Esquema de la base: 6**
+(`venta.caja`, `venta.medio_pago`, `venta.turno_id`, y las tablas `turno_caja` y
+`movimiento_efectivo`).
+Sube también cuando solo se añaden operaciones: así una actualización a medias se detecta al
+arrancar y no en mitad de una pantalla. Hay que actualizar las dos cajas a la vez.
+
+**El arqueo** (D-036) vive en `services/arqueo.py`. Las reglas contra el robo están ahí y no en la
+pantalla: el retiro exige administrador, y a quien no lo es no se le devuelve cuánto debería
+haber, así que tampoco viaja por la red. `SesionLocal.cerrar_venta` pide `exigir_turno=True`: con
+la caja cerrada lanza `CajaCerrada`, que la pantalla de venta convierte en el diálogo de apertura.
 
 **El día de los informes** empieza a `config.HORA_CORTE_DIA` (hoy 0, medianoche; pregunta H10).
-Las ventas del día y el cierre lo leen de ahí, a través de `repositories/ventas.py::rango_del_dia`. Sube también cuando solo se añaden operaciones: así una actualización a medias
-se detecta al arrancar y no en mitad de una pantalla. Hay que actualizar las dos cajas a la vez.
+Las ventas del día y el cierre lo leen de ahí, a través de `repositories/ventas.py::rango_del_dia`
+y `dia_comercial`, que lo consultan en cada llamada: cambiar ese número cambia las dos pantallas a
+la vez. Las pruebas de `tests/test_cierre.py` lo comprueban con un corte a las 6.
 
 **Antivirus:** algunos marcan como sospechosos los ejecutables de PyInstaller. Conviene
 probarlo en el equipo del cliente antes de la demostración.

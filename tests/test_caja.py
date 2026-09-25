@@ -25,6 +25,8 @@ from tienda_pos.repositories import ventas as repo_ventas
 from tienda_pos.services import auth
 from tienda_pos.services import venta as servicio_venta
 
+from .conftest import abrir_cajas
+
 
 def _carrito(producto):
     carrito = servicio_venta.Carrito()
@@ -175,6 +177,7 @@ class TestCajaPorLaRed:
         with transaccion(conexion):
             cajera = auth.crear_usuario(conexion, "Marta", Rol.CAJERO, "5706")
         principal = SesionLocal(conexion, caja="Principal")
+        abrir_cajas(conexion, cajera, "Principal", "Secundaria")
         puerto = _puerto_libre()
         with ServidorTienda(principal, host="127.0.0.1", puerto=puerto):
             yield {

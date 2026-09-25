@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..domain.errors import ErrorDominio, ProductoNoEncontrado
+from ..domain.errors import CajaCerrada, ErrorDominio, ProductoNoEncontrado
 from ..domain.models import MedioPago, Usuario
 from ..red.sesion import Sesion
 from ..services import venta as servicio_venta
@@ -41,6 +41,7 @@ from ..utils import sonido
 from ..utils.money import formatear_clp
 from ..utils.scanner import DetectorLector
 from . import dialogos, estilos, iconos, movimiento, tablas
+from .efectivo_view import pedir_apertura
 
 # Cuánto tiempo permanece visible un mensaje de éxito o de error antes de desvanecerse.
 _MENSAJE_MS = 5000
@@ -942,9 +943,21 @@ class VentaView(QWidget):
             self._intento_cobro = str(uuid.uuid4())
 
         try:
-            venta = self._sesion.cerrar_venta(
-                self._carrito, self.usuario, self._intento_cobro, medio_pago=self._medio
-            )
+            venta = self._cerrar_venta()
+        except CajaCerrada:
+            # Lo dice el servidor, no esta pantalla (D-036): con la caja cerrada no se cobra.
+            # Se ofrece abrirla aquí mismo y, si se abre, se cobra sin volver a confirmar.
+            if pedir_apertura(
+                self._sesion, self.usuario, self, motivo="La caja está cerrada. Para cobrar hay que abrirla."
+            ) is None:
+                self.enfocar_escaneo()
+                return
+            try:
+                venta = self._cerrar_venta()
+            except ErrorDominio as error:
+                dialogos.mostrar_error(self, str(error))
+                self.enfocar_escaneo()
+                return
         except ErrorDominio as error:
             dialogos.mostrar_error(self, str(error))
             self.enfocar_escaneo()
@@ -964,6 +977,11 @@ class VentaView(QWidget):
         )
         self.venta_registrada.emit()
         self.enfocar_escaneo()
+
+    def _cerrar_venta(self):
+        return self._sesion.cerrar_venta(
+            self._carrito, self.usuario, self._intento_cobro, medio_pago=self._medio
+        )
 
     # ------------------------------------------------------------------ presentación
 

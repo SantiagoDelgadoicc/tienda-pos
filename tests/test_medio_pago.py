@@ -23,6 +23,8 @@ from tienda_pos.repositories import ventas as repo_ventas
 from tienda_pos.services import auth
 from tienda_pos.services import venta as servicio_venta
 
+from .conftest import abrir_cajas
+
 
 def _carrito(producto):
     carrito = servicio_venta.Carrito()
@@ -147,6 +149,7 @@ class TestPorLaRed:
         conexion = abrir_base_datos(":memory:", con_datos_demo=True, compartida_entre_hilos=True)
         with transaccion(conexion):
             cajera = auth.crear_usuario(conexion, "Marta", Rol.CAJERO, "5706")
+        abrir_cajas(conexion, cajera, "Secundaria")
         puerto = _puerto_libre()
         with ServidorTienda(SesionLocal(conexion, caja="Principal"), host="127.0.0.1", puerto=puerto):
             yield SesionRemota("127.0.0.1", puerto, caja="Secundaria"), cajera, conexion

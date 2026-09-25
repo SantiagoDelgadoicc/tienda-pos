@@ -107,7 +107,7 @@ def ventana(app, conexion, monkeypatch, tmp_path):
     from PySide6.QtWidgets import QApplication
 
     from tienda_pos.db.seed import cargar_datos_demo
-    from tienda_pos.ui import dialogos
+    from tienda_pos.ui import dialogos, efectivo_view
     from tienda_pos.ui.main_window import VentanaPrincipal
 
     with transaccion(conexion):
@@ -121,11 +121,18 @@ def ventana(app, conexion, monkeypatch, tmp_path):
     monkeypatch.setattr(dialogos, "confirmar", lambda *a, **k: True)
     monkeypatch.setattr(dialogos, "mostrar_error", lambda *a, **k: None)
     monkeypatch.setattr(dialogos, "mostrar_info", lambda *a, **k: None)
+    # El diálogo de montos del efectivo (fase 19) también es modal. Por defecto se cancela; las
+    # pruebas del efectivo lo sustituyen por la respuesta que necesitan.
+    monkeypatch.setattr(efectivo_view.DialogoMonto, "pedir", classmethod(lambda cls, *a, **k: None))
 
     # La ventana ya no recibe una conexión sino una Sesion (D-015): así la misma interfaz
     # sirve para la caja principal, que tiene la base al lado, y para la secundaria, que la
     # tiene al otro lado de la red. Aquí se usa la local, que es lo que hacía antes.
-    ventana = VentanaPrincipal(SesionLocal(conexion))
+    #
+    # Con nombre de caja y la caja abierta, como en la tienda: desde la fase 19 no se cobra con
+    # la caja cerrada (D-036). Las pruebas del arqueo la cierran cuando lo necesitan.
+    abrir_cajas(conexion, auth.autenticar(conexion, "Administrador", "1234"), "Caja 1")
+    ventana = VentanaPrincipal(SesionLocal(conexion, caja="Caja 1"))
     ventana.establecer_usuario(Usuario(id=1, nombre="Ana Pérez", rol=Rol.CAJERO))
     # Sin mostrar la ventana, Qt considera que ningún widget está visible ni tiene el foco,
     # y las comprobaciones de foco (que aquí son parte de lo que se prueba) darían siempre
@@ -145,6 +152,14 @@ def con_movimiento():
     movimiento.suprimir(False)
     yield movimiento
     movimiento.suprimir(True)
+
+
+def abrir_cajas(conexion: sqlite3.Connection, usuario: Usuario, *cajas: str) -> None:
+    """Abre esas cajas con $0 en el cajón. Desde la fase 19 no se cobra con la caja cerrada."""
+    from tienda_pos.services import arqueo
+
+    for caja in cajas:
+        arqueo.abrir_turno(conexion, caja, usuario, 0)
 
 
 def esperar(milisegundos: int) -> None:

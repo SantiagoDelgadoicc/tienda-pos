@@ -28,18 +28,21 @@ from ..domain.models import (
     CierreCaja,
     CodigoNoEncontrado,
     MedioPago,
+    MovimientoEfectivo,
     Producto,
     Rol,
+    TipoMovimiento,
+    TurnoCaja,
     Usuario,
     Venta,
 )
-from ..services import auth, catalogo, reportes
+from ..services import arqueo, auth, catalogo, reportes
 from ..services import venta as servicio_venta
 from ..services.venta import Carrito
 
 
 class Sesion(ABC):
-    """Las 19 operaciones que la interfaz necesita. Nada más.
+    """Las 26 operaciones que la interfaz necesita. Nada más.
 
     Es deliberadamente corta: cada método que se añada aquí es un método que habrá que
     implementar dos veces y hacer viajar por la red. Si algo se puede calcular en la caja con
@@ -154,6 +157,46 @@ class Sesion(ABC):
     @abstractmethod
     def cierre_de_caja(self, dia: date | None, caja: str | None) -> CierreCaja:
         """El cierre de una caja. `caja` None: las ventas anteriores a registrar la caja."""
+
+    # ------------------------------------------------------------------ arqueo (fase 19)
+    #
+    # Todas actúan sobre **esta** caja, salvo cerrar un turno por su número, que un
+    # administrador puede hacer con la caja de otro PC. Las reglas contra el robo —retiro solo
+    # con administrador, conteo a ciegas— están en `services/arqueo.py`, no aquí ni en la
+    # pantalla: esta sesión puede ser el servidor atendiendo a la otra caja.
+
+    @abstractmethod
+    def turno_abierto(self, usuario: Usuario | None) -> TurnoCaja | None:
+        """El turno abierto de esta caja, o None si está cerrada."""
+
+    @abstractmethod
+    def abrir_turno(
+        self, usuario: Usuario | None, apertura_clp: int, intento_id: str | None = None
+    ) -> TurnoCaja: ...
+
+    @abstractmethod
+    def registrar_movimiento(
+        self,
+        usuario: Usuario | None,
+        tipo: TipoMovimiento,
+        monto_clp: int,
+        motivo: str = "",
+        intento_id: str | None = None,
+    ) -> MovimientoEfectivo: ...
+
+    @abstractmethod
+    def cerrar_turno(
+        self, usuario: Usuario | None, turno_id: int, contado_clp: int, nota: str | None = None
+    ) -> TurnoCaja: ...
+
+    @abstractmethod
+    def turnos_recientes(self, admin: Usuario | None) -> list[TurnoCaja]: ...
+
+    @abstractmethod
+    def monto_sugerido(self) -> int | None: ...
+
+    @abstractmethod
+    def fijar_monto_sugerido(self, admin: Usuario | None, monto_clp: int | None) -> None: ...
 
 
 _R = TypeVar("_R")
@@ -281,6 +324,9 @@ class SesionLocal(Sesion):
             intento_id,
             caja=caja_de_la_venta,
             medio_pago=medio_pago,
+            # Aquí, en la sesión, y no en el botón: así tampoco cobra con la caja cerrada la
+            # caja secundaria, cuyo cobro también pasa por aquí, en el servidor (D-036).
+            exigir_turno=True,
         )
 
     # ------------------------------------------------------------------ acceso
@@ -330,3 +376,68 @@ class SesionLocal(Sesion):
     @_serializado
     def cierre_de_caja(self, dia: date | None, caja: str | None) -> CierreCaja:
         return reportes.cierre_de_caja(self._conexion, dia, caja)
+
+    # ------------------------------------------------------------------ arqueo
+
+    def _caja_de(self, caja: Any) -> str | None:
+        return self._caja if caja is _DE_ESTA_CAJA else caja
+
+    @_serializado
+    def turno_abierto(
+        self, usuario: Usuario | None, *, caja: str | None = _DE_ESTA_CAJA
+    ) -> TurnoCaja | None:
+        return arqueo.turno_abierto(self._conexion, self._caja_de(caja), usuario)
+
+    @_serializado
+    def abrir_turno(
+        self,
+        usuario: Usuario | None,
+        apertura_clp: int,
+        intento_id: str | None = None,
+        *,
+        caja: str | None = _DE_ESTA_CAJA,
+    ) -> TurnoCaja:
+        return arqueo.abrir_turno(
+            self._conexion, self._caja_de(caja), usuario, apertura_clp, intento_id
+        )
+
+    @_serializado
+    def registrar_movimiento(
+        self,
+        usuario: Usuario | None,
+        tipo: TipoMovimiento,
+        monto_clp: int,
+        motivo: str = "",
+        intento_id: str | None = None,
+        *,
+        caja: str | None = _DE_ESTA_CAJA,
+    ) -> MovimientoEfectivo:
+        return arqueo.registrar_movimiento(
+            self._conexion, self._caja_de(caja), usuario, tipo, monto_clp, motivo, intento_id
+        )
+
+    @_serializado
+    def cerrar_turno(
+        self,
+        usuario: Usuario | None,
+        turno_id: int,
+        contado_clp: int,
+        nota: str | None = None,
+        *,
+        caja: str | None = _DE_ESTA_CAJA,
+    ) -> TurnoCaja:
+        return arqueo.cerrar_turno(
+            self._conexion, self._caja_de(caja), usuario, turno_id, contado_clp, nota
+        )
+
+    @_serializado
+    def turnos_recientes(self, admin: Usuario | None) -> list[TurnoCaja]:
+        return arqueo.turnos_recientes(self._conexion, admin)
+
+    @_serializado
+    def monto_sugerido(self) -> int | None:
+        return arqueo.monto_sugerido(self._conexion)
+
+    @_serializado
+    def fijar_monto_sugerido(self, admin: Usuario | None, monto_clp: int | None) -> None:
+        arqueo.fijar_monto_sugerido(self._conexion, admin, monto_clp)

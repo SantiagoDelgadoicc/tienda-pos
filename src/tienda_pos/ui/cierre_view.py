@@ -1,8 +1,4 @@
-"""Cierre diario de una caja (fase 18).
-
-**BORRADOR, SIN CONECTAR (2026-09-24).** La fase 18 se cortó aquí a pedido de Santiago. Esta
-pantalla no está en la barra lateral ni en la ventana, y no tiene pruebas: se escribió y se
-comprobó que importa, nada más. Lo que falta está en `docs/PLAN.md`, fase 18.
+"""Cierre diario de una caja (fase 18, D-035).
 
 Lo que pidió el cliente: por caja, cuánto se vendió y con qué se pagó —efectivo, débito y
 crédito por separado—, qué empleado vendió cuánto, y la lista de ventas con los productos de
@@ -10,24 +6,24 @@ cada una. Reservada al administrador, como las ventas del día (pregunta H4 pend
 
 **Es un informe que se calcula al pedirlo, no un registro.** No cierra nada ni bloquea la caja:
 se puede mirar a media tarde y volver a mirar después. Lo dice al pie, para que nadie crea que
-ha "cerrado" algo. El dinero del cajón —fondo inicial, conteo, diferencia— es la fase 19, y va
-detrás de un interruptor porque el cliente no contestó claro si lo quiere.
+ha "cerrado" algo. El dinero del cajón —apertura, conteo, diferencia— va en la pantalla de
+Efectivo (fase 19, D-036).
 """
 
 from __future__ import annotations
 
 from datetime import date
 
-from PySide6.QtCore import QDate, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QFont
+from PySide6.QtCore import QDate, QPointF, Qt, Signal
+from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QDateEdit,
     QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
     QTreeWidget,
@@ -43,7 +39,7 @@ from ..services import reportes
 from ..utils.money import formatear_clp
 from . import dialogos, estilos, tablas
 from .venta_view import NOMBRE_MEDIO
-from .widgets.desplegable import Desplegable
+from .widgets.desplegable import Desplegable, SelectorFecha
 
 _DIAS = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
 _MESES = (
@@ -55,6 +51,9 @@ _MESES = (
 #: qué, cuántos, quién, cómo pagó y cuánto. Una línea deja en blanco lo que no le toca.
 _COLUMNAS_VENTAS = ("Venta / producto", "Cant.", "Atendió", "Medio", "Total")
 _COLUMNAS_EMPLEADOS = ("Empleado", "Ventas", "Artículos", "Total")
+
+_VER_PRODUCTOS = "Ver productos"
+_OCULTAR_PRODUCTOS = "Ocultar productos"
 
 SIN_CAJA = "Sin caja registrada"
 SIN_USUARIO = "Sin usuario (antes de la actualización)"
@@ -68,6 +67,50 @@ def fecha_larga(dia: date) -> str:
 
 def nombre_caja(caja: str | None) -> str:
     return caja if caja is not None else SIN_CAJA
+
+
+def _ventas(cantidad: int) -> str:
+    return "1 venta" if cantidad == 1 else f"{cantidad} ventas"
+
+
+def _articulos(cantidad: int) -> str:
+    return "1 artículo" if cantidad == 1 else f"{cantidad} artículos"
+
+
+class _ArbolVentas(QTreeWidget):
+    """Árbol de ventas que dibuja él mismo la columna de la flecha de desplegar.
+
+    Por el mismo motivo que `widgets/desplegable.py`: la hoja de estilos no alcanza esa
+    columna sin apagar la flecha nativa. Sin esto, el filete entre filas y el fondo de la fila
+    elegida se cortan justo antes de la flecha. El chevrón sale así con el trazo y el color de
+    los demás iconos.
+    """
+
+    def drawBranches(self, pintor: QPainter, rect, indice) -> None:  # noqa: N802 - lo nombra Qt
+        paleta = estilos.actual
+        pintor.save()
+        if self.selectionModel().isSelected(indice):
+            pintor.fillRect(rect, QColor(paleta.seleccion))
+        pintor.setPen(QPen(QColor(paleta.borde_suave), 1))
+        pintor.drawLine(rect.left(), rect.bottom(), rect.right(), rect.bottom())
+
+        if self.model().hasChildren(indice):
+            lapiz = QPen(QColor(paleta.texto_suave), 1.6)
+            lapiz.setCapStyle(Qt.PenCapStyle.RoundCap)
+            lapiz.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+            pintor.setPen(lapiz)
+            pintor.setRenderHint(QPainter.RenderHint.Antialiasing)
+            x = rect.right() - self.indentation() / 2
+            y = rect.center().y() + 0.5
+            if self.isExpanded(indice):
+                puntos = ((x - 4, y - 2), (x, y + 2), (x + 4, y - 2))
+            else:
+                puntos = ((x - 2, y - 4), (x + 2, y), (x - 2, y + 4))
+            camino = QPainterPath(QPointF(*puntos[0]))
+            for punto in puntos[1:]:
+                camino.lineTo(QPointF(*punto))
+            pintor.drawPath(camino)
+        pintor.restore()
 
 
 class CierreView(QWidget):
@@ -101,8 +144,8 @@ class CierreView(QWidget):
         columna.addLayout(cuerpo, stretch=1)
 
         pie = QLabel(
-            "Este informe se calcula al pedirlo. No cierra nada ni bloquea la caja: puede "
-            "consultarse las veces que haga falta."
+            "Este informe se calcula al pedirlo y puede consultarse las veces que haga falta. "
+            "El efectivo del cajón se abre, se anota y se cuenta en Efectivo."
         )
         pie.setObjectName("subtitulo")
         pie.setWordWrap(True)
@@ -113,10 +156,10 @@ class CierreView(QWidget):
         fila.setSpacing(10)
 
         fila.addWidget(QLabel("Día"))
-        self.selector_dia = QDateEdit()
-        self.selector_dia.setCalendarPopup(True)
-        self.selector_dia.setDisplayFormat("dd/MM/yyyy")
-        self.selector_dia.setMinimumWidth(150)
+        self.selector_dia = SelectorFecha()
+        # El ancho que pida su texto, que crece con la letra (D-031). Un ancho fijo cortaba el
+        # año con la letra "Muy grande".
+        self.selector_dia.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         # Se puede mirar un día anterior: con la pregunta de la medianoche sin responder (H10),
         # quien cierra a la una de la madrugada querrá ver el de "ayer".
         self.selector_dia.dateChanged.connect(lambda _fecha: self.recargar())
@@ -131,10 +174,6 @@ class CierreView(QWidget):
         fila.addWidget(self.selector_caja)
 
         fila.addStretch()
-
-        self.boton_desplegar = QPushButton("Ver los productos de todas")
-        self.boton_desplegar.clicked.connect(self._alternar_despliegue)
-        fila.addWidget(self.boton_desplegar)
 
         boton_actualizar = QPushButton("Actualizar")
         boton_actualizar.clicked.connect(self.recargar)
@@ -177,19 +216,27 @@ class CierreView(QWidget):
         return valor, detalle, tarjeta
 
     def _panel_ventas(self) -> QWidget:
-        self.arbol_ventas = QTreeWidget()
+        self.arbol_ventas = _ArbolVentas()
         self.arbol_ventas.setColumnCount(len(_COLUMNAS_VENTAS))
         self.arbol_ventas.setHeaderLabels(_COLUMNAS_VENTAS)
         self.arbol_ventas.setRootIsDecorated(True)
         self.arbol_ventas.setUniformRowHeights(True)
         self.arbol_ventas.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.arbol_ventas.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        # Si se abren una a una hasta tenerlas todas, el botón tiene que decir "Ocultar".
+        self.arbol_ventas.itemExpanded.connect(lambda _item: self._actualizar_boton_despliegue())
+        self.arbol_ventas.itemCollapsed.connect(lambda _item: self._actualizar_boton_despliegue())
         cabecera = self.arbol_ventas.header()
         cabecera.setStretchLastSection(False)
         cabecera.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         for columna in range(1, len(_COLUMNAS_VENTAS)):
             cabecera.setSectionResizeMode(columna, QHeaderView.ResizeMode.ResizeToContents)
-        return self._envolver("Ventas de la caja", self.arbol_ventas)
+        # El botón va junto al título de la lista sobre la que actúa, y no en la fila del día y
+        # la caja: allí no cabía en una pantalla de 1080 de ancho.
+        self.boton_desplegar = QPushButton(_VER_PRODUCTOS)
+        self.boton_desplegar.setObjectName("botonSuave")
+        self.boton_desplegar.clicked.connect(self._alternar_despliegue)
+        return self._envolver("Ventas de la caja", self.arbol_ventas, self.boton_desplegar)
 
     def _panel_empleados(self) -> QWidget:
         self.tabla_empleados = QTableWidget(0, len(_COLUMNAS_EMPLEADOS))
@@ -206,17 +253,33 @@ class CierreView(QWidget):
             self.tabla_empleados,
             (tablas.IZQUIERDA, tablas.CENTRO, tablas.CENTRO, tablas.DERECHA),
         )
-        return self._envolver("Por empleado", self.tabla_empleados)
+        # Un gemelo invisible del botón de "Ver productos", que sigue ocupando su sitio: así los
+        # títulos y las tablas de los dos paneles empiezan a la misma altura con cualquier
+        # tamaño de letra.
+        gemelo = QPushButton(_VER_PRODUCTOS)
+        gemelo.setObjectName("botonSuave")
+        politica = gemelo.sizePolicy()
+        politica.setRetainSizeWhenHidden(True)
+        gemelo.setSizePolicy(politica)
+        gemelo.hide()
+        return self._envolver("Por empleado", self.tabla_empleados, gemelo)
 
     @staticmethod
-    def _envolver(titulo: str, contenido: QWidget) -> QWidget:
+    def _envolver(titulo: str, contenido: QWidget, accion: QWidget | None = None) -> QWidget:
+        """Un título encima del contenido y, si la hay, una acción a su derecha."""
         contenedor = QWidget()
         columna = QVBoxLayout(contenedor)
         columna.setContentsMargins(0, 0, 0, 0)
         columna.setSpacing(8)
+        cabecera = QHBoxLayout()
+        cabecera.setContentsMargins(0, 0, 0, 0)
         etiqueta = QLabel(titulo)
         etiqueta.setObjectName("tituloTarjeta")
-        columna.addWidget(etiqueta)
+        cabecera.addWidget(etiqueta)
+        cabecera.addStretch()
+        if accion is not None:
+            cabecera.addWidget(accion)
+        columna.addLayout(cabecera)
         columna.addWidget(contenido, stretch=1)
         return contenedor
 
@@ -231,6 +294,8 @@ class CierreView(QWidget):
         self.selector_dia.setDate(QDate(hoy.year, hoy.month, hoy.day))
         self.selector_dia.blockSignals(False)
         self.recargar()
+        # El foco a las ventas y no al día: con las flechas se recorren, y con → se abre una.
+        self.arbol_ventas.setFocus()
 
     @property
     def dia(self) -> date:
@@ -240,38 +305,52 @@ class CierreView(QWidget):
         try:
             self._cierre = self._sesion.cierre_de_caja(self.dia, self._caja)
         except ErrorDominio as error:
+            # Sin servidor, por ejemplo. Se vacía la pantalla en lugar de dejar las cifras de la
+            # vez anterior debajo de un día que ya no es el suyo.
+            self._cierre = None
+            self._pintar_sin_datos()
             dialogos.mostrar_error(self, str(error))
             return
         self._pintar()
 
     def repintar(self) -> None:
-        """Tras un cambio de tema: los colores de los medios van puestos a mano."""
-        if self._cierre is not None:
-            self._pintar()
+        """Tras un cambio de tema: los colores de los medios van puestos a mano.
+
+        Las ventas que estaban abiertas siguen abiertas: cambiar el tema no es mirar otro
+        cierre.
+        """
+        if self._cierre is None:
+            return
+        abiertas = {
+            item.data(0, Qt.ItemDataRole.UserRole)
+            for item in self._filas_de_venta()
+            if item.isExpanded()
+        }
+        self._pintar()
+        for item in self._filas_de_venta():
+            item.setExpanded(item.data(0, Qt.ItemDataRole.UserRole) in abiertas)
+        self._actualizar_boton_despliegue()
+
+    def _filas_de_venta(self) -> list[QTreeWidgetItem]:
+        return [
+            self.arbol_ventas.topLevelItem(i) for i in range(self.arbol_ventas.topLevelItemCount())
+        ]
 
     def _elegir_caja(self, indice: int) -> None:
         self._caja = self.selector_caja.itemData(indice)
         self.recargar()
 
     def _alternar_despliegue(self) -> None:
-        todas_abiertas = all(
-            self.arbol_ventas.topLevelItem(i).isExpanded()
-            for i in range(self.arbol_ventas.topLevelItemCount())
-        )
-        if todas_abiertas:
+        if all(item.isExpanded() for item in self._filas_de_venta()):
             self.arbol_ventas.collapseAll()
         else:
             self.arbol_ventas.expandAll()
         self._actualizar_boton_despliegue()
 
     def _actualizar_boton_despliegue(self) -> None:
-        cuantas = self.arbol_ventas.topLevelItemCount()
-        abiertas = cuantas and all(
-            self.arbol_ventas.topLevelItem(i).isExpanded() for i in range(cuantas)
-        )
-        self.boton_desplegar.setText(
-            "Ocultar los productos" if abiertas else "Ver los productos de todas"
-        )
+        filas = self._filas_de_venta()
+        abiertas = bool(filas) and all(item.isExpanded() for item in filas)
+        self.boton_desplegar.setText(_OCULTAR_PRODUCTOS if abiertas else _VER_PRODUCTOS)
         self.boton_desplegar.setEnabled(bool(self._cierre and self._cierre.ventas))
 
     # ------------------------------------------------------------------ pintura
@@ -284,12 +363,30 @@ class CierreView(QWidget):
         self._pintar_ventas(cierre)
         self._pintar_empleados(cierre)
 
-        cantidad = cierre.cantidad_ventas
-        ventas = "1 venta" if cantidad == 1 else f"{cantidad} ventas"
         self.resumen_cambiado.emit(
-            f"{nombre_caja(cierre.caja)}  ·  {fecha_larga(cierre.dia)}  ·  {ventas}"
-            f"  ·  {cierre.articulos} artículos"
+            f"{nombre_caja(cierre.caja)}  ·  {fecha_larga(cierre.dia)}"
+            f"  ·  {_ventas(cierre.cantidad_ventas)}  ·  {_articulos(cierre.articulos)}"
         )
+
+    def _pintar_sin_datos(self) -> None:
+        self.valor_total.setText("—")
+        self.detalle_total.setText("")
+        for valor, detalle, _tarjeta in self._tarjetas_medio.values():
+            valor.setText("—")
+            detalle.setText("")
+        self._aviso_en_el_arbol("No se pudo cargar el cierre. Pruebe con Actualizar.")
+        self.tabla_empleados.setRowCount(0)
+        self.resumen_cambiado.emit(f"{nombre_caja(self._caja)}  ·  {fecha_larga(self.dia)}")
+
+    def _aviso_en_el_arbol(self, texto: str) -> None:
+        """Una sola fila, sin flecha y que no se puede elegir, con un aviso en gris."""
+        self.arbol_ventas.clear()
+        aviso = QTreeWidgetItem([texto])
+        aviso.setForeground(0, QBrush(QColor(estilos.actual.texto_suave)))
+        aviso.setFlags(Qt.ItemFlag.NoItemFlags)
+        self.arbol_ventas.addTopLevelItem(aviso)
+        aviso.setFirstColumnSpanned(True)
+        self._actualizar_boton_despliegue()
 
     def _pintar_selector_de_caja(self, cierre: CierreCaja) -> None:
         """El desplegable solo aparece si ese día vendió más de una caja.
@@ -313,7 +410,7 @@ class CierreView(QWidget):
     def _pintar_tarjetas(self, cierre: CierreCaja) -> None:
         self.valor_total.setText(formatear_clp(cierre.total_clp))
         self.detalle_total.setText(
-            f"{cierre.cantidad_ventas} ventas · {cierre.articulos} artículos"
+            f"{_ventas(cierre.cantidad_ventas)} · {_articulos(cierre.articulos)}"
         )
         por_medio = {fila.medio_pago: fila for fila in cierre.por_medio}
         for medio, (valor, detalle, tarjeta) in self._tarjetas_medio.items():
@@ -324,19 +421,15 @@ class CierreView(QWidget):
                 continue
             valor.setText(formatear_clp(fila.total_clp))
             valor.setStyleSheet(f"color: {estilos.color_medio(medio)};")
-            detalle.setText("1 venta" if fila.ventas == 1 else f"{fila.ventas} ventas")
+            detalle.setText(_ventas(fila.ventas))
 
     def _pintar_ventas(self, cierre: CierreCaja) -> None:
+        if not cierre.ventas:
+            self._aviso_en_el_arbol("Esta caja no tiene ventas ese día.")
+            return
+
         self.arbol_ventas.clear()
         suave = QBrush(QColor(estilos.actual.texto_suave))
-        if not cierre.ventas:
-            vacio = QTreeWidgetItem(["Esta caja no tiene ventas ese día."])
-            vacio.setForeground(0, suave)
-            vacio.setFlags(Qt.ItemFlag.NoItemFlags)
-            self.arbol_ventas.addTopLevelItem(vacio)
-            vacio.setFirstColumnSpanned(True)
-            self._actualizar_boton_despliegue()
-            return
 
         negrita = QFont(self.arbol_ventas.font())
         negrita.setBold(True)
@@ -351,6 +444,8 @@ class CierreView(QWidget):
                     formatear_clp(venta.total_clp),
                 ]
             )
+            fila.setData(0, Qt.ItemDataRole.UserRole, venta.id)
+            fila.setToolTip(2, fila.text(2))
             fila.setTextAlignment(1, Qt.AlignmentFlag.AlignCenter)
             fila.setTextAlignment(4, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             # El total en negrita: con las líneas desplegadas en medio, la columna de las ventas
@@ -361,6 +456,8 @@ class CierreView(QWidget):
                 hija = QTreeWidgetItem(
                     [linea.nombre, str(linea.cantidad), "", "", formatear_clp(linea.subtotal_clp)]
                 )
+                # En una pantalla estrecha el nombre se abrevia: entero, al pasar el ratón.
+                hija.setToolTip(0, linea.nombre)
                 hija.setTextAlignment(1, Qt.AlignmentFlag.AlignCenter)
                 hija.setTextAlignment(
                     4, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
@@ -386,4 +483,7 @@ class CierreView(QWidget):
             for columna, (texto, alineacion) in enumerate(celdas):
                 celda = QTableWidgetItem(texto)
                 celda.setTextAlignment(alineacion | Qt.AlignmentFlag.AlignVCenter)
+                if columna == 0:
+                    # Por debajo de 1366 de ancho el nombre se abrevia: entero, al pasar el ratón.
+                    celda.setToolTip(texto)
                 self.tabla_empleados.setItem(indice, columna, celda)

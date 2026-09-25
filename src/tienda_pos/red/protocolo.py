@@ -19,9 +19,12 @@ from ..domain.models import (
     CodigoNoEncontrado,
     EstadoVenta,
     LineaVenta,
-    Producto,
     MedioPago,
+    MovimientoEfectivo,
+    Producto,
     Rol,
+    TipoMovimiento,
+    TurnoCaja,
     Usuario,
     Venta,
 )
@@ -39,8 +42,8 @@ _FORMATO_FECHA_HORA = "%Y-%m-%d %H:%M:%S"
 #:
 #: Historia: 1, dos cajas (fase 13) · 2, administración de usuarios (fase 15) · 3, cada venta
 #: dice de qué caja viene (fase 16) · 4, y con qué se pagó (fase 17) · 5, el cierre por caja
-#: (fase 18).
-VERSION_PROTOCOLO = 5
+#: (fase 18) · 6, el arqueo de caja (fase 19).
+VERSION_PROTOCOLO = 6
 
 
 # --------------------------------------------------------------------------- dominio → JSON
@@ -93,6 +96,7 @@ def de_venta(v: Venta) -> dict[str, Any]:
         "intento_id": v.intento_id,
         "caja": v.caja,
         "medio_pago": str(v.medio_pago) if v.medio_pago else None,
+        "turno_id": v.turno_id,
         "lineas": [de_linea_venta(linea) for linea in v.lineas],
     }
 
@@ -155,6 +159,7 @@ def a_venta(d: dict[str, Any]) -> Venta:
         intento_id=d.get("intento_id"),
         caja=d.get("caja"),
         medio_pago=MedioPago.leer(d.get("medio_pago")),
+        turno_id=d.get("turno_id"),
         lineas=[a_linea_venta(x) for x in d.get("lineas", [])],
     )
 
@@ -194,6 +199,7 @@ _ERRORES: dict[str, type[errors.ErrorDominio]] = {
         errors.DescuentoInvalido,
         errors.CredencialesInvalidas,
         errors.PermisoDenegado,
+        errors.CajaCerrada,
     )
 }
 
@@ -249,3 +255,83 @@ def a_cierre(d: dict[str, Any]) -> CierreCaja:
         cajas_del_dia=list(d.get("cajas_del_dia", [])),
     )
 
+
+# --------------------------------------------------------------------------- arqueo de caja
+
+
+def _de_momento(m: datetime | None) -> str | None:
+    return m.strftime(_FORMATO_FECHA_HORA) if m else None
+
+
+def _a_momento(s: str | None) -> datetime | None:
+    return datetime.strptime(s, _FORMATO_FECHA_HORA) if s else None
+
+
+def de_movimiento(m: MovimientoEfectivo) -> dict[str, Any]:
+    return {
+        "id": m.id,
+        "turno_id": m.turno_id,
+        "tipo": str(m.tipo) if m.tipo else None,
+        "monto_clp": m.monto_clp,
+        "motivo": m.motivo,
+        "usuario_id": m.usuario_id,
+        "usuario_nombre": m.usuario_nombre,
+        "fecha_hora": _de_momento(m.fecha_hora),
+        "intento_id": m.intento_id,
+    }
+
+
+def a_movimiento(d: dict[str, Any]) -> MovimientoEfectivo:
+    return MovimientoEfectivo(
+        id=d.get("id"),
+        turno_id=d["turno_id"],
+        tipo=TipoMovimiento.leer(d.get("tipo")),
+        monto_clp=d["monto_clp"],
+        motivo=d.get("motivo", ""),
+        usuario_id=d["usuario_id"],
+        usuario_nombre=d.get("usuario_nombre"),
+        fecha_hora=_a_momento(d["fecha_hora"]),
+        intento_id=d.get("intento_id"),
+    )
+
+
+def de_turno(t: TurnoCaja) -> dict[str, Any]:
+    """Tal como lo devolvió el servicio: si quien pidió no es administrador, las cifras del
+    conteo a ciegas ya vienen en None y así viajan (D-036)."""
+    return {
+        "id": t.id,
+        "caja": t.caja,
+        "abierto_en": _de_momento(t.abierto_en),
+        "abierto_por_id": t.abierto_por_id,
+        "abierto_por_nombre": t.abierto_por_nombre,
+        "apertura_clp": t.apertura_clp,
+        "ventas_efectivo_clp": t.ventas_efectivo_clp,
+        "ventas_efectivo": t.ventas_efectivo,
+        "movimientos": [de_movimiento(m) for m in t.movimientos],
+        "cerrado_en": _de_momento(t.cerrado_en),
+        "cerrado_por_id": t.cerrado_por_id,
+        "cerrado_por_nombre": t.cerrado_por_nombre,
+        "esperado_al_cerrar_clp": t.esperado_al_cerrar_clp,
+        "contado_clp": t.contado_clp,
+        "nota": t.nota,
+    }
+
+
+def a_turno(d: dict[str, Any]) -> TurnoCaja:
+    return TurnoCaja(
+        id=d.get("id"),
+        caja=d["caja"],
+        abierto_en=_a_momento(d["abierto_en"]),
+        abierto_por_id=d["abierto_por_id"],
+        abierto_por_nombre=d.get("abierto_por_nombre"),
+        apertura_clp=d["apertura_clp"],
+        ventas_efectivo_clp=d.get("ventas_efectivo_clp"),
+        ventas_efectivo=d.get("ventas_efectivo"),
+        movimientos=[a_movimiento(m) for m in d.get("movimientos", [])],
+        cerrado_en=_a_momento(d.get("cerrado_en")),
+        cerrado_por_id=d.get("cerrado_por_id"),
+        cerrado_por_nombre=d.get("cerrado_por_nombre"),
+        esperado_al_cerrar_clp=d.get("esperado_al_cerrar_clp"),
+        contado_clp=d.get("contado_clp"),
+        nota=d.get("nota"),
+    )

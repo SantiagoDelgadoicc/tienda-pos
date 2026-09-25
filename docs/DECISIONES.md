@@ -1222,8 +1222,7 @@ que la columna vaya sin `CHECK` es justo lo que hace barata esa marcha atrás.
 
 ## D-035 — El cierre diario por caja es un informe que deriva sus totales de las ventas
 
-**Fecha:** 2026-09-24 · **Estado:** aceptada · **la pantalla está pendiente** (fase 18 en curso)
-· **Decide:** Santiago
+**Fecha:** 2026-09-24 · **Estado:** aceptada e implementada (fase 18) · **Decide:** Santiago
 
 **Contexto.** El cliente pidió un cierre diario por caja que diga qué empleados vendieron y qué
 ventas fueron, y el 2026-09-23 precisó: efectivo, débito y crédito por separado, y la lista de
@@ -1250,6 +1249,55 @@ ventas con los productos de cada una. No contestó claro si quiere cuadrar el ef
 6. Reservado al administrador en la pantalla, igual que las ventas del día. Quién más debería verlo
    es la pregunta H4, sin responder.
 
-**Consecuencias.** Protocolo a la versión 5. Queda por hacer, en `docs/PLAN.md` fase 18: las pruebas
-—sobre todo la de que las tres sumas cuadran, los dos empleados en una caja y los bordes del día con
-corte distinto de cero—, conectar la pantalla, y mirarla con letra grande.
+**Consecuencias.** Protocolo a la versión 5. Las pruebas cubren lo que más importa: que las tres
+sumas cuadran en un día revuelto, los dos empleados en una misma caja y los bordes del día con un
+corte a las 6, además de la secundaria pidiendo el cierre de la principal contra un servidor real.
+La hora de corte se lee de `config` en cada llamada, no se copia al importar: si no, cambiarla no
+alcanzaría a las consultas ya cargadas. Se llega a la pantalla desde la barra lateral y desde un
+botón en las ventas del día. Por debajo de unos 1300 píxeles de ancho los nombres de empleado se
+abrevian (el nombre entero sale al pasar el ratón); a 1366×768 cabe todo, también con la letra más
+grande.
+
+---
+
+## D-036 — El arqueo de caja está siempre activo, por turno de caja, y el conteo es a ciegas
+
+**Fecha:** 2026-09-24 · **Estado:** aceptada e implementada (fase 19) · **Decide:** Santiago
+
+**Contexto.** El 2026-09-23 el cliente no dejó claro si quería cuadrar el efectivo del cajón, y
+Santiago decidió que el arqueo fuera un modo activable. El 2026-09-24 el cliente lo aclaró: anota
+todos los retiros "porque si no le robarían un montón", saca plata seguido de cada caja (por
+ejemplo $150.000 de la caja dos), paga en efectivo desde la caja a algunos proveedores, y quiere
+hacerlo en el sistema para tener cifras exactas. Hoy cada caja parte con un monto distinto, y dijo
+que podría dejar uno fijo si el sistema se lo indica.
+
+**Decisión.**
+
+1. **Sin interruptor.** El arqueo está siempre activo. Si se pudiera apagar, un cajero podría
+   apagarlo. Se retira lo decidido el 2026-09-23 (modo en `meta`, pantalla en F9, dos caminos).
+2. **Turno de caja**: se abre con el efectivo que hay en el cajón y se cierra contándolo. Es de la
+   caja, no del empleado, y no depende del día: la pregunta de la medianoche (H10) no le afecta.
+   Una sola caja abierta a la vez por nombre, garantizado por un índice único parcial.
+3. **No se cobra con la caja cerrada**, y lo impide la sesión (`SesionLocal`, que es también el
+   servidor), no la pantalla. El servicio de venta mantiene su comportamiento para quien lo llame
+   sin sesión —pruebas, herramientas— y una venta sin caja (anterior a D-033) no necesita turno.
+4. **Cada venta guarda su turno** (`venta.turno_id`), asignado por el servidor dentro de la misma
+   transacción del cobro. El esperado se calcula por turno, no comparando horas de dos PC.
+5. **Salidas y entradas de efectivo**, que nunca se borran: *retiro* (solo administrador),
+   *pago a proveedor* (cualquier empleado, con el nombre del proveedor; queda a su nombre) e
+   *ingreso* de sencillo. Todo con identificador de intento, como el cobro (D-024).
+6. **Debería haber** = apertura + ventas en efectivo del turno + ingresos − retiros − pagos. El
+   vuelto no entra: sale del mismo cajón y el neto de la venta es su total.
+7. **Conteo a ciegas** (propuesto por nosotros, aprobado por Santiago el 2026-09-24). Quien cierra escribe lo contado sin ver el
+   esperado. El esperado y la diferencia solo los recibe un administrador: el servidor no se los
+   manda a un cajero, así que tampoco se ven desde la otra caja. Se retira quitando esa condición.
+8. **Cerrar no bloquea nada** ni exige explicación: guarda el esperado de ese momento, lo contado,
+   quién y una nota opcional (H1d sin respuesta). Un administrador puede cerrar la caja de otro PC,
+   por si ese equipo no enciende; un cajero, solo la suya.
+9. **Monto sugerido de apertura** en `meta`, fijado por el administrador. Se propone al abrir;
+   se guarda lo que se escribió.
+
+**Consecuencias.** Esquema a la versión 6 y protocolo a la 6: las dos cajas se actualizan en la
+misma visita, como siempre. El primer cobro tras actualizar pide abrir la caja. Riesgo aceptado:
+el pago a proveedor lo anota el propio cajero, así que un pago inventado baja el esperado; queda a
+su nombre y con el proveedor, a la vista del dueño en los cierres.

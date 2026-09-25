@@ -46,7 +46,8 @@ def _guardar(widget, destino: Path, nombre: str) -> Path:
     QApplication.processEvents()
     ruta = destino / f"{nombre}.png"
     widget.grab().save(str(ruta))
-    print(f"  {ruta.relative_to(RAIZ)}")
+    # Relativa al proyecto cuando cae dentro; la carpeta de destino puede estar en cualquier sitio.
+    print(f"  {ruta.relative_to(RAIZ) if ruta.is_relative_to(RAIZ) else ruta}")
     return ruta
 
 
@@ -76,7 +77,13 @@ def generar(destino: Path) -> list[Path]:
     conexion = abrir_base_datos(":memory:", con_datos_demo=True)
     # Las pantallas hablan con una Sesion, no con la conexion: es lo que permite que la
     # misma interfaz funcione contra la base local o contra el servidor de la otra caja.
-    sesion = SesionLocal(conexion)
+    # Con nombre de caja, como toda caja de verdad (D-033): el cierre la muestra.
+    sesion = SesionLocal(conexion, caja="Caja 1")
+    # Las dos cajas abiertas desde el principio: desde la fase 19 no se cobra con la caja
+    # cerrada, y el diálogo de apertura se quedaría esperando un clic (D-036).
+    encargado = sesion.autenticar("Administrador", "1234")
+    sesion.abrir_turno(encargado, 50_000, "captura-apertura-1")
+    sesion.abrir_turno(encargado, 30_000, "captura-apertura-2", caja="Caja 2")
     ventana = VentanaPrincipal(sesion)
     # Las capturas no deben depender de los ajustes que tenga guardados quien las genera.
     ventana.aplicar_preferencias(servicio_preferencias.Preferencias())
@@ -177,6 +184,42 @@ def generar(destino: Path) -> list[Path]:
     pin.show()
     generadas.append(_guardar(pin, destino, "13-pin-generado"))
     pin.close()
+
+    # 14. Cierre de caja (fase 18): dos empleados en la misma caja, los tres medios, y otra
+    # caja que también vendió, para que se vea el desplegable. La primera venta, abierta.
+    from tienda_pos.domain.models import MedioPago
+    from tienda_pos.services.venta import Carrito
+
+    empleados = {u.nombre: u for u in sesion.listar_para_administrar(administrador)}
+    ventas_del_cierre = (
+        ("Marta Rojas", MedioPago.DEBITO, (35, 52, 44), "Caja 1"),
+        ("Pedro Soto", MedioPago.EFECTIVO, (0, 0, 19), "Caja 1"),
+        ("Marta Rojas", MedioPago.CREDITO, (10, 12), "Caja 1"),
+        ("Pedro Soto", MedioPago.DEBITO, (3,), "Caja 2"),
+    )
+    for numero, (nombre, medio, indices, caja) in enumerate(ventas_del_cierre):
+        carrito = Carrito()
+        for indice in indices:
+            carrito.agregar(sesion.consultar_por_codigo(codigo_demo(indice)))
+        sesion.cerrar_venta(
+            carrito, empleados[nombre], f"captura-{numero}", medio_pago=medio, caja=caja
+        )
+    ventana.mostrar_cierre()
+    ventana.vista_cierre.arbol_ventas.topLevelItem(0).setExpanded(True)
+    generadas.append(_guardar(ventana, destino, "14-cierre"))
+
+    # 15. Efectivo (fase 19), como lo ve el administrador: un pago a proveedor, un retiro y un
+    # ingreso en la caja 1, y la caja 2 ya cerrada con una diferencia, abajo.
+    from tienda_pos.domain.models import TipoMovimiento
+
+    marta_rojas = empleados["Marta Rojas"]
+    sesion.registrar_movimiento(marta_rojas, TipoMovimiento.PAGO_PROVEEDOR, 18_500, "Hielo Sur", "c-m1")
+    sesion.registrar_movimiento(administrador, TipoMovimiento.RETIRO, 60_000, "Depósito", "c-m2")
+    sesion.registrar_movimiento(marta_rojas, TipoMovimiento.INGRESO, 10_000, "Sencillo", "c-m3")
+    caja_2 = sesion.turno_abierto(administrador, caja="Caja 2")
+    sesion.cerrar_turno(empleados["Pedro Soto"], caja_2.id, 33_000, "Revisar", caja="Caja 2")
+    ventana.mostrar_efectivo()
+    generadas.append(_guardar(ventana, destino, "15-efectivo"))
 
     conexion.close()
     return generadas

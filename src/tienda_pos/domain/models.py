@@ -151,6 +151,9 @@ class Venta:
     caja: str | None = None
     #: Con qué se pagó (fase 17). None en las ventas anteriores a la migración 5: no registrado.
     medio_pago: MedioPago | None = None
+    #: El turno de caja en que se cobró (fase 19): decide a qué cajón fue el efectivo. None en
+    #: las ventas anteriores al arqueo y en las que no llevan caja.
+    turno_id: int | None = None
     lineas: list[LineaVenta] = field(default_factory=list)
 
     @property
@@ -250,3 +253,120 @@ class CierreCaja:
             fila.articulos += venta.cantidad_articulos
         return sorted(filas.values(), key=lambda f: (-f.total_clp, f.nombre or ""))
 
+
+# --------------------------------------------------------------------------- arqueo de caja
+
+
+class TipoMovimiento(StrEnum):
+    """Lo que entra o sale del cajón sin ser una venta (fase 19, D-036)."""
+
+    #: El dueño saca plata. Solo con PIN de administrador.
+    RETIRO = "retiro"
+    #: Se le paga en efectivo a un proveedor, desde la caja. Lo anota quien atiende.
+    PAGO_PROVEEDOR = "pago_proveedor"
+    #: Se agrega sencillo.
+    INGRESO = "ingreso"
+
+    @property
+    def es_salida(self) -> bool:
+        return self is not TipoMovimiento.INGRESO
+
+    @classmethod
+    def leer(cls, valor: object) -> "TipoMovimiento | None":
+        """Como `MedioPago.leer`: lo desconocido no tumba la pantalla, se lee como None."""
+        try:
+            return cls(valor)
+        except ValueError:
+            return None
+
+
+@dataclass(slots=True)
+class MovimientoEfectivo:
+    """Una salida o entrada de efectivo del cajón. No se borra ni se edita."""
+
+    turno_id: int
+    tipo: TipoMovimiento | None  # None: un tipo que esta versión no conoce
+    monto_clp: int
+    motivo: str
+    usuario_id: int
+    fecha_hora: datetime
+    usuario_nombre: str | None = None
+    id: int | None = None
+    intento_id: str | None = None
+
+    @property
+    def efecto_clp(self) -> int:
+        """Cuánto cambia el efectivo del cajón: negativo si sale. Un tipo desconocido cuenta
+        como salida, que es lo prudente: nunca aumenta lo que "debería haber"."""
+        return self.monto_clp if self.tipo is TipoMovimiento.INGRESO else -self.monto_clp
+
+
+@dataclass(slots=True)
+class TurnoCaja:
+    """Una caja abierta con el efectivo que tenía, y cerrada contándolo (fase 19, D-036).
+
+    `ventas_efectivo_clp` es None cuando quien pregunta no es administrador: el conteo es a
+    ciegas, y sin esa cifra no se puede calcular cuánto debería haber. El servidor no la manda,
+    así que tampoco se puede ver desde la otra caja.
+    """
+
+    caja: str
+    abierto_en: datetime
+    abierto_por_id: int
+    apertura_clp: int
+    id: int | None = None
+    abierto_por_nombre: str | None = None
+    #: Suma de las ventas en efectivo del turno, y cuántas son. None: no visible para quien pide.
+    ventas_efectivo_clp: int | None = None
+    ventas_efectivo: int | None = None
+    movimientos: list[MovimientoEfectivo] = field(default_factory=list)
+    cerrado_en: datetime | None = None
+    cerrado_por_id: int | None = None
+    cerrado_por_nombre: str | None = None
+    #: Lo que debería haber al cerrar, guardado en ese momento. None si está abierto o no visible.
+    esperado_al_cerrar_clp: int | None = None
+    contado_clp: int | None = None
+    nota: str | None = None
+
+    @property
+    def abierto(self) -> bool:
+        return self.cerrado_en is None
+
+    def _suma(self, *tipos: TipoMovimiento) -> int:
+        return sum(m.monto_clp for m in self.movimientos if m.tipo in tipos)
+
+    @property
+    def retiros_clp(self) -> int:
+        return self._suma(TipoMovimiento.RETIRO)
+
+    @property
+    def pagos_clp(self) -> int:
+        return self._suma(TipoMovimiento.PAGO_PROVEEDOR)
+
+    @property
+    def ingresos_clp(self) -> int:
+        return self._suma(TipoMovimiento.INGRESO)
+
+    @property
+    def esperado_clp(self) -> int | None:
+        """Cuánto debería haber en el cajón ahora: apertura + ventas en efectivo + ingresos −
+        salidas. El vuelto no entra: sale del mismo cajón y el neto es el total de la venta.
+
+        Cerrado, es lo guardado al cerrar. None si quien pregunta no puede verlo.
+        """
+        if not self.abierto:
+            return self.esperado_al_cerrar_clp
+        if self.ventas_efectivo_clp is None:
+            return None
+        return (
+            self.apertura_clp
+            + self.ventas_efectivo_clp
+            + sum(m.efecto_clp for m in self.movimientos)
+        )
+
+    @property
+    def diferencia_clp(self) -> int | None:
+        """Contado menos esperado: negativo si falta plata, positivo si sobra."""
+        if self.contado_clp is None or self.esperado_al_cerrar_clp is None:
+            return None
+        return self.contado_clp - self.esperado_al_cerrar_clp

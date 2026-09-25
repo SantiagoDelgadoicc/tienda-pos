@@ -39,10 +39,15 @@ from . import estilos, iconos, movimiento
 _PRINCIPALES = (
     ("venta", "Venta", "escanear", "Esc"),
     ("consulta", "Consulta de precio", "etiqueta", "F2"),
+    # En CAJA y no en ADMINISTRACIÓN: el pago a un proveedor y el cierre los hace quien atiende.
+    ("efectivo", "Efectivo", "billete", ""),
 )
 _ADMINISTRACION = (
     ("productos", "Productos", "catalogo", "F7"),
     ("reportes", "Ventas del día", "informe", "F8"),
+    # Sin tecla, como Usuarios: F1 a F12 están tomadas. Se mira una vez al día, al cerrar, y
+    # se llega también desde las ventas del día (F8), que es donde el dueño lo va a buscar.
+    ("cierre", "Cierre de caja", "registradora", ""),
     # Sin tecla: F1 a F12 están tomadas, y es una pantalla que se abre cuando entra o se va
     # alguien, no varias veces al día.
     ("usuarios", "Usuarios", "usuario", ""),
@@ -85,7 +90,8 @@ class _BotonNav(QPushButton):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setMinimumHeight(42)
-        self.setToolTip(f"{rotulo}   ({atajo})")
+        # Las entradas sin tecla no dicen "()": un paréntesis vacío parece un error.
+        self.setToolTip(f"{rotulo}   ({atajo})" if atajo else rotulo)
 
         self._fila = QHBoxLayout(self)
         self._fila.setContentsMargins(12, 0, 10, 0)

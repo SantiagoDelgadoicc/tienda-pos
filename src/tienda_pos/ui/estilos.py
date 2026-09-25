@@ -547,7 +547,9 @@ QLineEdit#campoBusqueda {{
     padding: 9px 18px;
 }}
 
-QComboBox {{
+/* El selector de día del cierre es un desplegable más: se viste igual que el de caja, que va
+   a su lado. */
+QComboBox, QDateEdit {{
     background-color: {p.superficie};
     border: 1px solid {p.borde_fuerte};
     border-radius: {RADIO_PEQUENO}px;
@@ -555,16 +557,40 @@ QComboBox {{
     padding-right: 34px;
     font-size: 15px;
     color: {p.texto};
+    selection-background-color: {p.acento_suave};
+    selection-color: {p.acento_fuerte};
 }}
-QComboBox:focus {{
+QComboBox:focus, QDateEdit:focus {{
     border: 1px solid {p.acento};
 }}
 /* El subcontrol nativo se apaga entero: su marco cuadrado rompe el radio del campo. La
    flecha la pinta `ui/widgets/desplegable.py`; ver allí por qué no puede quedarse. */
-QComboBox::drop-down {{
+QComboBox::drop-down, QDateEdit::drop-down {{
     background: transparent;
     border: none;
     width: 34px;
+}}
+/* El calendario del selector de día. Solo se toca lo que desentona: el día elegido, que
+   sin esto sale en el azul de Windows, y la barra de meses. */
+QCalendarWidget QAbstractItemView {{
+    background-color: {p.superficie};
+    color: {p.texto};
+    selection-background-color: {p.acento_suave};
+    selection-color: {p.acento_fuerte};
+    outline: none;
+}}
+QCalendarWidget QWidget#qt_calendar_navigationbar {{
+    background-color: {p.superficie};
+}}
+QCalendarWidget QToolButton {{
+    background-color: transparent;
+    color: {p.texto};
+    border: none;
+    padding: 6px 10px;
+    font-weight: 600;
+}}
+QCalendarWidget QToolButton:hover {{
+    background-color: {p.superficie_alterna};
 }}
 QComboBox QAbstractItemView {{
     background-color: {p.superficie};
@@ -721,6 +747,24 @@ QTableWidget::item:selected {{
     background-color: {p.seleccion};
     color: {p.texto};
 }}
+/* El árbol de ventas del cierre: la misma tabla, con las líneas de cada venta dentro. La
+   columna de la flecha no se toca aquí: cualquier regla sobre `::branch` hace que Qt deje de
+   dibujar la flecha. La pinta `cierre_view._ArbolVentas`. */
+QTreeWidget {{
+    background-color: {p.superficie};
+    border: 1px solid {p.borde};
+    border-radius: {RADIO_ANIDADO}px;
+    font-size: 15px;
+    outline: none;
+}}
+QTreeWidget::item {{
+    padding: 4px 6px;
+    border-bottom: 1px solid {p.borde_suave};
+}}
+QTreeWidget::item:selected {{
+    background-color: {p.seleccion};
+    color: {p.texto};
+}}
 QHeaderView {{
     background: transparent;
 }}
@@ -869,6 +913,11 @@ QScrollBar::handle:horizontal {{
 }}
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
     width: 0px;
+}}
+/* El carril por donde corre la barra. Sin esta regla Qt lo rellena con su trama de puntos,
+   que en el tema oscuro se ve como una franja rayada al lado de cada lista larga. */
+QScrollBar::add-page, QScrollBar::sub-page {{
+    background: transparent;
 }}
 
 QToolTip {{

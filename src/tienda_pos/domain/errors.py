@@ -65,3 +65,18 @@ class PermisoDenegado(ErrorDominio):
     def __init__(self, accion: str) -> None:
         self.accion = accion
         super().__init__(f"Se requiere permiso de administrador para {accion}.")
+
+
+class CajaCerrada(ErrorDominio):
+    """Se intentó cobrar o anotar efectivo con la caja sin abrir (fase 19, D-036).
+
+    Tiene tipo propio, y no es un `DatosInvalidos`, porque la pantalla de venta lo trata distinto:
+    en vez de un aviso, ofrece abrir la caja ahí mismo.
+    """
+
+    def __init__(self, caja: str | None = None) -> None:
+        self.caja = caja
+        super().__init__(
+            "La caja está cerrada. Ábrala con el efectivo que hay en el cajón para seguir."
+        )
+

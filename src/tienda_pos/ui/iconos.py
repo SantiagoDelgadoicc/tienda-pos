@@ -169,6 +169,35 @@ def _caja(pintor: QPainter, color: QColor) -> None:
     pintor.drawPath(tapa)
 
 
+def _registradora(pintor: QPainter, color: QColor) -> None:
+    """Una caja registradora: visor arriba, cuerpo y cajón. El cierre de caja.
+
+    No sirve la de `_caja`, que es una caja de cartón: al lado de "Cierre de caja" se leería
+    como el stock, que es otra pantalla.
+    """
+    _trazo(pintor, color)
+    visor = QPainterPath()
+    visor.addRoundedRect(QRectF(7, 3.5, 10, 5), 1.5, 1.5)
+    pintor.drawPath(visor)
+    pintor.drawLine(QPointF(12, 8.5), QPointF(12, 11.5))
+    cuerpo = QPainterPath()
+    cuerpo.addRoundedRect(QRectF(3.5, 11.5, 17, 8.5), 2, 2)
+    pintor.drawPath(cuerpo)
+    pintor.drawLine(QPointF(3.5, 15.5), QPointF(20.5, 15.5))
+    pintor.drawLine(QPointF(10, 17.8), QPointF(14, 17.8))
+
+
+def _billete(pintor: QPainter, color: QColor) -> None:
+    """Un billete: el efectivo del cajón (fase 19)."""
+    _trazo(pintor, color)
+    cuerpo = QPainterPath()
+    cuerpo.addRoundedRect(QRectF(2.5, 6.5, 19, 11), 2, 2)
+    pintor.drawPath(cuerpo)
+    pintor.drawEllipse(QPointF(12, 12), 2.6, 2.6)
+    pintor.drawLine(QPointF(5.5, 9.5), QPointF(6.5, 9.5))
+    pintor.drawLine(QPointF(17.5, 14.5), QPointF(18.5, 14.5))
+
+
 def _enlace(pintor: QPainter, color: QColor) -> None:
     """Dos nodos unidos: el estado de la conexión entre las dos cajas."""
     _trazo(pintor, color)
@@ -192,6 +221,8 @@ _DIBUJOS = {
     "plegar": _plegar,
     "desplegar": _desplegar,
     "caja": _caja,
+    "registradora": _registradora,
+    "billete": _billete,
 }
 
 NOMBRES = tuple(_DIBUJOS)

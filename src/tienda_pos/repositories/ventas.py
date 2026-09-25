@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import date, datetime, time, timedelta
 
-from ..config import HORA_CORTE_DIA
+from .. import config
 from ..domain.models import EstadoVenta, LineaVenta, MedioPago, Venta
 
 _FORMATO_FECHA_HORA = "%Y-%m-%d %H:%M:%S"
@@ -25,6 +25,7 @@ def _a_venta(fila: sqlite3.Row) -> Venta:
         intento_id=fila["intento_id"] if "intento_id" in fila.keys() else None,
         caja=fila["caja"] if "caja" in fila.keys() else None,
         medio_pago=MedioPago.leer(fila["medio_pago"]) if "medio_pago" in fila.keys() else None,
+        turno_id=fila["turno_id"] if "turno_id" in fila.keys() else None,
     )
 
 
@@ -58,8 +59,8 @@ def insertar(conexion: sqlite3.Connection, venta: Venta) -> Venta:
     """Inserta la venta y todas sus líneas. Debe ejecutarse dentro de una transacción."""
     cursor = conexion.execute(
         "INSERT INTO venta (folio, usuario_id, fecha_hora, subtotal_clp, descuento_clp, "
-        "total_clp, estado, intento_id, caja, medio_pago) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "total_clp, estado, intento_id, caja, medio_pago, turno_id) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             venta.folio,
             venta.usuario_id,
@@ -71,6 +72,7 @@ def insertar(conexion: sqlite3.Connection, venta: Venta) -> Venta:
             venta.intento_id,
             venta.caja,
             str(venta.medio_pago) if venta.medio_pago else None,
+            venta.turno_id,
         ),
     )
     venta.id = int(cursor.lastrowid)
@@ -171,7 +173,7 @@ def dia_comercial(ahora: datetime | None = None) -> date:
     dueño cuenta como del viernes.
     """
     ahora = ahora or datetime.now()
-    return (ahora - timedelta(hours=HORA_CORTE_DIA)).date()
+    return (ahora - timedelta(hours=config.HORA_CORTE_DIA)).date()
 
 
 def rango_del_dia(dia: date) -> tuple[str, str]:
@@ -180,8 +182,11 @@ def rango_del_dia(dia: date) -> tuple[str, str]:
     Un rango y no `date(fecha_hora) = ?` por dos motivos: permite que el día no empiece a
     medianoche (`HORA_CORTE_DIA`, pregunta H10), y compara el texto ISO tal cual, que es lo
     que deja usar el índice por fecha en lugar de recorrer la tabla entera.
+
+    La hora se lee de `config` en cada llamada, no se copia al importar: así cambiarla afecta
+    a todas las consultas a la vez, y las pruebas pueden probar otro corte.
     """
-    desde = datetime.combine(dia, time(HORA_CORTE_DIA))
+    desde = datetime.combine(dia, time(config.HORA_CORTE_DIA))
     hasta = desde + timedelta(days=1)
     return desde.strftime(_FORMATO_FECHA_HORA), hasta.strftime(_FORMATO_FECHA_HORA)
 

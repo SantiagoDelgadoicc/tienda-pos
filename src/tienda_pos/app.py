@@ -332,6 +332,7 @@ def _ejecutar_con_base_local(
         ventana.establecer_usuario(usuario)
         ventana.show()
         ventana.mostrar_venta()
+        ventana.proponer_apertura()
 
         codigo = app.exec()
     finally:
@@ -472,6 +473,7 @@ def _ejecutar_como_caja(app: QApplication, red: config_red.ConfiguracionRed) -> 
     ventana.establecer_usuario(usuario)
     ventana.show()
     ventana.mostrar_venta()
+    ventana.proponer_apertura()
 
     codigo = app.exec()
     _logger.info("Aplicación cerrada con código %s", codigo)

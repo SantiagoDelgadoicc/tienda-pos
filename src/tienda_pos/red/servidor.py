@@ -256,6 +256,51 @@ def _cierre_de_caja(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
     return protocolo.de_cierre(cierre)
 
 
+def _turno_abierto(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any] | None:
+    # Como en el cobro: la caja es la de la petición, no la del servidor.
+    turno = sesion.turno_abierto(_usuario(a), caja=a.get("caja"))
+    return protocolo.de_turno(turno) if turno else None
+
+
+def _abrir_turno(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
+    turno = sesion.abrir_turno(
+        _usuario(a), a["apertura_clp"], a.get("intento_id"), caja=a.get("caja")
+    )
+    return protocolo.de_turno(turno)
+
+
+def _registrar_movimiento(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
+    movimiento = sesion.registrar_movimiento(
+        _usuario(a),
+        a["tipo"],
+        a["monto_clp"],
+        a.get("motivo", ""),
+        a.get("intento_id"),
+        caja=a.get("caja"),
+    )
+    return protocolo.de_movimiento(movimiento)
+
+
+def _cerrar_turno(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
+    turno = sesion.cerrar_turno(
+        _usuario(a), a["turno_id"], a["contado_clp"], a.get("nota"), caja=a.get("caja")
+    )
+    return protocolo.de_turno(turno)
+
+
+def _turnos_recientes(sesion: SesionLocal, a: dict[str, Any]) -> list[dict[str, Any]]:
+    return [protocolo.de_turno(t) for t in sesion.turnos_recientes(_usuario(a))]
+
+
+def _monto_sugerido(sesion: SesionLocal, a: dict[str, Any]) -> int | None:
+    return sesion.monto_sugerido()
+
+
+def _fijar_monto_sugerido(sesion: SesionLocal, a: dict[str, Any]) -> None:
+    sesion.fijar_monto_sugerido(_usuario(a), a.get("monto_clp"))
+    return None
+
+
 #: El contrato, en un solo sitio. Lo que no esté aquí no se puede pedir por la red.
 _OPERACIONES = {
     "consultar_por_codigo": _consultar_por_codigo,
@@ -276,6 +321,13 @@ _OPERACIONES = {
     "resumen_del_dia": _resumen_del_dia,
     "ventas_del_dia": _ventas_del_dia,
     "cierre_de_caja": _cierre_de_caja,
+    "turno_abierto": _turno_abierto,
+    "abrir_turno": _abrir_turno,
+    "registrar_movimiento": _registrar_movimiento,
+    "cerrar_turno": _cerrar_turno,
+    "turnos_recientes": _turnos_recientes,
+    "monto_sugerido": _monto_sugerido,
+    "fijar_monto_sugerido": _fijar_monto_sugerido,
 }
 
 

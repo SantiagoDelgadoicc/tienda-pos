@@ -149,8 +149,10 @@
     El dueno, en Usuarios: seleccionarlo -> "PIN nuevo".
 
   EL DUENO OLVIDO SU PIN
-    Solo en el PC 1. Ventana de comandos en C:\TiendaPOS y:
-        PuntoYFamaCaja.exe --reiniciar-admin
+    En el PC 1, con el programa cerrado, doble clic en
+        RECUPERAR-ADMINISTRADOR.bat
+    Pide el nombre del administrador y ensena un PIN nuevo, UNA
+    vez: anotalo. No toca productos ni ventas. En el PC 2 no sirve.
 
   EL PROGRAMA NUEVO NO ARRANCA
     NO vuelvas tu solo al programa viejo de TiendaPOS-ANTERIOR:

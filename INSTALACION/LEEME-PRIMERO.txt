@@ -57,6 +57,8 @@
   - Si una ventana dice "SE PARO": lee lo de arriba. La base de
     datos no se toco. Casi siempre es el programa abierto.
   - DIAGNOSTICO.bat dice que tiene cada PC. Sacale una foto.
+  - Nadie recuerda el PIN del administrador: en el PC 1, con el
+    programa cerrado, RECUPERAR-ADMINISTRADOR.bat. Da un PIN nuevo.
   - El detalle de todo esta en INSTRUCCIONES.txt.
   - NO copies ningun archivo tienda.db a mano.
 

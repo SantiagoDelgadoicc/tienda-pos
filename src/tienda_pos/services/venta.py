@@ -9,6 +9,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 
+from .. import config
 from ..config import PERMITIR_STOCK_NEGATIVO
 from ..db.connection import transaccion
 from ..domain.errors import (
@@ -29,6 +30,16 @@ from ..utils.money import porcentaje_de
 CANTIDAD_MAX_POR_LINEA = 999
 
 
+def _validar_gramos(gramos: object) -> None:
+    """Un peso utilizable: gramos enteros, más que cero y bajo el tope de una línea."""
+    if not isinstance(gramos, int) or isinstance(gramos, bool) or gramos <= 0:
+        raise DatosInvalidos("El peso debe ser un número de gramos mayor que cero.")
+    if gramos > config.GRAMOS_MAX_POR_LINEA:
+        raise DatosInvalidos(
+            f"El peso no puede superar los {config.GRAMOS_MAX_POR_LINEA // 1000} kg por producto."
+        )
+
+
 class Carrito:
     """La venta en curso.
 
@@ -44,15 +55,26 @@ class Carrito:
 
     # ------------------------------------------------------------------ productos
 
-    def agregar(self, producto: Producto, cantidad: int = 1) -> LineaCarrito:
+    def agregar(
+        self, producto: Producto, cantidad: int = 1, gramos: int | None = None
+    ) -> LineaCarrito:
         """Añade un producto, o suma unidades si ya estaba en el carrito.
 
+        Un producto por peso (D-037) se agrega con `gramos` y no con unidades. Si ya estaba, los
+        gramos se suman en la misma línea: dos trozos de jamón al mismo precio por kilo cuestan
+        lo mismo juntos que por separado, y el cajero ve una sola línea, como con los yogures.
+
         Raises:
-            DatosInvalidos: si la cantidad no es positiva o supera el tope por línea.
+            DatosInvalidos: si la cantidad o el peso no son positivos o superan su tope, o si se
+                dan gramos a un producto por unidad o se omiten en uno por peso.
         """
+        assert producto.id is not None, "El producto debe venir de la base de datos"
+        if producto.por_peso:
+            return self._agregar_por_peso(producto, gramos)
+        if gramos is not None:
+            raise DatosInvalidos(f"{producto.nombre} se vende por unidad, no por peso.")
         if cantidad <= 0:
             raise DatosInvalidos("La cantidad debe ser mayor que cero.")
-        assert producto.id is not None, "El producto debe venir de la base de datos"
 
         linea = self._lineas.get(producto.codigo_barras)
         if linea is None:
@@ -74,12 +96,52 @@ class Carrito:
         linea.cantidad = nueva_cantidad
         return linea
 
+    def _agregar_por_peso(self, producto: Producto, gramos: int | None) -> LineaCarrito:
+        assert producto.id is not None
+        if gramos is None:
+            raise DatosInvalidos(f"{producto.nombre} se vende por peso: indique los gramos.")
+        _validar_gramos(gramos)
+        linea = self._lineas.get(producto.codigo_barras)
+        total = gramos + ((linea.gramos or 0) if linea else 0)
+        _validar_gramos(total)
+        if linea is None:
+            linea = LineaCarrito(
+                producto_id=producto.id,
+                codigo_barras=producto.codigo_barras,
+                nombre=producto.nombre,
+                precio_unit_clp=producto.precio_clp,
+                cantidad=1,
+                gramos=total,
+            )
+            self._lineas[producto.codigo_barras] = linea
+        else:
+            linea.gramos = total
+        return linea
+
+    def cambiar_gramos(self, codigo_barras: str, gramos: int) -> None:
+        """Fija el peso de una línea por peso. Con 0 gramos la línea se elimina."""
+        linea = self._linea(codigo_barras)
+        if not linea.por_peso:
+            raise DatosInvalidos(f"{linea.nombre} se vende por unidad, no por peso.")
+        if gramos == 0:
+            del self._lineas[codigo_barras]
+            return
+        _validar_gramos(gramos)
+        linea.gramos = gramos
+
     def cambiar_cantidad(self, codigo_barras: str, cantidad: int) -> None:
-        """Fija la cantidad de una línea. Con cantidad 0 la línea se elimina."""
+        """Fija la cantidad de una línea. Con cantidad 0 la línea se elimina.
+
+        En una línea por peso solo vale 0, que la quita: sus unidades no significan nada, y
+        sumarle "una más" a 350 g de jamón no es algo que un cajero quiera hacer sin querer.
+        """
         if codigo_barras not in self._lineas:
             raise DatosInvalidos("Ese producto no está en el carrito.")
         if cantidad < 0:
             raise DatosInvalidos("La cantidad no puede ser negativa.")
+        linea = self._lineas[codigo_barras]
+        if linea.por_peso and cantidad != 0:
+            raise DatosInvalidos(f"{linea.nombre} se vende por peso: cambie el peso, no la cantidad.")
         if cantidad > CANTIDAD_MAX_POR_LINEA:
             raise DatosInvalidos(f"El máximo por línea es {CANTIDAD_MAX_POR_LINEA} unidades.")
 
@@ -246,6 +308,7 @@ class Carrito:
                     "cantidad": linea.cantidad,
                     "descuento_monto_clp": linea.descuento_monto_clp,
                     "descuento_porcentaje": linea.descuento_porcentaje,
+                    "gramos": linea.gramos,
                 }
                 for linea in self.lineas
             ],
@@ -272,6 +335,7 @@ class Carrito:
                 cantidad=d["cantidad"],
                 descuento_monto_clp=d.get("descuento_monto_clp", 0),
                 descuento_porcentaje=d.get("descuento_porcentaje"),
+                gramos=d.get("gramos"),
             )
             carrito._lineas[linea.codigo_barras] = linea
         carrito._descuento_monto = datos.get("descuento_monto_clp", 0)
@@ -402,7 +466,17 @@ def _registrar(
                 raise DatosInvalidos(
                     f"El producto {linea.nombre} ya no está disponible. Quítelo del carrito."
                 )
-            if not PERMITIR_STOCK_NEGATIVO and producto.stock < linea.cantidad:
+            # Se decide con el producto de la base, no con lo que diga el carrito: la otra caja
+            # pudo armarlo antes de que el dueño cambiara el producto a peso, o al revés.
+            if producto.por_peso != linea.por_peso:
+                raise DatosInvalidos(
+                    f"{linea.nombre} cambió entre venta por peso y por unidad. "
+                    "Quítelo del carrito y vuelva a agregarlo."
+                )
+            if linea.por_peso:
+                assert linea.gramos is not None
+                _validar_gramos(linea.gramos)
+            elif not PERMITIR_STOCK_NEGATIVO and producto.stock < linea.cantidad:
                 raise StockInsuficiente(producto.nombre, producto.stock, linea.cantidad)
 
         venta = Venta(
@@ -426,6 +500,7 @@ def _registrar(
                     cantidad=linea.cantidad,
                     subtotal_clp=linea.subtotal_clp,
                     descuento_clp=linea.descuento_clp,
+                    gramos=linea.gramos,
                 )
                 for linea in carrito.lineas
             ],
@@ -433,6 +508,12 @@ def _registrar(
 
         repo_ventas.insertar(conexion, venta)
         for linea in carrito.lineas:
-            repo_productos.descontar_stock(conexion, linea.producto_id, linea.cantidad)
+            if linea.gramos is not None:
+                # El stock de un producto por peso son gramos, y no impide vender (D-037).
+                repo_productos.descontar_stock(
+                    conexion, linea.producto_id, linea.gramos, sin_bajar_de_cero=True
+                )
+            else:
+                repo_productos.descontar_stock(conexion, linea.producto_id, linea.cantidad)
 
     return venta

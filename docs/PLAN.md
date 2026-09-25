@@ -410,6 +410,10 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 **Dónde está todo:** rama `diseño`. 586 pruebas en verde. Esquema de la base en la versión 6 y
 protocolo entre cajas en la 6. El `.exe` de `dist/` está construido con todo lo de la fase 19.
 
+**Actualizado el 2026-09-25:** hecha la **fase 21, venta por peso** (D-037). Esquema y protocolo
+en la **versión 7**, 639 pruebas en verde. El informe "Cierre de caja" se llama ahora "Ventas por
+caja".
+
 **El kit del pendrive está al día** (2026-09-25): `INSTALACION/` instala `PuntoYFamaCaja.exe`,
 aparta el programa viejo, rehace los accesos directos del escritorio y del arranque, y pregunta
 el nombre de cada caja sin borrarlo nunca. Se probó entero contra una copia de la instalación de
@@ -639,6 +643,30 @@ tocar en `docs/MANUAL-USUARIO.md`:
 
 También: `docs/GUION-DEMO.md` (arrancar con `--demo`), `README.md`, y revisar que las capturas de
 `docs/img/` estén al día.
+
+---
+
+## Fase 21 — Venta por peso (D-037) ✅
+
+*2026-09-25.* Pedida por el cliente: pan, pollo y jamón a precio por kilo, con los gramos
+tecleados en la caja.
+
+- [x] Migración 7: `producto.por_peso` y `venta_linea.gramos`. **Esquema a la versión 7**
+- [x] Precio al peso más cercano, en enteros; tope de 50 kg por línea
+- [x] Carrito: pedir gramos, sumar al reescanear, volver a pesar, quitar; viaja por la red
+- [x] Cobro: el servidor decide si es por peso; stock en gramos que no impide vender
+- [x] Código interno para productos sin código (`2000001`...)
+- [x] **Protocolo a la versión 7**
+- [x] Pantallas: ventana del peso con el precio en vivo, líneas con "350 g" y "$7.990/kg",
+      formulario de producto con "Se vende por peso", consulta, búsqueda e informes
+- [x] "Cierre de caja" pasa a "Ventas por caja" (Santiago)
+- [x] Pruebas: 53 nuevas; migración de una base de la tienda de la versión 3 a la 7
+- [x] Capturas 16 a 18 y sección 6 del manual
+
+**Criterio de aceptación:** el pan sin código se vende buscándolo por nombre y tecleando los
+gramos, el jamón escaneado igual, el precio es exacto al peso, y todo lo que se vendía por unidad
+sigue igual. **Cumplido.** Queda por ver en la tienda cómo pesan hoy: si la balanza imprime
+etiquetas con código, leerlas es un paso más (D-037, punto 9).
 
 ---
 

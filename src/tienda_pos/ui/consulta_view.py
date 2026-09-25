@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 from ..domain.errors import ErrorDominio, ProductoNoEncontrado
 from ..red.sesion import Sesion
 from ..utils import sonido
-from ..utils.money import formatear_clp
+from ..utils.money import formatear_clp, formatear_peso
 from . import estilos, movimiento
 
 #: Tiempo que un precio permanece en pantalla antes de volver al estado de espera.
@@ -152,12 +152,18 @@ class ConsultaView(QWidget):
         self.etiqueta_nombre.setText(producto.nombre)
         self.etiqueta_nombre.show()
         self.etiqueta_precio.setStyleSheet("")
-        self.etiqueta_precio.setText(formatear_clp(producto.precio_clp))
+        if producto.por_peso:
+            # Por peso (D-037): lo que se pregunta es cuánto vale el kilo.
+            self.etiqueta_precio.setText(f"{formatear_clp(producto.precio_clp)} el kilo")
+            disponibilidad = (
+                f"Quedan {formatear_peso(producto.stock)}" if producto.stock > 0 else "Se vende por peso"
+            )
+        else:
+            self.etiqueta_precio.setText(formatear_clp(producto.precio_clp))
+            disponibilidad = (
+                f"Quedan {producto.stock} unidades" if producto.stock > 0 else "Sin stock"
+            )
         self.etiqueta_precio.show()
-
-        disponibilidad = (
-            f"Quedan {producto.stock} unidades" if producto.stock > 0 else "Sin stock"
-        )
         self.etiqueta_detalle.setText(f"{producto.codigo_barras}  ·  {disponibilidad}")
         self.etiqueta_detalle.show()
         # Entra con un fundido; si ya había un precio en pantalla, parpadea. Es lo que dice

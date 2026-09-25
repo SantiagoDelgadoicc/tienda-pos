@@ -70,7 +70,7 @@ class TestAcceso:
         caja_1.mostrar_cierre()
 
         assert caja_1.pantallas.currentWidget() is caja_1.vista_cierre
-        assert caja_1.titulo_pantalla.text() == "Cierre de caja"
+        assert caja_1.titulo_pantalla.text() == "Ventas por caja"
         assert caja_1.barra_lateral._botones["cierre"].isChecked()
         # La cabecera dice qué caja y qué día se está mirando.
         subtitulo = caja_1.subtitulo_pantalla.text()

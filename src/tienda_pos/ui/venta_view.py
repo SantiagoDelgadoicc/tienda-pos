@@ -38,7 +38,7 @@ from ..services import venta as servicio_venta
 from ..services.preferencias import Preferencias
 from ..services.venta import Carrito
 from ..utils import sonido
-from ..utils.money import formatear_clp
+from ..utils.money import formatear_clp, formatear_peso, precio_por_gramos
 from ..utils.scanner import DetectorLector
 from . import dialogos, estilos, iconos, movimiento, tablas
 from .efectivo_view import pedir_apertura
@@ -635,18 +635,63 @@ class VentaView(QWidget):
             self._avisar(str(error), exito=False)
             return
 
+        gramos: int | None = None
+        if producto.por_peso:
+            # El pan, el pollo o el jamón (D-037): el código dice qué es, y el peso lo teclea
+            # el cajero después de pesarlo.
+            gramos = self.pedir_gramos(producto.nombre, producto.precio_clp)
+            if gramos is None:
+                self.enfocar_escaneo()
+                return
+
         try:
-            self._carrito.agregar(producto)
+            self._carrito.agregar(producto, gramos=gramos)
         except ErrorDominio as error:
             self._avisar(str(error), exito=False)
+            self.enfocar_escaneo()
             return
 
         self._refrescar()
         self._seleccionar(producto.codigo_barras)
         self._destellar(producto.codigo_barras)
-        self._avisar(
-            f"{producto.nombre} · {formatear_clp(producto.precio_clp)}", exito=True
-        )
+        if gramos is None:
+            aviso = f"{producto.nombre} · {formatear_clp(producto.precio_clp)}"
+        else:
+            aviso = (
+                f"{producto.nombre} · {formatear_peso(gramos)} · "
+                f"{formatear_clp(precio_por_gramos(producto.precio_clp, gramos))}"
+            )
+        self._avisar(aviso, exito=True)
+        self.enfocar_escaneo()
+
+    def pedir_gramos(
+        self, nombre: str, precio_kilo_clp: int, gramos_iniciales: int | None = None
+    ) -> int | None:
+        """Pregunta el peso. Aparte para que las pruebas puedan contestar sin abrir la ventana."""
+        return dialogos.DialogoPeso(nombre, precio_kilo_clp, self, gramos_iniciales).pedir()
+
+    def cambiar_peso(self, codigo: str | None = None) -> None:
+        """Vuelve a pesar una línea por peso: el cliente pidió un poco más, o se pesó mal."""
+        codigo = codigo or self._codigo_seleccionado()
+        if codigo is None:
+            return
+        linea = self._carrito.linea_de(codigo)
+        if linea is None or not linea.por_peso:  # pragma: no cover - lo filtra quien llama
+            return
+        gramos = self.pedir_gramos(linea.nombre, linea.precio_unit_clp, linea.gramos)
+        if gramos is None:
+            self.enfocar_escaneo()
+            return
+        try:
+            self._carrito.cambiar_gramos(codigo, gramos)
+        except ErrorDominio as error:
+            self._avisar(str(error), exito=False)
+            self.enfocar_escaneo()
+            return
+        self._refrescar()
+        self._seleccionar(codigo)
+        self._destellar(codigo)
+        self._avisar(f"{linea.nombre}: {formatear_peso(gramos)}.", exito=True)
         self.enfocar_escaneo()
 
     def _codigo_no_encontrado(self, codigo: str) -> None:
@@ -759,6 +804,10 @@ class VentaView(QWidget):
         linea = self._carrito.linea_de(codigo)
         if linea is None:  # pragma: no cover - la tabla siempre refleja el carrito
             return
+        if linea.por_peso:
+            # "Una más" no tiene sentido en 350 g de jamón: se vuelve a pesar.
+            self.cambiar_peso(codigo)
+            return
 
         try:
             self._carrito.cambiar_cantidad(codigo, linea.cantidad + 1)
@@ -787,7 +836,7 @@ class VentaView(QWidget):
             return
 
         nombre = linea.nombre
-        if linea.cantidad > 1:
+        if linea.cantidad > 1 and not linea.por_peso:
             self._carrito.cambiar_cantidad(codigo, linea.cantidad - 1)
             self._avisar(f"Se quitó una unidad de {nombre}.", exito=True)
             self._refrescar()
@@ -1004,8 +1053,14 @@ class VentaView(QWidget):
             # ancho al nombre, que es lo que el cajero necesita leer.
             self._celda(fila, COL_CODIGO, linea.codigo_barras, fija=True)
             self._celda(fila, COL_NOMBRE, linea.nombre)
-            self._celda(fila, COL_PRECIO, formatear_clp(linea.precio_unit_clp), derecha=True)
-            self._celda(fila, COL_CANTIDAD, str(linea.cantidad), centrada=True, fuerte=True)
+            if linea.gramos is not None:
+                precio = f"{formatear_clp(linea.precio_unit_clp)}/kg"
+                cantidad = formatear_peso(linea.gramos)
+            else:
+                precio = formatear_clp(linea.precio_unit_clp)
+                cantidad = str(linea.cantidad)
+            self._celda(fila, COL_PRECIO, precio, derecha=True)
+            self._celda(fila, COL_CANTIDAD, cantidad, centrada=True, fuerte=True)
             self._celda(
                 fila,
                 COL_DESCUENTO,
@@ -1019,6 +1074,14 @@ class VentaView(QWidget):
             self._celda_accion(
                 fila, COL_COPIAR, _COPIAR, f"Copiar el código {linea.codigo_barras}   (Ctrl+C)"
             )
+            if linea.por_peso:
+                self._celda_accion(
+                    fila, COL_MENOS, _MENOS, f"Quitar {linea.nombre}   (flecha izquierda)"
+                )
+                self._celda_accion(
+                    fila, COL_MAS, _MAS, f"Cambiar el peso de {linea.nombre}   (flecha derecha)"
+                )
+                continue
             self._celda_accion(
                 fila,
                 COL_MENOS,

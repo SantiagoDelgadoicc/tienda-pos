@@ -561,7 +561,7 @@ class EfectivoView(QWidget):
                 f"Contado: {formatear_clp(contado)}\n\n"
                 f"{describir_diferencia(cerrado.diferencia_clp)}."
             )
-        dialogos.mostrar_info(self, mensaje, "Cierre de caja")
+        dialogos.mostrar_info(self, mensaje, "Caja cerrada")
         self.recargar()
 
     def _ver_cuentas(self) -> None:

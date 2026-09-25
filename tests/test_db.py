@@ -105,8 +105,11 @@ class TestTransacciones:
 
 class TestDatosDemo:
     def test_todos_los_codigos_son_ean13_validos(self) -> None:
-        # Si no lo fueran, una pistola real no los leería en la demostración.
-        assert all(es_ean13(p.codigo_barras) for p in catalogo_demo())
+        # Si no lo fueran, una pistola real no los leería en la demostración. La excepción es
+        # el pan, que no trae etiqueta: lleva un código interno y se vende por nombre (D-037).
+        etiquetados = [p for p in catalogo_demo() if p.codigo_barras != "2000001"]
+        assert all(es_ean13(p.codigo_barras) for p in etiquetados)
+        assert len(etiquetados) == len(catalogo_demo()) - 1
 
     def test_no_hay_codigos_repetidos(self) -> None:
         codigos = [p.codigo_barras for p in catalogo_demo()]

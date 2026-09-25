@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import sqlite3
 
+from .. import config
 from ..db.connection import transaccion
 from ..domain.errors import (
     CodigoInvalido,
@@ -71,6 +72,22 @@ def listar(conexion: sqlite3.Connection, incluir_inactivos: bool = False) -> lis
     return repo_productos.listar(conexion, incluir_inactivos=incluir_inactivos)
 
 
+def _codigo_interno(conexion: sqlite3.Connection) -> str:
+    """Un código para un producto que no trae código de barras, como el pan (D-037).
+
+    Siete cifras que empiezan por el prefijo de uso interno: "2000001", "2000002"... Cortas, para
+    poder teclearlas si hace falta, y distintas de cualquier EAN de fábrica, que tienen 8 o 13.
+    """
+    prefijo = config.PREFIJO_CODIGO_INTERNO
+    ultimo = repo_productos.ultimo_codigo_interno(conexion, prefijo)
+    siguiente = int(ultimo[len(prefijo):]) + 1 if ultimo else 1
+    while True:
+        codigo = f"{prefijo}{siguiente:06d}"
+        if repo_productos.obtener_por_codigo(conexion, codigo, incluir_inactivos=True) is None:
+            return codigo
+        siguiente += 1
+
+
 def _validar_datos(codigo: str, nombre: str, precio_clp: int, stock: int) -> tuple[str, str]:
     if not cb.es_valido(codigo):
         raise DatosInvalidos("El código de barras no es válido.")
@@ -93,8 +110,12 @@ def crear_producto(
     nombre: str,
     precio_clp: int,
     stock: int = 0,
+    por_peso: bool = False,
 ) -> Producto:
     """Da de alta un producto. Solo administradores.
+
+    Con `por_peso` (D-037), `precio_clp` es el precio del kilo y `stock` son gramos. Sin código
+    de barras, el sistema le da uno interno: el pan no trae etiqueta y se vende buscándolo.
 
     Raises:
         PermisoDenegado, DatosInvalidos, ProductoDuplicado
@@ -102,12 +123,19 @@ def crear_producto(
     from .auth import exigir_admin  # importación local: evita un ciclo entre servicios
 
     exigir_admin(usuario, "crear productos")
-    codigo, nombre = _validar_datos(codigo, nombre, precio_clp, stock)
-
     with transaccion(conexion):
+        if not cb.normalizar(codigo):
+            codigo = _codigo_interno(conexion)
+        codigo, nombre = _validar_datos(codigo, nombre, precio_clp, stock)
         producto = repo_productos.crear(
             conexion,
-            Producto(codigo_barras=codigo, nombre=nombre, precio_clp=precio_clp, stock=stock),
+            Producto(
+                codigo_barras=codigo,
+                nombre=nombre,
+                precio_clp=precio_clp,
+                stock=stock,
+                por_peso=bool(por_peso),
+            ),
         )
         # Si este código estaba en la lista de "no encontrados", ya dejó de estarlo.
         repo_codigos.marcar_resuelto(conexion, codigo)
@@ -122,16 +150,24 @@ def actualizar_producto(
     nombre: str,
     precio_clp: int,
     stock: int,
+    por_peso: bool | None = None,
 ) -> Producto:
-    """Modifica un producto existente. Solo administradores."""
+    """Modifica un producto existente. Solo administradores.
+
+    `por_peso` None lo deja como estaba. Cambiarlo no toca las ventas pasadas: cada línea
+    guarda si se vendió por peso.
+    """
     from .auth import exigir_admin
 
     exigir_admin(usuario, "modificar productos")
-    codigo, nombre = _validar_datos(codigo, nombre, precio_clp, stock)
-
     existente = repo_productos.obtener_por_id(conexion, producto_id)
     if existente is None:
         raise DatosInvalidos("El producto que intenta modificar ya no existe.")
+    if not cb.normalizar(codigo):
+        codigo = existente.codigo_barras
+    codigo, nombre = _validar_datos(codigo, nombre, precio_clp, stock)
+    if por_peso is not None:
+        existente.por_peso = bool(por_peso)
 
     existente.codigo_barras = codigo
     existente.nombre = nombre

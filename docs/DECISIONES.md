@@ -1311,3 +1311,44 @@ un turno cruza la medianoche, sus ventas de después de las 00:00 salen en el ci
 siguiente. El dinero del cajón cuadra igual, porque eso lo calcula el turno. Si llegara a molestar,
 hay dos salidas: subir `HORA_CORTE_DIA` a la hora en que la tienda ya cerró seguro, que es un
 número, o que el cierre se pida por turno y no por día, que es un cambio de pantalla.
+
+
+---
+
+## D-037 — Venta por peso: precio por kilo, gramos enteros en la línea
+
+*2026-09-25.* **Pedido por el cliente**, que se había olvidado de decirlo: vende pan, pollo y
+jamón, y quiere fijar el precio del kilo y teclear los gramos en la caja, escaneando si el producto
+tiene código y buscándolo por nombre si no, como el pan. **Retira la línea de 3.2 "venta solo por
+unidad".** Lo decidieron Santiago y el cliente; el diseño concreto lo aprobó Santiago.
+
+**Decisión.**
+
+1. **El producto dice si se vende por peso** (`producto.por_peso`). Entonces `precio_clp` es el
+   precio **de un kilo**. Los productos que ya existían quedan por unidad.
+2. **La línea guarda los gramos** (`gramos`, entero), `cantidad` vale 1 y `precio_unit_clp` es el
+   precio del kilo. Así una línea por peso cuenta como **un artículo**, y el cierre, el arqueo, las
+   ventas del día y todo lo que suma `cantidad` siguen igual sin tocarlos.
+3. **Precio = kilo × gramos / 1000, al peso más cercano, la mitad hacia arriba**, en enteros
+   (`utils/money.precio_por_gramos`). 350 g a $7.990 son $2.797.
+4. **Gramos enteros, de 1 a 50 kg por línea** (`config.GRAMOS_MAX_POR_LINEA`): el tope es contra
+   un cero de más, no una regla del negocio.
+5. **El stock de un producto por peso son gramos y no impide vender** (aprobado por Santiago):
+   nadie pesa el pan al recibirlo. Baja con cada venta y se queda en cero, nunca negativo.
+6. **Escanear otra vez el mismo producto suma los gramos** en la misma línea. El + de la línea
+   vuelve a pesar; el − quita la línea entera: "una más" no significa nada en 350 g de jamón.
+7. **Un producto sin código recibe uno interno**: `2` y seis cifras, desde `2000001`. El prefijo 2
+   es el que el estándar EAN reserva para uso interno, así que no choca con los de fábrica. Vale
+   para cualquier producto, no solo los de peso.
+8. **Lo decide la base, no el carrito**: si un producto pasó de unidad a peso, o al revés, entre
+   que la otra caja lo agregó y lo cobró, el cobro se niega con un mensaje en vez de cobrar mal.
+9. **No se leen etiquetas de balanza** con el peso o el precio dentro del código (los EAN que
+   empiezan por 2 que imprimen algunas balanzas). El cliente no las mencionó; si las usa, es otra
+   cosa y se puede agregar.
+
+**Consecuencias.** Esquema y protocolo a la **versión 7**: las dos cajas se actualizan juntas, como
+siempre. 53 pruebas nuevas (`test_venta_por_peso.py`, `test_ui_peso.py` y en catálogo), entre ellas
+una base de la versión 6 migrada y el cobro por peso desde la caja secundaria contra un servidor
+real. En la misma entrega, la pantalla del informe **"Cierre de caja" pasa a llamarse "Ventas por
+caja"** (decidido por Santiago): con el botón "Cerrar la caja" en Efectivo, dos nombres casi
+iguales para dos cosas distintas confundían.

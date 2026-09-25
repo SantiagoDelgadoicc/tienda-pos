@@ -118,7 +118,7 @@ class TestAdministracionDeProductos:
     @pytest.mark.parametrize(
         "codigo, nombre, precio, stock",
         [
-            ("", "Producto", 1000, 1),
+            ("no-es-valido!", "Producto", 1000, 1),
             ("7801234000040", "", 1000, 1),
             ("7801234000040", "   ", 1000, 1),
             ("7801234000040", "Producto", -1, 1),
@@ -128,6 +128,33 @@ class TestAdministracionDeProductos:
     def test_rechaza_datos_invalidos(self, conexion, admin, codigo, nombre, precio, stock) -> None:
         with pytest.raises(DatosInvalidos):
             catalogo.crear_producto(conexion, admin, codigo, nombre, precio, stock)
+
+    def test_sin_codigo_recibe_uno_interno(self, conexion, admin) -> None:
+        # El pan no trae código de barras (D-037): el sistema le da uno para poder venderlo.
+        pan = catalogo.crear_producto(conexion, admin, "", "Pan batido", 2490, 0, por_peso=True)
+        otro = catalogo.crear_producto(conexion, admin, "  ", "Pan amasado", 2790, 0, por_peso=True)
+        assert pan.codigo_barras == "2000001" and otro.codigo_barras == "2000002"
+        assert catalogo.consultar_por_codigo(conexion, "2000001").nombre == "Pan batido"
+
+    def test_el_codigo_interno_no_repite_uno_existente(self, conexion, admin) -> None:
+        catalogo.crear_producto(conexion, admin, "2000001", "Ya existía", 100, 0)
+        nuevo = catalogo.crear_producto(conexion, admin, "", "Pan", 2490, 0, por_peso=True)
+        assert nuevo.codigo_barras == "2000002"
+
+    def test_editar_sin_codigo_conserva_el_que_tenia(self, conexion, admin) -> None:
+        pan = catalogo.crear_producto(conexion, admin, "", "Pan", 2490, 0, por_peso=True)
+        catalogo.actualizar_producto(conexion, admin, pan.id, "", "Pan", 2590, 0)
+        guardado = catalogo.consultar_por_codigo(conexion, pan.codigo_barras)
+        assert guardado.precio_clp == 2590 and guardado.por_peso
+
+    def test_por_peso_se_guarda_y_se_cambia(self, conexion, productos, admin) -> None:
+        producto = catalogo.consultar_por_codigo(conexion, "7801234000019")
+        assert not producto.por_peso
+        catalogo.actualizar_producto(
+            conexion, admin, producto.id, producto.codigo_barras, producto.nombre, 9990, 5000,
+            por_peso=True,
+        )
+        assert catalogo.consultar_por_codigo(conexion, "7801234000019").por_peso
 
     def test_actualizar_cambia_el_precio(self, conexion, productos, admin) -> None:
         producto = catalogo.consultar_por_codigo(conexion, "7801234000019")

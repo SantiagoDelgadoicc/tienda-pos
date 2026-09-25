@@ -213,7 +213,7 @@ class TestPantallaDeProductos:
         monkeypatch.setattr(
             productos_view,
             "DialogoProducto",
-            _DialogoFalso(datos=("7790000000024", "Producto de prueba", 1990, 7)),
+            _DialogoFalso(datos=("7790000000024", "Producto de prueba", 1990, 7, False)),
         )
         antes = vista.tabla.rowCount()
         vista.crear()
@@ -221,13 +221,37 @@ class TestPantallaDeProductos:
         assert vista.tabla.rowCount() == antes + 1
         assert catalogo.consultar_por_codigo(conexion, "7790000000024").precio_clp == 1990
 
+    def test_crear_un_producto_por_peso_sin_codigo(self, vista, conexion, monkeypatch) -> None:
+        monkeypatch.setattr(
+            productos_view,
+            "DialogoProducto",
+            _DialogoFalso(datos=("", "Pan amasado", 2790, 0, True)),
+        )
+        vista.crear()
+        pan = catalogo.buscar_por_nombre(conexion, "amasado")[0]
+        assert pan.por_peso and pan.precio_clp == 2790 and pan.codigo_barras.startswith("2")
+        vista.campo_filtro.setText("amasado")
+        assert vista.tabla.item(0, 2).text() == "$2.790/kg"
+
+    def test_el_formulario_rotula_el_precio_por_kilo(self, vista) -> None:
+        dialogo = productos_view.DialogoProducto(vista)
+        assert dialogo.rotulo_precio.text() == "Precio de venta"
+        dialogo.casilla_peso.setChecked(True)
+        assert dialogo.rotulo_precio.text() == "Precio de un kilo"
+        assert "gramos" in dialogo.rotulo_stock.text()
+        dialogo.campo_nombre.setText("Pan")
+        dialogo.campo_precio.setText("2490")
+        dialogo._validar()  # sin código se acepta: el sistema le pondrá uno
+        assert dialogo.result() == dialogo.DialogCode.Accepted
+        assert dialogo.datos == ("", "Pan", 2490, 0, True)
+
     def test_editar_cambia_el_precio(self, vista, conexion, monkeypatch) -> None:
         vista.campo_filtro.setText(COLA)
         vista.tabla.selectRow(0)
         monkeypatch.setattr(
             productos_view,
             "DialogoProducto",
-            _DialogoFalso(datos=(COLA, "Bebida Cola 1.5 L", 2490, 48)),
+            _DialogoFalso(datos=(COLA, "Bebida Cola 1.5 L", 2490, 48, False)),
         )
         vista.editar()
 

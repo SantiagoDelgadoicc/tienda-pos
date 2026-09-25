@@ -172,7 +172,13 @@ class SesionRemota(Sesion):
         return [protocolo.a_producto(d) for d in datos]
 
     def crear_producto(
-        self, usuario: Usuario | None, codigo: str, nombre: str, precio_clp: int, stock: int
+        self,
+        usuario: Usuario | None,
+        codigo: str,
+        nombre: str,
+        precio_clp: int,
+        stock: int,
+        por_peso: bool = False,
     ) -> Producto:
         datos = self._llamar(
             "crear_producto",
@@ -182,6 +188,7 @@ class SesionRemota(Sesion):
                 "nombre": nombre,
                 "precio_clp": precio_clp,
                 "stock": stock,
+                "por_peso": por_peso,
             },
         )
         return protocolo.a_producto(datos)
@@ -194,6 +201,7 @@ class SesionRemota(Sesion):
         nombre: str,
         precio_clp: int,
         stock: int,
+        por_peso: bool | None = None,
     ) -> Producto:
         datos = self._llamar(
             "actualizar_producto",
@@ -204,6 +212,7 @@ class SesionRemota(Sesion):
                 "nombre": nombre,
                 "precio_clp": precio_clp,
                 "stock": stock,
+                "por_peso": por_peso,
             },
         )
         return protocolo.a_producto(datos)

@@ -52,12 +52,17 @@ class MedioPago(StrEnum):
 class Producto:
     codigo_barras: str
     nombre: str
+    #: Con `por_peso`, es el precio de **un kilo**.
     precio_clp: int
+    #: Con `por_peso`, en **gramos**; si no, en unidades.
     stock: int = 0
     activo: bool = True
     id: int | None = None
     creado_en: str | None = None
     actualizado_en: str | None = None
+    #: Se vende por peso, como el pan o el jamón (D-037): el precio es por kilo y cada venta
+    #: lleva los gramos. Si no, por unidad, como todo lo anterior.
+    por_peso: bool = False
 
 
 @dataclass(slots=True)
@@ -93,10 +98,21 @@ class LineaCarrito:
     cantidad: int = 1
     descuento_monto_clp: int = 0
     descuento_porcentaje: float | None = None
+    #: Solo en los productos por peso (D-037): los gramos pesados. Entonces `precio_unit_clp` es
+    #: el precio del kilo y `cantidad` vale 1, así que la línea cuenta como un artículo.
+    gramos: int | None = None
+
+    @property
+    def por_peso(self) -> bool:
+        return self.gramos is not None
 
     @property
     def subtotal_clp(self) -> int:
         """Importe bruto de la línea, antes de su descuento."""
+        if self.gramos is not None:
+            from ..utils.money import precio_por_gramos
+
+            return precio_por_gramos(self.precio_unit_clp, self.gramos)
         return self.precio_unit_clp * self.cantidad
 
     @property
@@ -129,6 +145,9 @@ class LineaVenta:
     producto_id: int | None = None
     id: int | None = None
     venta_id: int | None = None
+    #: Los gramos vendidos, si el producto se vendió por peso (D-037). Entonces
+    #: `precio_unit_clp` es el precio del kilo y `cantidad` es 1.
+    gramos: int | None = None
 
 
 @dataclass(slots=True)

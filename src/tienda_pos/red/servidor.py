@@ -170,14 +170,25 @@ def _listar_productos(sesion: SesionLocal, a: dict[str, Any]) -> list[dict[str, 
 
 def _crear_producto(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
     producto = sesion.crear_producto(
-        _usuario(a), a["codigo"], a["nombre"], a["precio_clp"], a.get("stock", 0)
+        _usuario(a),
+        a["codigo"],
+        a["nombre"],
+        a["precio_clp"],
+        a.get("stock", 0),
+        bool(a.get("por_peso", False)),
     )
     return protocolo.de_producto(producto)
 
 
 def _actualizar_producto(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
     producto = sesion.actualizar_producto(
-        _usuario(a), a["producto_id"], a["codigo"], a["nombre"], a["precio_clp"], a["stock"]
+        _usuario(a),
+        a["producto_id"],
+        a["codigo"],
+        a["nombre"],
+        a["precio_clp"],
+        a["stock"],
+        a.get("por_peso"),
     )
     return protocolo.de_producto(producto)
 

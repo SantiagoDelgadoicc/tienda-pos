@@ -53,6 +53,15 @@ PERMITIR_STOCK_NEGATIVO = False
 #: Longitud máxima aceptada para un código de barras leído.
 CODIGO_LONGITUD_MAX = 32
 
+#: Tope del peso de una línea vendida por peso (D-037): 50 kg. Un tope, y no un límite del
+#: negocio: sirve para que un cero de más al teclear los gramos no cobre una fortuna.
+GRAMOS_MAX_POR_LINEA = 50_000
+
+#: Prefijo de los códigos internos que el sistema da a un producto por peso sin código de
+#: barras, como el pan (D-037). El 2 inicial es el que el estándar EAN reserva para uso
+#: interno de cada tienda, así que no choca con ningún código de fábrica.
+PREFIJO_CODIGO_INTERNO = "2"
+
 # --------------------------------------------------------------------------- red (D-015)
 
 #: Puerto en el que escucha el servidor. Por encima de 1024 para no necesitar privilegios, y

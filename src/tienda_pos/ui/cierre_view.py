@@ -36,7 +36,7 @@ from ..domain.errors import ErrorDominio
 from ..domain.models import CierreCaja, MedioPago
 from ..red.sesion import Sesion
 from ..services import reportes
-from ..utils.money import formatear_clp
+from ..utils.money import formatear_clp, formatear_peso
 from . import dialogos, estilos, tablas
 from .venta_view import NOMBRE_MEDIO
 from .widgets.desplegable import Desplegable, SelectorFecha
@@ -454,7 +454,13 @@ class CierreView(QWidget):
             fila.setForeground(3, QBrush(QColor(estilos.color_medio(venta.medio_pago))))
             for linea in venta.lineas:
                 hija = QTreeWidgetItem(
-                    [linea.nombre, str(linea.cantidad), "", "", formatear_clp(linea.subtotal_clp)]
+                    [
+                        linea.nombre,
+                        formatear_peso(linea.gramos) if linea.gramos else str(linea.cantidad),
+                        "",
+                        "",
+                        formatear_clp(linea.subtotal_clp),
+                    ]
                 )
                 # En una pantalla estrecha el nombre se abrevia: entero, al pasar el ratón.
                 hija.setToolTip(0, linea.nombre)

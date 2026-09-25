@@ -51,7 +51,7 @@ _CABECERAS = {
     "efectivo": ("Efectivo", "Abrir la caja, lo que entra y sale del cajón, y el cierre."),
     "productos": ("Productos", "El catálogo completo de la tienda."),
     "reportes": ("Ventas del día", "Lo que se vendió hoy, venta por venta."),
-    "cierre": ("Cierre de caja", "Lo vendido en una caja, por medio de pago y por empleado."),
+    "cierre": ("Ventas por caja", "El cierre diario: lo vendido en una caja, por medio de pago y por empleado."),
     "usuarios": ("Usuarios", "Un usuario por empleado, cada uno con su PIN."),
 }
 

@@ -359,3 +359,110 @@ class DialogoDescuento(QDialog):
     @property
     def valor(self) -> float:
         return getattr(self, "_valor", 0)
+
+
+class DialogoPeso(QDialog):
+    """Pide los gramos de un producto por peso (D-037) y enseña el precio mientras se teclean.
+
+    Se ve el precio antes de aceptar porque es lo que el cajero le dice al cliente: "son 350
+    gramos, $2.797". Solo admite gramos enteros, que es como marca la balanza, y avisa del tope
+    en lugar de aceptar un cero de más. Tras cerrar con Aceptar, `gramos` tiene el peso.
+    """
+
+    def __init__(
+        self,
+        nombre: str,
+        precio_kilo_clp: int,
+        padre: QWidget | None = None,
+        gramos_iniciales: int | None = None,
+    ) -> None:
+        from PySide6.QtGui import QIntValidator
+        from PySide6.QtWidgets import QLineEdit
+
+        from ..config import GRAMOS_MAX_POR_LINEA
+        from ..utils.money import formatear_clp, formatear_peso, precio_por_gramos
+
+        super().__init__(padre)
+        movimiento.aparecer_al_abrir(self)
+        self.setWindowTitle("Peso del producto")
+        self.setMinimumWidth(400)
+        self._precio_kilo = precio_kilo_clp
+        self._tope = GRAMOS_MAX_POR_LINEA
+        self._formatear_clp = formatear_clp
+        self._formatear_peso = formatear_peso
+        self._precio_por_gramos = precio_por_gramos
+        self.gramos: int | None = None
+
+        disposicion = QVBoxLayout(self)
+        disposicion.setContentsMargins(24, 24, 24, 20)
+        disposicion.setSpacing(10)
+
+        titulo = QLabel(nombre)
+        titulo.setObjectName("tituloPantalla")
+        titulo.setWordWrap(True)
+        disposicion.addWidget(titulo)
+        precio = QLabel(f"{formatear_clp(precio_kilo_clp)} el kilo")
+        precio.setObjectName("subtitulo")
+        disposicion.addWidget(precio)
+
+        disposicion.addWidget(QLabel("Peso en gramos"))
+        self.campo = QLineEdit("" if gramos_iniciales is None else str(gramos_iniciales))
+        self.campo.setValidator(QIntValidator(0, 10 * GRAMOS_MAX_POR_LINEA, self))
+        self.campo.setPlaceholderText("Por ejemplo: 350")
+        self.campo.selectAll()
+        self.campo.textChanged.connect(self._actualizar)
+        disposicion.addWidget(self.campo)
+
+        self.vista = QLabel()
+        self.vista.setObjectName("valorSubtotal")
+        disposicion.addWidget(self.vista)
+        self.error = QLabel()
+        self.error.setObjectName("mensajeError")
+        self.error.setWordWrap(True)
+        self.error.hide()  # su estilo lleva fondo: vacío se vería como un recuadro sin motivo
+        disposicion.addWidget(self.error)
+
+        caja = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        self._aceptar = caja.button(QDialogButtonBox.StandardButton.Ok)
+        self._aceptar.setText("Agregar" if gramos_iniciales is None else "Cambiar")
+        self._aceptar.setObjectName("botonAccion")
+        caja.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
+        caja.accepted.connect(self._confirmar)
+        caja.rejected.connect(self.reject)
+        disposicion.addWidget(caja)
+        self._actualizar()
+
+    def _leer(self) -> int | None:
+        texto = self.campo.text().strip()
+        return int(texto) if texto.isdigit() else None
+
+    def _actualizar(self) -> None:
+        gramos = self._leer()
+        self.error.clear()
+        self.error.hide()
+        if gramos is None or gramos <= 0:
+            self.vista.setText(" ")
+            self._aceptar.setEnabled(False)
+            return
+        if gramos > self._tope:
+            self.vista.setText(" ")
+            self.error.setText(f"El máximo es {self._tope // 1000} kg. Revise el peso.")
+            self.error.show()
+            self._aceptar.setEnabled(False)
+            return
+        precio = self._precio_por_gramos(self._precio_kilo, gramos)
+        self.vista.setText(f"{self._formatear_peso(gramos)}  ·  {self._formatear_clp(precio)}")
+        self._aceptar.setEnabled(True)
+
+    def _confirmar(self) -> None:
+        gramos = self._leer()
+        if gramos is None or not 0 < gramos <= self._tope:
+            return
+        self.gramos = gramos
+        self.accept()
+
+    def pedir(self) -> int | None:
+        """Abre el diálogo y devuelve los gramos, o None si se canceló."""
+        return self.gramos if self.exec() else None

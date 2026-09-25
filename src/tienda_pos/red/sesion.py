@@ -80,7 +80,13 @@ class Sesion(ABC):
 
     @abstractmethod
     def crear_producto(
-        self, usuario: Usuario | None, codigo: str, nombre: str, precio_clp: int, stock: int
+        self,
+        usuario: Usuario | None,
+        codigo: str,
+        nombre: str,
+        precio_clp: int,
+        stock: int,
+        por_peso: bool = False,
     ) -> Producto: ...
 
     @abstractmethod
@@ -92,6 +98,7 @@ class Sesion(ABC):
         nombre: str,
         precio_clp: int,
         stock: int,
+        por_peso: bool | None = None,
     ) -> Producto: ...
 
     @abstractmethod
@@ -273,9 +280,17 @@ class SesionLocal(Sesion):
 
     @_serializado
     def crear_producto(
-        self, usuario: Usuario | None, codigo: str, nombre: str, precio_clp: int, stock: int
+        self,
+        usuario: Usuario | None,
+        codigo: str,
+        nombre: str,
+        precio_clp: int,
+        stock: int,
+        por_peso: bool = False,
     ) -> Producto:
-        return catalogo.crear_producto(self._conexion, usuario, codigo, nombre, precio_clp, stock)
+        return catalogo.crear_producto(
+            self._conexion, usuario, codigo, nombre, precio_clp, stock, por_peso
+        )
 
     @_serializado
     def actualizar_producto(
@@ -286,9 +301,10 @@ class SesionLocal(Sesion):
         nombre: str,
         precio_clp: int,
         stock: int,
+        por_peso: bool | None = None,
     ) -> Producto:
         return catalogo.actualizar_producto(
-            self._conexion, usuario, producto_id, codigo, nombre, precio_clp, stock
+            self._conexion, usuario, producto_id, codigo, nombre, precio_clp, stock, por_peso
         )
 
     @_serializado

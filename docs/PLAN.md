@@ -405,19 +405,25 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 | 19 | Arqueo de caja, siempre activo (D-036) | ✅ 2026-09-24 |
 | 20 | Documentación y manual | pendiente |
 
-### Cómo retomar (estado al 2026-09-24)
+### Cómo retomar (estado al 2026-09-25)
 
-**Dónde está todo:** rama `diseño`. 583 pruebas en verde. Esquema de la base en la versión 6 y
-protocolo entre cajas en la 6. El `.exe` del escritorio está construido en la fase 15: hay que
-reconstruirlo (`python tools/construir.py`) para ver las fases 16 a 18.
+**Dónde está todo:** rama `diseño`. 586 pruebas en verde. Esquema de la base en la versión 6 y
+protocolo entre cajas en la 6. El `.exe` de `dist/` está construido con todo lo de la fase 19.
+
+**El kit del pendrive está al día** (2026-09-25): `INSTALACION/` instala `PuntoYFamaCaja.exe`,
+aparta el programa viejo, rehace los accesos directos del escritorio y del arranque, y pregunta
+el nombre de cada caja sin borrarlo nunca. Se probó entero contra una copia de la instalación de
+la tienda, con los fallos a mitad de copia incluidos; los pasos 3 y 4 solo se pueden probar en la
+tienda, porque cambian la dirección de red del equipo. Ver `DESPLIEGUE-TIENDA.md`, sección 5.
 
 **Lo siguiente es la fase 20**, la documentación y el manual, escrito con todo hecho.
 
 **Pendiente del cliente** (detalle en `docs/PREGUNTAS-CIERRE-Y-USUARIOS.md`):
 
-- **H10, la medianoche.** Si venden pasada la medianoche, ¿de qué día son esas ventas? Responderla
-  es cambiar `config.HORA_CORTE_DIA`. Es la que puede salir cara si se olvida.
-- **H8, cómo se llaman las cajas.** Se escribe en `red.json` de cada PC el día de la visita.
+- ~~H10, la medianoche~~: **decidida por Santiago el 2026-09-25**. Cada caja se abre al empezar el
+  día y se cierra al terminarlo; ver el añadido a D-036.
+- **H8, cómo se llaman las cajas.** Lo pregunta `PASO-2` en cada PC el día de la visita; sin
+  respuesta, "Caja 1" y "Caja 2".
 - H1d: quién cuenta al cerrar y qué hacen si no cuadra. Mientras tanto, la diferencia se anota y
   no bloquea nada.
 - H3 (otros medios, fiado), H11 (anular ventas), H9, H4 (quién ve el cierre), H5 (imprimirlo),
@@ -427,7 +433,7 @@ reconstruirlo (`python tools/construir.py`) para ver las fases 16 a 18.
 **Pendiente en la tienda** (una sola visita, con las dos cajas paradas; procedimiento en
 `docs/DESPLIEGUE-TIENDA.md`, "Actualizar a la versión con un usuario por empleado"): actualizar los
 dos PC a la vez, crear los usuarios de los empleados, PIN nuevo para `Administrador`, baja de
-`Cajero`, `nombre_caja` distinto en el `red.json` de cada PC, y comprobar la resolución de pantalla
+`Cajero`, un nombre distinto para cada caja (lo pregunta `PASO-2`), y comprobar la resolución de pantalla
 de los equipos (D-031: todo el margen del carrito se midió a 1600 de ancho).
 
 **Pendiente de Santiago:** abrir el PR de `diseño` a `main` (`gh` no está autenticado en este

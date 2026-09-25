@@ -1,5 +1,5 @@
 @echo off
-title Tienda POS - Direccion de este PC
+title Punto y Fama - Direccion de este PC
 
 echo.
 echo  ==========================================================

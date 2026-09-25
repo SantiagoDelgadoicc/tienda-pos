@@ -117,6 +117,10 @@ parte la caja:
   apertura lo teclea quien abre, con un monto sugerido que fija el administrador. **El conteo es
   a ciegas** (2026-09-24): quien cierra escribe lo que contó sin ver cuánto debería haber; eso y
   la diferencia los ve solo el administrador.
+- **La medianoche (H10), decidida el 2026-09-25**: cada caja se abre al empezar el día y se
+  cierra al terminarlo, como se viene haciendo, y lo vendido entre medio es de ese turno aunque
+  pase la medianoche. `HORA_CORTE_DIA` sigue en 0. El informe Cierre de caja es por día de
+  calendario y en ese caso partiría el turno en dos (añadido a D-036).
 - La venta se cierra con su total, **el medio de pago** —efectivo, débito o crédito, que lo
   marca el cajero— y **la caja donde se hizo**, y queda registrada (D-033, D-034; los dos,
   pedidos por el cliente). Sigue sin vuelto, sin comprobante impreso y sin boleta electrónica
@@ -262,7 +266,7 @@ src/tienda_pos/
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    583 pruebas
+tests/                    586 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -299,7 +303,7 @@ python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
 python main.py --demo                 # con el catálogo y los usuarios de ejemplo, en una base vacía
 python main.py --reiniciar-admin      # recuperar un administrador; solo en el PC de la base
-pytest                                # pruebas (583, dos minutos)
+pytest                                # pruebas (586, dos minutos)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

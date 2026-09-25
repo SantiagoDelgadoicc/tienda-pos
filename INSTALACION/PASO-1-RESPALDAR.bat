@@ -1,8 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
-title Tienda POS - PASO 1 - Respaldar el catalogo del PC 1
+title Punto y Fama - PASO 1 - Respaldar el catalogo del PC 1
 
-set "DATOS=%LOCALAPPDATA%\TiendaPOS"
+if not defined DATOS set "DATOS=%LOCALAPPDATA%\TiendaPOS"
 set "DESTINO=%~dp0RESPALDOS"
 
 echo.
@@ -13,7 +13,7 @@ echo.
 echo   Esto NO cambia nada. Solo copia lo que hay al pendrive.
 echo   Hazlo ANTES que ninguna otra cosa.
 echo.
-echo   CIERRA TIENDA POS ANTES DE SEGUIR.
+echo   CIERRA EL PROGRAMA DE LA CAJA ANTES DE SEGUIR.
 echo   Con el programa abierto, la copia puede salir incompleta.
 echo.
 pause
@@ -27,8 +27,11 @@ if not exist "%DATOS%\tienda.db" (
     exit /b 1
 )
 
-for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value 2^>nul') do set "LD=%%I"
-set "SELLO=%LD:~0,8%-%LD:~8,4%"
+rem La fecha con PowerShell y no con wmic: Windows 11 ya no trae wmic, y sin fecha cada
+rem respaldo nuevo iria a la misma carpeta que el anterior y lo pisaria.
+set "SELLO="
+for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"`) do set "SELLO=%%I"
+if not defined SELLO set "SELLO=sin-fecha-%RANDOM%%RANDOM%"
 set "CARPETA=%DESTINO%\PC1-%SELLO%"
 
 echo.

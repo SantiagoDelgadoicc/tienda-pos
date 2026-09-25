@@ -196,7 +196,8 @@ class TestCobro:
         _cobrar(conexion, carrito)
         assert repo_productos.obtener_por_id(conexion, jamon.id).stock == 0
 
-    def test_los_productos_por_unidad_siguen_exigiendo_stock(self, conexion, leche) -> None:
+    def test_con_stock_estricto_los_de_unidad_lo_exigen(self, conexion, leche, monkeypatch) -> None:
+        monkeypatch.setattr(config, "PERMITIR_STOCK_NEGATIVO", False)
         carrito = servicio_venta.Carrito()
         carrito.agregar(leche, 11)
         with pytest.raises(StockInsuficiente):

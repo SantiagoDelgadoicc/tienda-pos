@@ -10,7 +10,6 @@ import sqlite3
 from datetime import datetime
 
 from .. import config
-from ..config import PERMITIR_STOCK_NEGATIVO
 from ..db.connection import transaccion
 from ..domain.errors import (
     CajaCerrada,
@@ -476,7 +475,7 @@ def _registrar(
             if linea.por_peso:
                 assert linea.gramos is not None
                 _validar_gramos(linea.gramos)
-            elif not PERMITIR_STOCK_NEGATIVO and producto.stock < linea.cantidad:
+            elif not config.PERMITIR_STOCK_NEGATIVO and producto.stock < linea.cantidad:
                 raise StockInsuficiente(producto.nombre, producto.stock, linea.cantidad)
 
         venta = Venta(

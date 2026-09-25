@@ -88,7 +88,9 @@ def _codigo_interno(conexion: sqlite3.Connection) -> str:
         siguiente += 1
 
 
-def _validar_datos(codigo: str, nombre: str, precio_clp: int, stock: int) -> tuple[str, str]:
+def _validar_datos(
+    codigo: str, nombre: str, precio_clp: int, stock: int, stock_anterior: int | None = None
+) -> tuple[str, str]:
     if not cb.es_valido(codigo):
         raise DatosInvalidos("El código de barras no es válido.")
     nombre = nombre.strip()
@@ -98,7 +100,9 @@ def _validar_datos(codigo: str, nombre: str, precio_clp: int, stock: int) -> tup
         raise DatosInvalidos(f"El nombre no puede superar los {_NOMBRE_LONGITUD_MAX} caracteres.")
     if precio_clp < 0:
         raise DatosInvalidos("El precio no puede ser negativo.")
-    if stock < 0:
+    # Un stock negativo sale de vender sin stock (D-009); se acepta si ya era así, para poder
+    # cambiarle el precio a ese producto. Lo que no se puede es escribir uno negativo.
+    if stock < 0 and stock != stock_anterior:
         raise DatosInvalidos("El stock no puede ser negativo.")
     return cb.normalizar(codigo), nombre
 
@@ -165,7 +169,7 @@ def actualizar_producto(
         raise DatosInvalidos("El producto que intenta modificar ya no existe.")
     if not cb.normalizar(codigo):
         codigo = existente.codigo_barras
-    codigo, nombre = _validar_datos(codigo, nombre, precio_clp, stock)
+    codigo, nombre = _validar_datos(codigo, nombre, precio_clp, stock, existente.stock)
     if por_peso is not None:
         existente.por_peso = bool(por_peso)
 

@@ -48,7 +48,11 @@ LONGITUD_PIN_GENERADO = 4
 #: Si es False, una venta que dejaría el stock en negativo se rechaza.
 #: Se deja como constante y no como opción de interfaz porque cambiarlo es una decisión
 #: de negocio del cliente, no del cajero. Ver D-009 en docs/DECISIONES.md.
-PERMITIR_STOCK_NEGATIVO = False
+#:
+#: **True desde el 2026-09-25** (Santiago, añadido a D-009): las cantidades del catálogo de la
+#: tienda no están contadas, y una caja que se niega a cobrar lo que el cliente tiene en la mano
+#: es peor que un stock que queda en negativo. El negativo avisa de que falta cargar mercadería.
+PERMITIR_STOCK_NEGATIVO = True
 
 #: Longitud máxima aceptada para un código de barras leído.
 CODIGO_LONGITUD_MAX = 32

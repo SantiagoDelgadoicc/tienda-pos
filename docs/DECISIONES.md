@@ -181,6 +181,13 @@ topa con el bloqueo. **Es una decisión de negocio disfrazada de detalle técnic
 cliente dice que prefiere vender igual, se cambia una constante. Está en la pregunta A3 de
 `PREGUNTAS-CLIENTE.md`.
 
+
+**Añadido el 2026-09-25 — ahora se permite vender sin stock** (Santiago, "por si acaso"):
+`PERMITIR_STOCK_NEGATIVO = True`. Las cantidades del catálogo de la tienda no están contadas, y
+una caja que se niega a cobrar lo que el cliente tiene en la mano es peor que un stock en
+negativo, que además avisa de que falta cargar mercadería. Un producto en negativo se puede
+seguir editando; lo que no se puede es escribir un stock negativo a mano. Volver a la regla
+estricta es cambiar esa constante, y las pruebas la cubren igual.
 ---
 
 ## D-010 — El ejecutable se distribuye en carpeta, no como archivo único

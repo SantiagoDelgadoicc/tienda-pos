@@ -12,6 +12,7 @@ fase 13, que siguen siendo manuales, tienen aquí su sitio cuando se traigan.
 from __future__ import annotations
 
 import socket
+import sys
 
 import pytest
 
@@ -125,3 +126,27 @@ class TestVersionDelProtocolo:
         monkeypatch.setattr(servidor._Manejador, "_estado", como_un_servidor_viejo)
         with pytest.raises(VersionIncompatible):
             remota.comprobar_compatibilidad()
+
+
+class TestArranqueDelServidor:
+    """Fase 23: lo que en la tienda dejó cuatro programas abiertos en el PC 1."""
+
+    def test_no_pregunta_al_dns_al_arrancar(self, monkeypatch) -> None:
+        # En la tienda, sin DNS, getfqdn tardaba 13 s y el programa no aparecía.
+        def lento(*_args, **_kwargs):
+            raise AssertionError("No debía consultarse el nombre del equipo")
+
+        monkeypatch.setattr(socket, "getfqdn", lento)
+        conexion = abrir_base_datos(":memory:", con_datos_demo=False, compartida_entre_hilos=True)
+        with ServidorTienda(SesionLocal(conexion), host="127.0.0.1", puerto=_puerto_libre()):
+            pass
+        conexion.close()
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="SO_REUSEADDR solo se comporta así en Windows")
+    def test_un_segundo_programa_no_puede_escuchar_en_el_mismo_puerto(self) -> None:
+        conexion = abrir_base_datos(":memory:", con_datos_demo=False, compartida_entre_hilos=True)
+        puerto = _puerto_libre()
+        with ServidorTienda(SesionLocal(conexion), host="127.0.0.1", puerto=puerto):
+            with pytest.raises(OSError):
+                ServidorTienda(SesionLocal(conexion), host="127.0.0.1", puerto=puerto)
+        conexion.close()

@@ -6,12 +6,34 @@ se comporten igual sin repetir el mismo bloque de configuración en cada pantall
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QAbstractItemView, QTableWidget, QTableWidgetItem
 
 IZQUIERDA = Qt.AlignmentFlag.AlignLeft
 CENTRO = Qt.AlignmentFlag.AlignCenter
 DERECHA = Qt.AlignmentFlag.AlignRight
+
+
+@contextmanager
+def rellenar(tabla: QTableWidget, filas: int) -> Iterator[None]:
+    """Deja la tabla vacía con `filas` filas nuevas, y el dibujo parado hasta llenarlas.
+
+    Es la forma de volver a llenar una tabla **que ya tenía filas** (fase 23). Con las columnas
+    en `ResizeToContents`, reemplazar una celda hace que Qt vuelva a medir la columna entera:
+    con 2.000 productos eran unos 8.000 reemplazos por 2.000 filas medidas cada vez, y entrar
+    por segunda vez a Productos congelaba la caja dos minutos. Vaciando primero, cada celda
+    entra en una fila vacía, como la primera vez, y la medida se hace una sola vez al final.
+    """
+    tabla.setUpdatesEnabled(False)
+    try:
+        tabla.setRowCount(0)
+        tabla.setRowCount(filas)
+        yield
+    finally:
+        tabla.setUpdatesEnabled(True)
 
 
 def preparar(tabla: QTableWidget, seleccionable: bool = True) -> None:

@@ -277,7 +277,7 @@ src/tienda_pos/
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    664 pruebas
+tests/                    667 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -314,7 +314,7 @@ python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
 python main.py --demo                 # con el catálogo y los usuarios de ejemplo, en una base vacía
 python main.py --reiniciar-admin      # recuperar un administrador; solo en el PC de la base
-pytest                                # pruebas (664, dos minutos)
+pytest                                # pruebas (667, dos minutos)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

@@ -257,6 +257,29 @@ class TestPantallaDeProductos:
 
         assert catalogo.consultar_por_codigo(conexion, COLA).precio_clp == 2490
 
+    def test_volver_a_productos_con_el_catalogo_de_la_tienda_no_congela(
+        self, como_admin, conexion
+    ) -> None:
+        """Fase 23: con 2.000 productos, la segunda entrada tardaba 127 s; la primera, 0,09 s."""
+        import time
+
+        from tienda_pos.db.connection import transaccion
+
+        with transaccion(conexion):
+            conexion.executemany(
+                "INSERT INTO producto (codigo_barras, nombre, precio_clp, stock) VALUES (?, ?, ?, ?)",
+                [(f"78{i:011d}", f"Producto {i}", 500 + i, i % 30) for i in range(2000)],
+            )
+        tiempos = []
+        for _ in range(3):
+            inicio = time.perf_counter()
+            como_admin.mostrar_productos()
+            tiempos.append(time.perf_counter() - inicio)
+            como_admin.mostrar_venta()
+        assert max(tiempos) < 3, tiempos
+        como_admin.vista_productos.campo_filtro.setText("Producto 1")  # refiltrar, igual
+        assert como_admin.vista_productos.tabla.rowCount() > 100
+
     def test_cambiar_el_precio_no_pisa_lo_vendido_con_la_lista_abierta(
         self, vista, conexion, monkeypatch
     ) -> None:

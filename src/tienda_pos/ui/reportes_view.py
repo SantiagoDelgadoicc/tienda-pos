@@ -178,18 +178,23 @@ class ReportesView(QWidget):
         # Vienen con las líneas ya cargadas: pedirlas venta por venta dentro de este bucle
         # era una ida y vuelta por venta, que contra el servidor de D-015 se nota.
         self._ventas = self._sesion.ventas_del_dia(hoy)
-        self.tabla_ventas.setRowCount(len(self._ventas))
-
-        for fila, venta in enumerate(self._ventas):
-            self._celda(self.tabla_ventas, fila, 0, str(venta.folio), centrada=True)
-            self._celda(self.tabla_ventas, fila, 1, venta.fecha_hora.strftime("%H:%M"), centrada=True)
-            self._celda(self.tabla_ventas, fila, 2, str(venta.cantidad_articulos), centrada=True)
-            self._celda(
-                self.tabla_ventas, fila, 3, formatear_clp(venta.total_clp), derecha=True
-            )
-            self._celda(self.tabla_ventas, fila, _COL_MEDIO, _nombre_medio(venta))
-            self._celda(self.tabla_ventas, fila, 5, venta.usuario_nombre or "—")
-        self._colorear_medios()
+        # Vaciando antes de llenar, y el color dentro: cada cambio sobre una tabla llena hace
+        # que Qt vuelva a medir la columna entera (fase 23, `tablas.rellenar`).
+        with tablas.rellenar(self.tabla_ventas, len(self._ventas)):
+            for fila, venta in enumerate(self._ventas):
+                self._celda(self.tabla_ventas, fila, 0, str(venta.folio), centrada=True)
+                self._celda(
+                    self.tabla_ventas, fila, 1, venta.fecha_hora.strftime("%H:%M"), centrada=True
+                )
+                self._celda(
+                    self.tabla_ventas, fila, 2, str(venta.cantidad_articulos), centrada=True
+                )
+                self._celda(
+                    self.tabla_ventas, fila, 3, formatear_clp(venta.total_clp), derecha=True
+                )
+                self._celda(self.tabla_ventas, fila, _COL_MEDIO, _nombre_medio(venta))
+                self._celda(self.tabla_ventas, fila, 5, venta.usuario_nombre or "—")
+            self._colorear_medios()
 
         self._limpiar_detalle()
         if self._ventas:
@@ -213,23 +218,23 @@ class ReportesView(QWidget):
             f"  ·  {formatear_clp(venta.total_clp)}{descuento}{medio}"
         )
 
-        self.tabla_detalle.setRowCount(len(venta.lineas))
-        for indice, linea in enumerate(venta.lineas):
-            self._celda(self.tabla_detalle, indice, 0, linea.nombre)
-            self._celda(
-                self.tabla_detalle,
-                indice,
-                1,
-                f"{formatear_clp(linea.precio_unit_clp)}/kg"
-                if linea.gramos
-                else formatear_clp(linea.precio_unit_clp),
-                derecha=True,
-            )
-            cantidad = formatear_peso(linea.gramos) if linea.gramos else str(linea.cantidad)
-            self._celda(self.tabla_detalle, indice, 2, cantidad, centrada=True)
-            self._celda(
-                self.tabla_detalle, indice, 3, formatear_clp(linea.subtotal_clp), derecha=True
-            )
+        with tablas.rellenar(self.tabla_detalle, len(venta.lineas)):
+            for indice, linea in enumerate(venta.lineas):
+                self._celda(self.tabla_detalle, indice, 0, linea.nombre)
+                self._celda(
+                    self.tabla_detalle,
+                    indice,
+                    1,
+                    f"{formatear_clp(linea.precio_unit_clp)}/kg"
+                    if linea.gramos
+                    else formatear_clp(linea.precio_unit_clp),
+                    derecha=True,
+                )
+                cantidad = formatear_peso(linea.gramos) if linea.gramos else str(linea.cantidad)
+                self._celda(self.tabla_detalle, indice, 2, cantidad, centrada=True)
+                self._celda(
+                    self.tabla_detalle, indice, 3, formatear_clp(linea.subtotal_clp), derecha=True
+                )
 
     def repintar(self) -> None:
         """Tras un cambio de tema: el color de cada medio va celda a celda."""

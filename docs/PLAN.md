@@ -759,6 +759,25 @@ no en las pruebas.
       se anota en el registro
 - [x] 5 pruebas nuevas, que fallan con el código anterior
 
+**Segunda vuelta, el mismo día: seguía congelándose, también sin animaciones**, al cambiar
+mucho de pantalla. La causa de verdad era otra, y solo se ve con el catálogo de la tienda
+(unos 2.000 productos): **entrar por segunda vez a Productos tardaba 127 segundos**; la primera,
+0,09. Al volver a llenar una tabla que ya tenía filas, con columnas en `ResizeToContents`, Qt
+volvía a medir la columna entera tras cada celda reemplazada. Con los 65 productos de ejemplo
+no se notaba. "Ventas del día" tenía lo mismo, en menor medida: más de 2 segundos con 150 ventas.
+
+- [x] `tablas.rellenar`: vacía la tabla y para el dibujo antes de llenarla. Productos y Ventas
+      del día pasan a unos 0,06 s por entrada, vuelta tras vuelta, con 2.000 productos y 400
+      ventas. Las demás tablas tienen pocas filas y se dejan como estaban
+- [x] **El programa tardaba 13 s en aparecer en el PC 1**: `HTTPServer` le pregunta al DNS el
+      nombre del equipo, y en la tienda, con dirección fija y sin DNS, esperaba a que la
+      consulta se agotara. Se le daba doble clic otra vez y quedaron **cuatro programas abiertos**
+      a la vez. El servidor ya no pregunta
+- [x] **En Windows, dos programas podían escuchar en el mismo puerto** (`SO_REUSEADDR`), así que
+      el aviso de "el programa ya está abierto" nunca salía. Ahora el segundo falla al abrir el
+      puerto y lo dice
+- [x] 3 pruebas más, que fallan con el código anterior
+
 ---
 
 ## Decisiones pendientes

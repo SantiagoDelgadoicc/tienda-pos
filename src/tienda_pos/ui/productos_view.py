@@ -373,30 +373,34 @@ class ProductosView(QWidget):
         ]
 
     def _pintar(self) -> None:
+        from PySide6.QtGui import QBrush, QColor
+
+        from . import estilos
+
         visibles = self._visibles()
-        self.tabla.setRowCount(len(visibles))
+        rojo = QBrush(QColor(estilos.actual.error))
+        # Vaciando antes de llenar (fase 23): refiltrar o volver a la pantalla con el catálogo
+        # de la tienda congelaba la caja minutos. Ver `tablas.rellenar`.
+        with tablas.rellenar(self.tabla, len(visibles)):
+            for fila, producto in enumerate(visibles):
+                self.tabla.setItem(fila, 0, QTableWidgetItem(producto.codigo_barras))
+                self.tabla.setItem(fila, 1, QTableWidgetItem(producto.nombre))
 
-        for fila, producto in enumerate(visibles):
-            self.tabla.setItem(fila, 0, QTableWidgetItem(producto.codigo_barras))
-            self.tabla.setItem(fila, 1, QTableWidgetItem(producto.nombre))
+                texto_precio = formatear_clp(producto.precio_clp)
+                precio = QTableWidgetItem(
+                    f"{texto_precio}/kg" if producto.por_peso else texto_precio
+                )
+                precio.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                self.tabla.setItem(fila, 2, precio)
 
-            texto_precio = formatear_clp(producto.precio_clp)
-            precio = QTableWidgetItem(f"{texto_precio}/kg" if producto.por_peso else texto_precio)
-            precio.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            self.tabla.setItem(fila, 2, precio)
-
-            stock = QTableWidgetItem(
-                formatear_peso(producto.stock) if producto.por_peso else str(producto.stock)
-            )
-            stock.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            # El stock de un producto por peso no impide vender: no se marca como bajo.
-            if not producto.por_peso and producto.stock <= _STOCK_BAJO:
-                from PySide6.QtGui import QBrush, QColor
-
-                from . import estilos
-
-                stock.setForeground(QBrush(QColor(estilos.actual.error)))
-            self.tabla.setItem(fila, 3, stock)
+                stock = QTableWidgetItem(
+                    formatear_peso(producto.stock) if producto.por_peso else str(producto.stock)
+                )
+                stock.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                # El stock de un producto por peso no impide vender: no se marca como bajo.
+                if not producto.por_peso and producto.stock <= _STOCK_BAJO:
+                    stock.setForeground(rojo)
+                self.tabla.setItem(fila, 3, stock)
 
         total = len(self._productos)
         mostrados = len(visibles)

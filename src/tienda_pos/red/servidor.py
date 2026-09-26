@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+import socketserver
 import sys
 import threading
 from datetime import date
@@ -351,9 +352,29 @@ class _Servidor(HTTPServer):
 
     daemon_threads = False
 
+    #: En Windows, SO_REUSEADDR deja que **otro proceso** escuche en el mismo puerto sin error
+    #: (fase 23): en la tienda quedaron cuatro programas abiertos en el PC 1, tres de ellos
+    #: sirviendo a la vez, y el aviso de "el programa ya está abierto" nunca salió. Sin él, el
+    #: segundo programa falla al abrir el puerto y lo dice. En Linux significa otra cosa
+    #: —reusar un puerto recién cerrado— y se deja como estaba.
+    allow_reuse_address = sys.platform != "win32"
+
     def __init__(self, direccion: tuple[str, int], sesion: SesionLocal) -> None:
         super().__init__(direccion, _Manejador)
         self.sesion = sesion
+
+    def server_bind(self) -> None:
+        """Abre el puerto **sin preguntar el nombre del equipo al DNS** (fase 23).
+
+        `HTTPServer.server_bind` llama a `socket.getfqdn`, que en la tienda —dirección fija por
+        cable, sin DNS— esperaba 13 segundos a que la consulta se agotara. El programa tardaba
+        eso en aparecer, se le daba doble clic otra vez, y se abrían varios. El nombre solo lo
+        usa `http.server` para CGI, que aquí no hay.
+        """
+        socketserver.TCPServer.server_bind(self)
+        host, puerto = self.server_address[:2]
+        self.server_name = str(host)
+        self.server_port = puerto
 
     def handle_error(self, request: object, client_address: object) -> None:
         """Que una caja que corta la conexión no llene el registro de tracebacks.

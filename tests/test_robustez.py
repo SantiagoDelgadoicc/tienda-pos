@@ -241,6 +241,33 @@ class TestManejadorGlobalDeErrores:
         assert "Error no controlado" in caplog.text
         assert "algo se rompió" in caplog.text
 
+    def test_no_abre_un_aviso_dentro_de_otro(self, app, monkeypatch) -> None:
+        """Fase 23: un error por evento abría avisos anidados y congelaba la caja."""
+        from PySide6.QtWidgets import QMessageBox
+
+        from tienda_pos.ui import errores
+
+        errores.reiniciar_contador()
+        abiertos: list[int] = []
+
+        def exec_(caja) -> int:
+            abiertos.append(1)
+            # Mientras el aviso está abierto llega otro error, como en la tienda.
+            try:
+                raise AttributeError("otra vez")
+            except AttributeError as otro:
+                errores.manejar_excepcion(type(otro), otro, otro.__traceback__)
+            return 0
+
+        monkeypatch.setattr(QMessageBox, "exec", exec_)
+        try:
+            raise AttributeError("primero")
+        except AttributeError as error:
+            errores.manejar_excepcion(type(error), error, error.__traceback__)
+
+        assert abiertos == [1]
+        assert errores._mostrando is False
+
     def test_deja_de_molestar_tras_varios_errores_seguidos(self) -> None:
         from tienda_pos.ui import errores
 

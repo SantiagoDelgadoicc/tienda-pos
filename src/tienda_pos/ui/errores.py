@@ -31,6 +31,9 @@ _VENTANA_SEGUNDOS = 30
 
 _mostrados: list[float] = []
 
+#: Si ya hay un aviso de error abierto. Ver `manejar_excepcion`.
+_mostrando = False
+
 
 def _puede_mostrar_dialogo() -> bool:
     ahora = time.monotonic()
@@ -61,7 +64,11 @@ def manejar_excepcion(
         "Error no controlado:\n%s", "".join(traceback.format_exception(tipo, valor, traza))
     )
 
-    if QApplication.instance() is None or not _puede_mostrar_dialogo():
+    global _mostrando
+    # Con un aviso ya abierto, el siguiente error solo se anota (fase 23). Un error que se
+    # repite en cada evento abría un aviso dentro de otro, cada uno con su propio bucle de
+    # eventos, y la caja quedaba congelada con "No responde".
+    if QApplication.instance() is None or _mostrando or not _puede_mostrar_dialogo():
         return
 
     caja = QMessageBox()
@@ -77,7 +84,11 @@ def manejar_excepcion(
     )
     caja.setStandardButtons(QMessageBox.StandardButton.Ok)
     caja.button(QMessageBox.StandardButton.Ok).setText("Continuar")
-    caja.exec()
+    _mostrando = True
+    try:
+        caja.exec()
+    finally:
+        _mostrando = False
 
 
 def instalar() -> None:

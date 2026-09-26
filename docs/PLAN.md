@@ -737,6 +737,30 @@ tocarlo.
 
 ---
 
+## Fase 23 — La caja principal se congelaba en la tienda (2026-09-26)
+
+El día de la instalación, en el PC 1: tras cambiar de un cajero a un administrador y moverse por
+la barra lateral, el programa quedó en "No responde". El registro de la tienda mostró la causa:
+ocho `AttributeError: '_AparicionDeVentana' object has no attribute '_anim'` seguidos, en
+`ui/movimiento.py`, justo antes de que hubiera que cerrarlo.
+
+**Causa.** El filtro que funde cada diálogo al abrirse (`_AparicionDeVentana`) solo lo sujetaba
+Qt, como hijo de su ventana; desde Python no lo sujetaba nadie. Cuando el recolector de Python
+limpiaba, podía vaciarle el estado mientras Qt le seguía mandando eventos, y cada evento
+reventaba. El manejador global abría un aviso de error por cada uno, uno dentro de otro, y la
+caja se congelaba. Depende de cuándo recolecta Python, por eso salió tras once minutos de uso y
+no en las pruebas.
+
+- [x] Los filtros de aparición quedan sujetos desde Python (`movimiento._apariciones`) y se
+      sueltan al destruirse su ventana
+- [x] Red de seguridad: un filtro sin estado deja pasar el evento sin fundido, en vez de fallar
+- [x] El delegado del destello del carrito tenía el mismo riesgo y se sujeta en la vista
+- [x] El aviso de "Ocurrió un error" no se abre dentro de otro: con uno abierto, el resto solo
+      se anota en el registro
+- [x] 5 pruebas nuevas, que fallan con el código anterior
+
+---
+
 ## Decisiones pendientes
 
 Resueltas en esta etapa: **instalador** → D-020 · **segunda caja** → D-015 · **trazabilidad de

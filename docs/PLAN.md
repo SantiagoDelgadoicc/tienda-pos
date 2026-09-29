@@ -737,6 +737,49 @@ tocarlo.
 
 ---
 
+## Fase 23 — La caja principal se congelaba en la tienda (2026-09-26)
+
+El día de la instalación, en el PC 1: tras cambiar de un cajero a un administrador y moverse por
+la barra lateral, el programa quedó en "No responde". El registro de la tienda mostró la causa:
+ocho `AttributeError: '_AparicionDeVentana' object has no attribute '_anim'` seguidos, en
+`ui/movimiento.py`, justo antes de que hubiera que cerrarlo.
+
+**Causa.** El filtro que funde cada diálogo al abrirse (`_AparicionDeVentana`) solo lo sujetaba
+Qt, como hijo de su ventana; desde Python no lo sujetaba nadie. Cuando el recolector de Python
+limpiaba, podía vaciarle el estado mientras Qt le seguía mandando eventos, y cada evento
+reventaba. El manejador global abría un aviso de error por cada uno, uno dentro de otro, y la
+caja se congelaba. Depende de cuándo recolecta Python, por eso salió tras once minutos de uso y
+no en las pruebas.
+
+- [x] Los filtros de aparición quedan sujetos desde Python (`movimiento._apariciones`) y se
+      sueltan al destruirse su ventana
+- [x] Red de seguridad: un filtro sin estado deja pasar el evento sin fundido, en vez de fallar
+- [x] El delegado del destello del carrito tenía el mismo riesgo y se sujeta en la vista
+- [x] El aviso de "Ocurrió un error" no se abre dentro de otro: con uno abierto, el resto solo
+      se anota en el registro
+- [x] 5 pruebas nuevas, que fallan con el código anterior
+
+**Segunda vuelta, el mismo día: seguía congelándose, también sin animaciones**, al cambiar
+mucho de pantalla. La causa de verdad era otra, y solo se ve con el catálogo de la tienda
+(unos 2.000 productos): **entrar por segunda vez a Productos tardaba 127 segundos**; la primera,
+0,09. Al volver a llenar una tabla que ya tenía filas, con columnas en `ResizeToContents`, Qt
+volvía a medir la columna entera tras cada celda reemplazada. Con los 65 productos de ejemplo
+no se notaba. "Ventas del día" tenía lo mismo, en menor medida: más de 2 segundos con 150 ventas.
+
+- [x] `tablas.rellenar`: vacía la tabla y para el dibujo antes de llenarla. Productos y Ventas
+      del día pasan a unos 0,06 s por entrada, vuelta tras vuelta, con 2.000 productos y 400
+      ventas. Las demás tablas tienen pocas filas y se dejan como estaban
+- [x] **El programa tardaba 13 s en aparecer en el PC 1**: `HTTPServer` le pregunta al DNS el
+      nombre del equipo, y en la tienda, con dirección fija y sin DNS, esperaba a que la
+      consulta se agotara. Se le daba doble clic otra vez y quedaron **cuatro programas abiertos**
+      a la vez. El servidor ya no pregunta
+- [x] **En Windows, dos programas podían escuchar en el mismo puerto** (`SO_REUSEADDR`), así que
+      el aviso de "el programa ya está abierto" nunca salía. Ahora el segundo falla al abrir el
+      puerto y lo dice
+- [x] 3 pruebas más, que fallan con el código anterior
+
+---
+
 ## Decisiones pendientes
 
 Resueltas en esta etapa: **instalador** → D-020 · **segunda caja** → D-015 · **trazabilidad de

@@ -320,7 +320,11 @@ class VentaView(QWidget):
         # La columna de descuentos solo aparece cuando hay alguno: una columna vacía en cada
         # venta normal sería ruido permanente por un caso ocasional.
         self.tabla.setColumnHidden(COL_DESCUENTO, True)
-        self.tabla.setItemDelegate(_DelegadoDestello(self))
+        # Guardado en la vista y no solo entregado a la tabla: si solo lo sujetara Qt, el
+        # recolector de Python podría vaciarle el estado mientras la tabla lo sigue usando para
+        # pintar cada fila (fase 23, lo mismo que congeló la caja con los diálogos).
+        self._delegado_destello = _DelegadoDestello(self)
+        self.tabla.setItemDelegate(self._delegado_destello)
         return self.tabla
 
     def _panel_totales(self) -> QWidget:

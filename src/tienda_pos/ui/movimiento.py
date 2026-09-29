@@ -199,17 +199,31 @@ class _AparicionDeVentana(QObject):
         ventana.installEventFilter(self)
 
     def eventFilter(self, objeto, evento) -> bool:  # noqa: N802 - lo nombra Qt
+        # Red de seguridad (fase 23): si Python llegara a vaciar el estado de este objeto
+        # mientras Qt lo sigue llamando, el evento pasa sin fundido. Antes eso era un
+        # AttributeError en cada evento, un aviso de error encima de otro, y la caja congelada.
+        anim = self.__dict__.get("_anim")
+        ventana = self.__dict__.get("_ventana")
+        if anim is None or ventana is None:
+            return False
         tipo = evento.type()
         if tipo == QEvent.Type.Show and activo():
-            self._ventana.setWindowOpacity(0.0)
-            self._anim.stop()
-            self._anim.start()
+            ventana.setWindowOpacity(0.0)
+            anim.stop()
+            anim.start()
         elif tipo == QEvent.Type.Hide:
             # Una ventana que se cierra a medio fundido no puede volver a abrirse
             # transparente: se deja entera al esconderse.
-            self._anim.stop()
-            self._ventana.setWindowOpacity(1.0)
+            anim.stop()
+            ventana.setWindowOpacity(1.0)
         return False
+
+
+#: Los filtros de aparición vivos, sujetos desde Python (fase 23). Sin esto solo los sujetaba
+#: Qt, como hijos de su ventana, y el recolector de Python podía vaciarles el estado mientras Qt
+#: les seguía mandando eventos: en la tienda, tras un rato de uso, eso congeló la caja. Cada uno
+#: sale de aquí cuando su ventana se destruye.
+_apariciones: set[_AparicionDeVentana] = set()
 
 
 def aparecer_al_abrir(ventana: QWidget) -> None:
@@ -222,7 +236,9 @@ def aparecer_al_abrir(ventana: QWidget) -> None:
     filtro vería pasar cada evento del programa —cada repintado, cada tecla de la pistola—
     solo para buscar los pocos que abren un diálogo.
     """
-    _AparicionDeVentana(ventana)
+    filtro = _AparicionDeVentana(ventana)
+    _apariciones.add(filtro)
+    ventana.destroyed.connect(lambda *_: _apariciones.discard(filtro))
 
 
 def sacudir(ventana: QWidget) -> None:

@@ -256,6 +256,52 @@ class TestDialogos:
         assert dialogo.windowOpacity() == pytest.approx(1.0)
         dialogo.close()
 
+    @staticmethod
+    def _filtro(dialogo):
+        (filtro,) = [f for f in movimiento._apariciones if f.__dict__.get("_ventana") is dialogo]
+        return filtro
+
+    def test_el_filtro_queda_sujeto_desde_python(self, ventana) -> None:
+        """Fase 23: sujeto solo por Qt, el recolector de Python podía vaciarlo."""
+        import gc
+
+        dialogo = self._dialogo(ventana)
+        filtro = self._filtro(dialogo)
+        gc.collect()
+        assert filtro in movimiento._apariciones and "_anim" in filtro.__dict__
+        dialogo.deleteLater()
+
+    def test_un_filtro_sin_estado_deja_pasar_los_eventos(self, ventana, con_movimiento) -> None:
+        """Fase 23: en la tienda era un AttributeError por evento y la caja congelada."""
+        import sys
+
+        errores: list[BaseException] = []
+        anterior, sys.excepthook = sys.excepthook, lambda t, v, tb: errores.append(v)
+        try:
+            dialogo = self._dialogo(ventana)
+            self._filtro(dialogo).__dict__.clear()  # lo que hacía el recolector
+            dialogo.show()
+            dialogo.hide()
+        finally:
+            sys.excepthook = anterior
+        assert errores == []
+        assert dialogo.windowOpacity() == pytest.approx(1.0)
+
+    def test_el_filtro_se_suelta_al_destruir_la_ventana(self, ventana) -> None:
+        from tienda_pos.ui.dialogos import DialogoTexto
+
+        antes = len(movimiento._apariciones)
+        dialogo = DialogoTexto("Prueba", "Escriba algo")
+        assert len(movimiento._apariciones) == antes + 1
+        dialogo.deleteLater()
+        del dialogo
+        esperar(50)
+        assert len(movimiento._apariciones) == antes
+
+    def test_el_delegado_del_destello_queda_sujeto(self, ventana) -> None:
+        vista = ventana.vista_venta
+        assert vista.tabla.itemDelegate() is vista._delegado_destello
+
 
 class TestPinIncorrecto:
     def _login(self, ventana):

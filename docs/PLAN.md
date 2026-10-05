@@ -403,53 +403,59 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 | 17 | Medio de pago: efectivo, débito y crédito (D-034) | ✅ 2026-09-24 |
 | 18 | Informe de cierre diario por caja (D-035) | ✅ 2026-09-24 |
 | 19 | Arqueo de caja, siempre activo (D-036) | ✅ 2026-09-24 |
-| 20 | Documentación y manual | pendiente |
+| 20 | Documentación y manual | manual hecho; faltan guion y README |
+| 21 | Venta por peso (D-037) | ✅ 2026-09-25 |
+| 22 | Errores encontrados antes de la visita | ✅ 2026-09-25 |
+| 23 | La caja principal se congelaba en la tienda | ✅ 2026-09-26 |
+| 24 | Los cajeros pueden crear productos (D-038) | **siguiente** |
 
-### Cómo retomar (estado al 2026-09-25)
+### Cómo retomar (estado al 2026-10-05)
 
-**Dónde está todo:** rama `diseño`. 586 pruebas en verde. Esquema de la base en la versión 6 y
-protocolo entre cajas en la 6. El `.exe` de `dist/` está construido con todo lo de la fase 19.
+**Dónde está todo:** rama `diseño`, todo subido a GitHub. `main` tiene hasta la fase 22 (PR #10,
+fusionado); la fase 23 está en el **PR #11**, abierto. **667 pruebas en verde.** Esquema de la base
+en la **versión 7**, protocolo entre cajas en la **8**.
 
-**Actualizado el 2026-09-25:** hecha la **fase 21, venta por peso** (D-037). Esquema y protocolo
-en la **versión 7**, 639 pruebas en verde. El informe "Cierre de caja" se llama ahora "Ventas por
-caja".
+**La tienda está en producción con esta versión** desde la visita del **2026-09-26**: los dos PC
+actualizados, usuarios por empleado creados con el dueño, cierre por caja, arqueo y venta por peso.
+Ese día la caja principal se congelaba al moverse entre pantallas; se arregló en el momento (fase
+23) y el dueño confirmó que ya no pasa. El detalle de la instalación está en
+`docs/DESPLIEGUE-TIENDA.md`, secciones 1 y 11.
 
-**El kit del pendrive está al día** (2026-09-25): `INSTALACION/` instala `PuntoYFamaCaja.exe`,
-aparta el programa viejo, rehace los accesos directos del escritorio y del arranque, y pregunta
-el nombre de cada caja sin borrarlo nunca. Se probó entero contra una copia de la instalación de
-la tienda, con los fallos a mitad de copia incluidos; los pasos 3 y 4 solo se pueden probar en la
-tienda, porque cambian la dirección de red del equipo. Ver `DESPLIEGUE-TIENDA.md`, sección 5.
+**El cliente pagó** el trabajo de esta etapa (comprobante de transferencia recibido por WhatsApp
+el 2026-10-01; Santiago debe confirmar que llegó a su cuenta). El manual en PDF se le entregó por
+WhatsApp. Lo acordado en septiembre sigue: un mes de marcha blanca para fallas, y lo nuevo se
+cotiza aparte.
 
-**Fase 22 hecha** (2026-09-25): los ocho errores de la revisión de la víspera, arreglados, con el
-**protocolo en la versión 8**. 659 pruebas en verde. El `.exe` está construido y **el kit del
-pendrive (`E:\PUNTO-Y-FAMA`) está al día**, comprobado archivo por archivo. La visita se ensayó
-entera contra dos PC simulados como los de la tienda: actualización con el kit, migración de la
-base de la versión 3 a la 7 con el `.exe` instalado, y un día de venta con las dos cajas en red.
+**Lo siguiente es la fase 24** (más abajo): que los cajeros puedan crear productos sin PIN, con
+precio, stock y bajas todavía con PIN (D-038). Antes de construirla hay tres cosas por confirmar
+con Santiago, listadas en D-038. Después, construir el `.exe`, actualizar el kit del pendrive y
+llevarlo a la tienda con `ACTUALIZAR-ESTE-PC.bat` en los dos PC (la base no se toca).
 
-**Lo siguiente es cerrar la fase 20**: el manual está hecho (PDF); faltan `GUION-DEMO.md` y `README.md`.
+**Cómo se trabaja con la tienda:**
+
+- Para depurar, lo primero es el registro del PC 1, `%LOCALAPPDATA%\TiendaPOS\logs\tienda_pos.log`:
+  fue lo que resolvió el congelamiento.
+- El catálogo real tiene **unos 2.000 productos**. Toda pantalla nueva se prueba con un catálogo de
+  ese tamaño y entrando más de una vez (`tablas.rellenar` para volver a llenar tablas).
+- El kit del pendrive está en `E:\PUNTO-Y-FAMA` (la carpeta `INSTALACION\` más
+  `dist\PuntoYFamaCaja\`). Tras copiarlo, se compara archivo por archivo.
 
 **Pendiente del cliente** (detalle en `docs/PREGUNTAS-CIERRE-Y-USUARIOS.md`):
 
-- ~~H10, la medianoche~~: **decidida por Santiago el 2026-09-25**. Cada caja se abre al empezar el
-  día y se cierra al terminarlo; ver el añadido a D-036.
-- **H8, cómo se llaman las cajas.** Lo pregunta `PASO-2` en cada PC el día de la visita; sin
-  respuesta, "Caja 1" y "Caja 2".
+- Si los cajeros también deben poder cambiar precios (D-038). Se le propuso que no; no contestó.
 - H1d: quién cuenta al cerrar y qué hacen si no cuadra. Mientras tanto, la diferencia se anota y
   no bloquea nada.
-- H3 (otros medios, fiado), H11 (anular ventas), H9, H4 (quién ve el cierre), H5 (imprimirlo),
-  D1 (quién cambia precios), y si quiere que se calcule el vuelto.
-- A las dos semanas de uso: ¿se marcan bien débito y crédito? Si no, se funden en "tarjeta".
+- H3 (otros medios, fiado), H11 (anular ventas), H9, H4 (quién ve el cierre), H5 (imprimirlo), y
+  si quiere que se calcule el vuelto.
+- ¿Se marcan bien débito y crédito tras dos semanas de uso? Si no, se funden en "tarjeta".
+- La boleta electrónica, que es otro proyecto (`docs/BOLETA-ELECTRONICA-SII.md`).
 
-**Pendiente en la tienda** (una sola visita, con las dos cajas paradas; procedimiento en
-`docs/DESPLIEGUE-TIENDA.md`, "Actualizar a la versión con un usuario por empleado"): actualizar los
-dos PC a la vez, crear los usuarios de los empleados, PIN nuevo para `Administrador`, baja de
-`Cajero`, un nombre distinto para cada caja (lo pregunta `PASO-2`), y comprobar la resolución de pantalla
-de los equipos (D-031: todo el margen del carrito se midió a 1600 de ancho).
+**Pendiente de Santiago:** fusionar el PR #11; confirmar el pago; cerrar la fase 20 (faltan
+`GUION-DEMO.md` y `README.md`).
 
-**Pendiente de Santiago:** abrir el PR de `diseño` a `main` (`gh` no está autenticado en este
-equipo), y la boleta electrónica, que es otro proyecto y espera a que el cliente conteste qué hace
-hoy con sus boletas (`docs/BOLETA-ELECTRONICA-SII.md`).
-
+**Mejoras anotadas, sin pedir:** que el programa se niegue a abrirse dos veces en el mismo PC (hoy
+solo avisa de que el puerto está ocupado); la trazabilidad del stock (fase 9, D-018), que hace más
+falta ahora que los cajeros van a crear productos.
 
 ---
 
@@ -777,6 +783,48 @@ no se notaba. "Ventas del día" tenía lo mismo, en menor medida: más de 2 segu
       el aviso de "el programa ya está abierto" nunca salía. Ahora el segundo falla al abrir el
       puerto y lo dice
 - [x] 3 pruebas más, que fallan con el código anterior
+
+---
+
+## Fase 24 — Los cajeros pueden crear productos (D-038) ← lo siguiente
+
+*Anotada el 2026-10-05, sin empezar.* Pedida por el cliente el 2026-10-01: "Al ingresar productos al
+sistema lo puede hacer cualquier usuario." Santiago decidió que **cambiar precio, cambiar stock y
+dar de baja sigan con PIN de administrador también para los cajeros**, porque es muy probable que
+se equivoquen. Ver D-038, con tres puntos a confirmar antes de empezar.
+
+**Cómo está hoy** (para no tener que buscarlo):
+
+- `ui/main_window.py::mostrar_productos` pide el PIN de un administrador **para entrar** a la
+  pantalla (`_asegurar_admin`), y deja ese administrador en `vista_productos.usuario`.
+- `services/catalogo.py`: `crear_producto`, `actualizar_producto`, `desactivar_producto` y
+  `codigos_pendientes` llaman a `exigir_admin`. Es el servicio quien manda, y sirve igual para la
+  caja secundaria por la red.
+- `ui/productos_view.py`: botones Nuevo producto, Editar, Stock, Pendientes y Dar de baja.
+  `ui/efectivo_view.py` ya resuelve "pedir el PIN solo para una acción" con `autorizar_admin`,
+  que fija la ventana: es el patrón a copiar.
+
+**Tareas:**
+
+- [ ] Servicio: `crear_producto` exige solo un usuario con sesión, no administrador; el resto
+      sigue igual. Si se confirma, también `codigos_pendientes`
+- [ ] Entrar a Productos sin PIN, con la lista a la vista; Nuevo producto libre
+- [ ] Editar, Stock y Dar de baja piden el PIN de un administrador **en el momento**, como el
+      retiro en Efectivo; el cajero sigue en su sesión
+- [ ] Dejar constancia en el registro de qué producto creó cada usuario (sin D-018 no queda otra
+      huella)
+- [ ] Pruebas: un cajero crea por la pantalla y por la red; no puede editar, ajustar stock ni dar
+      de baja sin PIN, ni por la pantalla ni llamando al servicio; con PIN sí. Con un catálogo de
+      2.000 productos (fase 23)
+- [ ] Manual (sección de Productos) y PDF; `LEEME-PRIMERO.txt` del kit
+- [ ] `.exe`, kit del pendrive comprobado archivo por archivo, y actualizar los dos PC
+
+**Protocolo:** no cambia la forma de ningún mensaje; solo lo que el servidor permite. Aun así las
+dos cajas se actualizan juntas, como siempre.
+
+**Criterio de aceptación:** un cajero da de alta un producto sin que nadie ponga su PIN, en
+cualquiera de las dos cajas; cambiar un precio, el stock o dar de baja sigue pidiendo el PIN del
+dueño; y nada de eso se puede saltar llamando al servidor directamente.
 
 ---
 

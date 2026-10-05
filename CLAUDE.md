@@ -18,6 +18,11 @@ Las fases 15 a 19 están hechas; la 19 es el arqueo de caja, siempre activo (D-0
 pedida por el cliente. Esa misma tarde, víspera de instalar, una revisión del código encontró y
 arregló ocho errores (fase 22); el protocolo entre cajas pasó a la **versión 8**.
 
+**Desde el 2026-09-26 la tienda funciona con esta versión**, en los dos PC. Ese día la caja
+principal se congelaba con el catálogo real y se arregló en la visita (fase 23). El cliente pagó.
+**Lo siguiente es la fase 24**: que los cajeros puedan crear productos (D-038). Para retomar, leer
+primero "Cómo retomar" en `docs/PLAN.md`.
+
 ## 2. Contexto del cliente
 
 ### Lo que dijo al principio, literalmente
@@ -111,6 +116,13 @@ De lo que contó el 2026-09-25, que se le había olvidado:
   teclean los gramos, escaneando si tiene código y buscándolo por nombre si no (D-037). Cómo se
   lleva el stock de esos productos lo decidió Santiago: en gramos y sin impedir vender.
 
+De sus mensajes por WhatsApp del 2026-10-01, tras unos días fuera del negocio:
+
+- **"Al ingresar productos al sistema lo puede hacer cualquier usuario."** Le extrañó que a sus
+  empleados se les pidiera su PIN para cargar un producto. → Los cajeros podrán crear productos
+  (fase 24, D-038). Se le propuso que los cambios de precio y las bajas siguieran con su PIN; **no
+  contestó a eso**: lo decidió Santiago (ver 3.2).
+
 ### 3.2 Decidido por Santiago (dueño del proyecto)
 
 - Alcance: POS con venta e inventario mínimo, no solo consulta de precios.
@@ -145,6 +157,10 @@ De lo que contó el 2026-09-25, que se le había olvidado:
 - Rubro asumido para el catálogo demo: almacén / minimarket.
 - Reportes mínimos: ventas del día.
 - Descuento manual aplicable a la venta entera o a un producto concreto.
+- **Productos, desde el 2026-10-05 (D-038, sin construir):** cualquier usuario crea productos sin
+  PIN, que es lo que pidió el cliente; **cambiar precio, cambiar stock y dar de baja siguen con PIN
+  de administrador, también para los cajeros**, porque es muy probable que se equivoquen y no
+  queda rastro de quién cambió qué (D-018).
 - Tema claro y tema oscuro, elegibles desde una pantalla de configuración (F9), junto con el
   sonido, la confirmación de cobro, la barra de atajos y el **tamaño de letra** (este último,
   pedido por el cliente: ver 3.1 y D-031). Se guardan en `preferencias.json`, dentro de la

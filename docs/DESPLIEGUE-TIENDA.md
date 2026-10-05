@@ -44,9 +44,12 @@ Enlace                 cable de red directo, ~30 m por el techo
 | Respaldos | `%LOCALAPPDATA%\TiendaPOS\backups\` |
 | Registro | `%LOCALAPPDATA%\TiendaPOS\logs\tienda_pos.log` |
 
-Versión del esquema de base de datos: **3**. Versión del protocolo de red: **1**.
-*(Así quedó el 2026-09-15. La versión que se instala desde el pendrive lleva el esquema a la **7**
-y el protocolo a la **8**.)*
+**Estado al 2026-10-05:** esquema de base de datos en la **7**, protocolo de red en la **8**. Los dos
+PC se actualizaron en la visita del **2026-09-26** con la versión de la fase 22, y ese mismo día,
+con la de la fase 23, que arregla el congelamiento del PC 1 (sección 11). El PC 1 firma sus ventas
+como **"Caja Principal"**. Hay usuarios por empleado: al menos `Emmily` (cajera), `Rodrigo` y
+`Rodrigo Fredes` (administradores), según el registro de ese día.
+*(El 2026-09-15 quedó en esquema 3 y protocolo 1.)*
 
 Los dos equipos abren el programa solos al encender, mediante un acceso directo en la
 carpeta de Inicio de Windows.
@@ -528,6 +531,26 @@ sabe si la venta se registró; reintentar la duplicaría y no reintentar la perd
 **El pendrive se desconectó dos veces** a mitad de copiar los 114 MB del programa. Conviene
 verificar el número de archivos en origen y destino después de copiar.
 
+### Visita del 2026-09-26: actualización a usuarios, cierre, arqueo y venta por peso
+
+**La caja principal se congelaba** ("No responde") al moverse entre pantallas, sobre todo tras
+cambiar de usuario. Dos causas, arregladas el mismo día (fase 23 de `PLAN.md`):
+
+- Con el catálogo real (~2.000 productos), **volver a entrar a Productos tardaba 127 s**: llenar
+  otra vez una tabla con columnas `ResizeToContents` medía la columna entera tras cada celda.
+  Con los 65 productos de ejemplo no se notaba. *Lección:* probar con un catálogo del tamaño del
+  real, y entrando más de una vez a cada pantalla.
+- El filtro de animación de los diálogos perdía su estado cuando el recolector de Python limpiaba,
+  y cada evento fallaba. Se vio en el registro como `AttributeError ... '_anim'`.
+
+**El programa tardaba 13 s en aparecer en el PC 1**, y se le dio doble clic hasta quedar **cuatro
+abiertos**. `HTTPServer` preguntaba el nombre del equipo al DNS, que en la tienda no hay. Y en
+Windows `SO_REUSEADDR` dejaba que los cuatro escucharan en el mismo puerto sin avisar. Las dos
+cosas, arregladas. *Lección:* mirar `tienda_pos.log` del PC 1 tras cada visita.
+
+**El registro de la tienda fue lo que resolvió el problema.** Está en
+`%LOCALAPPDATA%\TiendaPOS\logs\tienda_pos.log`; se trae en el pendrive.
+
 ---
 
 ## 12. Tiempo del despliegue
@@ -539,6 +562,7 @@ Dos visitas, en días distintos:
 | Primera | 9:00 – 14:00 | Montaje de los dos equipos, carga del catálogo |
 | Segunda | 9:30 – 12:00 | Cable de ~30 m por el techo, configuración de red, pruebas |
 | | **7,5 h** | |
+| Tercera (2026-09-26) | mañana | Actualización de los dos PC con el kit, usuarios con el dueño, y el arreglo del congelamiento |
 
 La segunda visita incluyó la prueba que de verdad cierra el despliegue: **apagar los dos
 equipos y encenderlos de nuevo**, empezando por el secundario, para comprobar que el arranque

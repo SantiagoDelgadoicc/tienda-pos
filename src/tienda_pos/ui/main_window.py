@@ -69,7 +69,7 @@ _AYUDA = """<b>Atajos de teclado</b><br><br>
 <tr><td><b>F6</b></td><td>Cancelar la venta en curso</td></tr>
 <tr><td><b>F11</b></td><td>Cambiar el medio de pago: efectivo, débito, crédito</td></tr>
 <tr><td><b>F12</b></td><td>Cobrar y registrar la venta</td></tr>
-<tr><td><b>F7</b></td><td>Administrar productos <i>(administrador)</i></td></tr>
+<tr><td><b>F7</b></td><td>Administrar productos</td></tr>
 <tr><td><b>F8</b></td><td>Ventas del día <i>(administrador)</i></td></tr>
 <tr><td><b>F9</b></td><td>Configuración</td></tr>
 <tr><td><b>F10</b></td><td>Cambiar de usuario</td></tr>
@@ -301,11 +301,10 @@ class VentanaPrincipal(QMainWindow):
             self.mostrar_consulta()
 
     def mostrar_productos(self) -> None:
-        """Catálogo. Si quien opera no es administrador, se le pide el PIN de uno."""
-        administrador = self._asegurar_admin("administrar los productos")
-        if administrador is None:
+        """Catálogo. Para cualquier empleado, sin PIN de administrador (D-038)."""
+        if self.usuario is None:
             return
-        self.vista_productos.usuario = administrador
+        self.vista_productos.usuario = self.usuario
         # Primero se cambia de pantalla y después se recarga: al recargar, la vista anuncia
         # cuántos productos hay y la cabecera solo lo recoge si ya está mostrándola.
         self._ir_a("productos", self.vista_productos)
@@ -520,6 +519,8 @@ class VentanaPrincipal(QMainWindow):
         self.usuario = usuario
         self.vista_venta.usuario = usuario
         self.vista_efectivo.usuario = usuario
+        # Si se cambia de usuario con Productos a la vista, lo que se cree después es del nuevo.
+        self.vista_productos.usuario = usuario
         self.barra_lateral.establecer_usuario(usuario, self._sesion.caja)
 
     def _actualizar_reloj(self) -> None:

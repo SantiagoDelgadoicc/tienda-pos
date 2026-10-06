@@ -285,7 +285,8 @@
     <tr><td>Anotar un retiro de plata</td><td>No</td><td>Sí, con su PIN</td></tr>
     <tr><td>Ver cuánto debería haber en el cajón</td><td>No</td><td>Sí</td></tr>
     <tr><td>Ventas por caja y ventas del día</td><td>No</td><td>Sí</td></tr>
-    <tr><td>Productos, precios y empleados</td><td>No</td><td>Sí</td></tr>
+    <tr><td>Productos: cargar, cambiar precio y stock, dar de baja</td><td>Sí</td><td>Sí</td></tr>
+    <tr><td>Empleados y claves</td><td>No</td><td>Sí</td></tr>
   </table>
 
   <div class="aviso">
@@ -517,7 +518,7 @@
     </figure>
     <div>
       <p><strong>Si el producto existe pero el código no se lee</strong>, pulse <em>Buscar por nombre</em> (<kbd>F3</kbd>) y elíjalo de la lista.</p>
-      <p><strong>Si el producto no está cargado</strong>, no hace falta anotarlo en un papel: el sistema guarda el código en una lista de pendientes, y el dueño lo carga después (sección 14).</p>
+      <p><strong>Si el producto no está cargado</strong>, no hace falta anotarlo en un papel: el sistema guarda el código en una lista de pendientes, y cualquiera lo puede cargar después en Productos (sección 14).</p>
     </div>
   </div>
 </section>
@@ -680,9 +681,8 @@
 
 <!-- =============================================================== 13 PRODUCTOS -->
 <section class="hoja" id="productos">
-  <span class="etiqueta-dueno">Solo el dueño</span>
   <h1 class="seccion"><span class="n">14</span>Productos y precios</h1>
-  <p class="entrada">Pulse <kbd>F7</kbd>. Si está atendiendo un cajero, el programa pide el PIN del dueño, sin cambiar quién está en la caja.</p>
+  <p class="entrada">Pulse <kbd>F7</kbd>. Cualquier empleado puede entrar y hacer todo lo de esta pantalla, sin el PIN del dueño.</p>
 
   <figure style="width:146mm">
     <img src="../img/06-productos.png" alt="Catálogo de productos">
@@ -758,7 +758,7 @@
     <div class="grupo">Pantallas</div>
     <div class="fila"><kbd>Esc</kbd><span>Volver a la venta</span></div>
     <div class="fila"><kbd>F2</kbd><span>Consultar un precio</span></div>
-    <div class="fila"><kbd>F7</kbd><span>Productos <em style="color:var(--apagado)">(dueño)</em></span></div>
+    <div class="fila"><kbd>F7</kbd><span>Productos</span></div>
     <div class="fila"><kbd>F8</kbd><span>Ventas del día <em style="color:var(--apagado)">(dueño)</em></span></div>
     <div class="fila"><kbd>F9</kbd><span>Configuración</span></div>
     <div class="fila"><kbd>F10</kbd><span>Cambiar de usuario</span></div>

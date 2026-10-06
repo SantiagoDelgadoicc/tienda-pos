@@ -9,7 +9,6 @@ import pytest
 from tienda_pos.domain.errors import (
     CodigoInvalido,
     DatosInvalidos,
-    PermisoDenegado,
     ProductoDuplicado,
     ProductoNoEncontrado,
 )
@@ -103,13 +102,31 @@ class TestAdministracionDeProductos:
         assert producto.id is not None
         assert catalogo.consultar_por_codigo(conexion, "7801234000040").precio_clp == 5490
 
-    def test_el_cajero_no_puede_crear(self, conexion, cajero) -> None:
-        with pytest.raises(PermisoDenegado):
-            catalogo.crear_producto(conexion, cajero, "7801234000040", "Café", 5490, 8)
+    def test_el_cajero_hace_todo_lo_del_catalogo(self, conexion, productos, cajero) -> None:
+        # D-038: lo pidió el cliente. Crear, cambiar precio y stock, dar de baja y ver los
+        # códigos pendientes, sin PIN de administrador.
+        nuevo = catalogo.crear_producto(conexion, cajero, "7801234000040", "Café", 5490, 8)
+        catalogo.actualizar_producto(conexion, cajero, nuevo.id, "", "Café", 5990, 12)
+        cafe = catalogo.consultar_por_codigo(conexion, "7801234000040")
+        assert (cafe.precio_clp, cafe.stock) == (5990, 12)
 
-    def test_sin_sesion_tampoco_se_puede_crear(self, conexion) -> None:
-        with pytest.raises(PermisoDenegado):
+        assert catalogo.codigos_pendientes(conexion, cajero) == []
+
+        catalogo.desactivar_producto(conexion, cajero, nuevo.id)
+        with pytest.raises(ProductoNoEncontrado):
+            catalogo.consultar_por_codigo(conexion, "7801234000040")
+
+    def test_sin_sesion_no_se_toca_el_catalogo(self, conexion, productos) -> None:
+        leche = catalogo.consultar_por_codigo(conexion, "7801234000019")
+        with pytest.raises(DatosInvalidos, match="Inicie sesión"):
             catalogo.crear_producto(conexion, None, "7801234000040", "Café", 5490, 8)
+        with pytest.raises(DatosInvalidos, match="Inicie sesión"):
+            catalogo.actualizar_producto(conexion, None, leche.id, "", "Leche", 1, None)
+        with pytest.raises(DatosInvalidos, match="Inicie sesión"):
+            catalogo.desactivar_producto(conexion, None, leche.id)
+        with pytest.raises(DatosInvalidos, match="Inicie sesión"):
+            catalogo.codigos_pendientes(conexion, None)
+        assert catalogo.consultar_por_codigo(conexion, "7801234000019").precio_clp == 1290
 
     def test_no_se_admiten_dos_productos_con_el_mismo_codigo(self, conexion, productos, admin) -> None:
         with pytest.raises(ProductoDuplicado):

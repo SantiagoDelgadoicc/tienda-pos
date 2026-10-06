@@ -117,17 +117,17 @@ def crear_producto(
     stock: int = 0,
     por_peso: bool = False,
 ) -> Producto:
-    """Da de alta un producto. Solo administradores.
+    """Da de alta un producto. Cualquier usuario con sesión (D-038).
 
     Con `por_peso` (D-037), `precio_clp` es el precio del kilo y `stock` son gramos. Sin código
     de barras, el sistema le da uno interno: el pan no trae etiqueta y se vende buscándolo.
 
     Raises:
-        PermisoDenegado, DatosInvalidos, ProductoDuplicado
+        DatosInvalidos, ProductoDuplicado
     """
-    from .auth import exigir_admin  # importación local: evita un ciclo entre servicios
+    from .auth import exigir_sesion  # importación local: evita un ciclo entre servicios
 
-    exigir_admin(usuario, "crear productos")
+    exigir_sesion(usuario, "crear productos")
     with transaccion(conexion):
         if not cb.normalizar(codigo):
             codigo = _codigo_interno(conexion)
@@ -157,7 +157,8 @@ def actualizar_producto(
     stock: int | None,
     por_peso: bool | None = None,
 ) -> Producto:
-    """Modifica un producto existente. Solo administradores.
+    """Modifica un producto existente, precio y stock incluidos. Cualquier usuario con sesión
+    (D-038).
 
     `por_peso` None lo deja como estaba. Cambiarlo no toca las ventas pasadas: cada línea
     guarda si se vendió por peso.
@@ -167,9 +168,9 @@ def actualizar_producto(
     si lo devolviera tal cual, cambiarle el precio a un producto borraría lo que las cajas
     vendieron mientras tanto (fase 22). Por eso el producto se lee dentro de la transacción.
     """
-    from .auth import exigir_admin
+    from .auth import exigir_sesion
 
-    exigir_admin(usuario, "modificar productos")
+    exigir_sesion(usuario, "modificar productos")
     with transaccion(conexion):
         existente = repo_productos.obtener_por_id(conexion, producto_id)
         if existente is None:
@@ -194,16 +195,16 @@ def desactivar_producto(
     conexion: sqlite3.Connection, usuario: Usuario | None, producto_id: int
 ) -> None:
     """Da de baja un producto sin borrarlo, para no romper el historial de ventas."""
-    from .auth import exigir_admin
+    from .auth import exigir_sesion
 
-    exigir_admin(usuario, "eliminar productos")
+    exigir_sesion(usuario, "eliminar productos")
     with transaccion(conexion):
         repo_productos.desactivar(conexion, producto_id)
 
 
 def codigos_pendientes(conexion: sqlite3.Connection, usuario: Usuario | None):
-    """Códigos escaneados que aún no existen en el catálogo. Solo administradores."""
-    from .auth import exigir_admin
+    """Códigos escaneados que aún no existen en el catálogo. Cualquier usuario con sesión."""
+    from .auth import exigir_sesion
 
-    exigir_admin(usuario, "ver los códigos pendientes")
+    exigir_sesion(usuario, "ver los códigos pendientes")
     return repo_codigos.listar_pendientes(conexion)

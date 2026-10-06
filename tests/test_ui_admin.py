@@ -167,18 +167,29 @@ class TestAccesoDeAdministrador:
         monkeypatch.setattr(
             main_window.DialogoLogin, "pedir", staticmethod(lambda *a, **k: None)
         )
-        ventana.mostrar_productos()
+        ventana.mostrar_reportes()
         assert ventana.pantallas.currentWidget() is ventana.vista_venta
 
     def test_con_autorizacion_de_administrador_si_entra(self, como_admin) -> None:
-        como_admin.mostrar_productos()
-        assert como_admin.pantallas.currentWidget() is como_admin.vista_productos
-        assert como_admin.vista_productos.usuario.es_admin
+        como_admin.mostrar_usuarios()
+        assert como_admin.pantallas.currentWidget() is como_admin.vista_usuarios
+        assert como_admin.vista_usuarios.usuario.es_admin
 
     def test_autorizar_no_cambia_al_cajero_que_opera(self, como_admin) -> None:
         # El encargado autoriza una acción puntual; la caja sigue siendo del cajero.
-        como_admin.mostrar_productos()
+        como_admin.mostrar_usuarios()
         assert como_admin.usuario.nombre == "Ana Pérez"
+
+    def test_el_cajero_entra_a_productos_sin_pin(self, ventana, monkeypatch) -> None:
+        # D-038. Si se pidiera el PIN, esta prueba fallaría en vez de quedarse esperando.
+        def no_debe_pedirse(*a, **k):
+            raise AssertionError("Productos no debe pedir PIN de administrador")
+
+        monkeypatch.setattr(main_window.DialogoLogin, "pedir", staticmethod(no_debe_pedirse))
+        ventana.mostrar_productos()
+        assert ventana.pantallas.currentWidget() is ventana.vista_productos
+        assert ventana.vista_productos.usuario is ventana.usuario
+        assert not ventana.usuario.es_admin
 
     def test_a_un_administrador_no_le_piden_nada(self, ventana, conexion) -> None:
         from tienda_pos.services import auth

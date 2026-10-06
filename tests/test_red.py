@@ -104,6 +104,25 @@ class TestUsuariosPorLaRed:
             remota.listar_para_administrar(marta)
 
 
+class TestProductosPorLaRed:
+    def test_un_cajero_administra_productos_desde_la_secundaria(self, red) -> None:
+        # D-038: el permiso lo decide el servidor, así que tiene que valer también por la red.
+        remota, local, admin = red
+        _, pin = remota.alta_usuario(admin, "Marta", Rol.CAJERO)
+        marta = remota.autenticar("Marta", pin)
+
+        cafe = remota.crear_producto(marta, "7801234000040", "Café", 5490, 8)
+        remota.actualizar_producto(marta, cafe.id, "", "Café", 5990, 12)
+        assert remota.codigos_pendientes(marta) == []
+        remota.desactivar_producto(marta, cafe.id)
+        assert [p.precio_clp for p in local.listar_productos(incluir_inactivos=True)] == [5990]
+
+    def test_sin_sesion_la_secundaria_no_crea_productos(self, red) -> None:
+        remota, _, _ = red
+        with pytest.raises(DatosInvalidos, match="Inicie sesión"):
+            remota.crear_producto(None, "7801234000040", "Café", 5490, 8)
+
+
 class TestVersionDelProtocolo:
     def test_una_caja_con_otra_version_se_detecta_al_conectar(self, red, monkeypatch) -> None:
         # Es lo que convierte una actualización a medias en un aviso al arrancar, y no en un

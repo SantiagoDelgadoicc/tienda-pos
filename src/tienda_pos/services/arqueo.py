@@ -22,7 +22,7 @@ from ..db.connection import escribir_meta, leer_meta, transaccion
 from ..domain.errors import CajaCerrada, DatosInvalidos, PermisoDenegado
 from ..domain.models import MovimientoEfectivo, TipoMovimiento, TurnoCaja, Usuario
 from ..repositories import arqueo as repo_arqueo
-from .auth import exigir_admin
+from .auth import exigir_admin, exigir_sesion
 from ..utils.money import formatear_clp
 
 #: Clave de `meta` del monto que se propone al abrir una caja. Es del negocio y no del PC: las
@@ -42,12 +42,6 @@ TURNOS_RECIENTES = 30
 
 def _ahora() -> datetime:
     return datetime.now().replace(microsecond=0)
-
-
-def _exigir_usuario(usuario: Usuario | None, accion: str) -> Usuario:
-    if usuario is None or usuario.id is None:
-        raise DatosInvalidos(f"Inicie sesión antes de {accion}.")
-    return usuario
 
 
 def _exigir_caja(caja: str | None) -> str:
@@ -163,7 +157,7 @@ def abrir_turno(
     Raises:
         DatosInvalidos: monto inválido, o la caja ya está abierta.
     """
-    usuario = _exigir_usuario(usuario, "abrir la caja")
+    usuario = exigir_sesion(usuario, "abrir la caja")
     caja = _exigir_caja(caja)
     apertura_clp = _validar_monto(apertura_clp, "El efectivo de apertura", puede_ser_cero=True)
 
@@ -215,7 +209,7 @@ def cerrar_turno(
     Raises:
         DatosInvalidos, PermisoDenegado
     """
-    usuario = _exigir_usuario(usuario, "cerrar la caja")
+    usuario = exigir_sesion(usuario, "cerrar la caja")
     contado_clp = _validar_monto(contado_clp, "El efectivo contado", puede_ser_cero=True)
     nota = _limpiar_texto(nota) or None
 
@@ -264,7 +258,7 @@ def registrar_movimiento(
     Raises:
         DatosInvalidos, PermisoDenegado, CajaCerrada
     """
-    usuario = _exigir_usuario(usuario, "anotar una salida o entrada de efectivo")
+    usuario = exigir_sesion(usuario, "anotar una salida o entrada de efectivo")
     caja = _exigir_caja(caja)
     tipo = _validar_tipo(tipo)
     if tipo is TipoMovimiento.RETIRO:

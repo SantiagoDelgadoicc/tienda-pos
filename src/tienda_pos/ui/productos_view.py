@@ -1,7 +1,7 @@
 """Administración del catálogo: alta, edición y baja de productos.
 
-Reservada al administrador. La comprobación de permisos no vive aquí sino en la capa de
-servicios: ocultar un botón no es control de acceso.
+Abierta a cualquier empleado con sesión desde D-038, que lo pidió el cliente. La comprobación
+de permisos no vive aquí sino en la capa de servicios: ocultar un botón no es control de acceso.
 """
 
 from __future__ import annotations

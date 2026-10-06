@@ -412,8 +412,8 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 ### Cómo retomar (estado al 2026-10-05)
 
 **Dónde está todo:** rama `diseño`, todo subido a GitHub. `main` tiene hasta la fase 22 (PR #10,
-fusionado); la fase 23 está en el **PR #11**, abierto. **667 pruebas en verde.** Esquema de la base
-en la **versión 7**, protocolo entre cajas en la **8**.
+fusionado); la fase 23 está en el **PR #11**, abierto. **670 pruebas en verde.** Esquema de la base
+en la **versión 7**, protocolo entre cajas en la **9**.
 
 **La tienda está en producción con esta versión** desde la visita del **2026-09-26**: los dos PC
 actualizados, usuarios por empleado creados con el dueño, cierre por caja, arqueo y venta por peso.
@@ -426,10 +426,10 @@ el 2026-10-01; Santiago debe confirmar que llegó a su cuenta). El manual en PDF
 WhatsApp. Lo acordado en septiembre sigue: un mes de marcha blanca para fallas, y lo nuevo se
 cotiza aparte.
 
-**Lo siguiente es la fase 24** (más abajo): que los cajeros puedan crear productos sin PIN, con
-precio, stock y bajas todavía con PIN (D-038). Antes de construirla hay tres cosas por confirmar
-con Santiago, listadas en D-038. Después, construir el `.exe`, actualizar el kit del pendrive y
-llevarlo a la tienda con `ACTUALIZAR-ESTE-PC.bat` en los dos PC (la base no se toca).
+**La fase 24 está construida** (más abajo): cualquier empleado administra los productos sin PIN
+(D-038). Falta construir el `.exe`, actualizar el kit del pendrive y
+llevarlo a la tienda con `ACTUALIZAR-ESTE-PC.bat` **en los dos PC a la vez**: el protocolo pasó a
+la versión 9 (la base no se toca).
 
 **Cómo se trabaja con la tienda:**
 
@@ -442,7 +442,6 @@ llevarlo a la tienda con `ACTUALIZAR-ESTE-PC.bat` en los dos PC (la base no se t
 
 **Pendiente del cliente** (detalle en `docs/PREGUNTAS-CIERRE-Y-USUARIOS.md`):
 
-- Si los cajeros también deben poder cambiar precios (D-038). Se le propuso que no; no contestó.
 - H1d: quién cuenta al cerrar y qué hacen si no cuadra. Mientras tanto, la diferencia se anota y
   no bloquea nada.
 - H3 (otros medios, fiado), H11 (anular ventas), H9, H4 (quién ve el cierre), H5 (imprimirlo), y
@@ -455,7 +454,7 @@ llevarlo a la tienda con `ACTUALIZAR-ESTE-PC.bat` en los dos PC (la base no se t
 
 **Mejoras anotadas, sin pedir:** que el programa se niegue a abrirse dos veces en el mismo PC (hoy
 solo avisa de que el puerto está ocupado); la trazabilidad del stock (fase 9, D-018), que hace más
-falta ahora que los cajeros van a crear productos.
+falta ahora que cualquier cajero cambia precios y stock.
 
 ---
 
@@ -786,45 +785,32 @@ no se notaba. "Ventas del día" tenía lo mismo, en menor medida: más de 2 segu
 
 ---
 
-## Fase 24 — Los cajeros pueden crear productos (D-038) ← lo siguiente
+## Fase 24 — Cualquier empleado administra los productos (D-038) ✅
 
-*Anotada el 2026-10-05, sin empezar.* Pedida por el cliente el 2026-10-01: "Al ingresar productos al
-sistema lo puede hacer cualquier usuario." Santiago decidió que **cambiar precio, cambiar stock y
-dar de baja sigan con PIN de administrador también para los cajeros**, porque es muy probable que
-se equivoquen. Ver D-038, con tres puntos a confirmar antes de empezar.
+*2026-10-05.* Pedida por el cliente el 2026-10-01: "Al ingresar productos al sistema lo puede hacer
+cualquier usuario." La primera redacción dejaba precio, stock y bajas con PIN; **Santiago la cambió
+antes de construirla: el cajero hace en Productos todo lo que hacía el administrador.** Ver D-038.
 
-**Cómo está hoy** (para no tener que buscarlo):
+- [x] `services/auth.exigir_sesion`: basta un usuario con sesión. La usa también el arqueo, que
+      tenía su propia copia
+- [x] `services/catalogo.py`: crear, actualizar, dar de baja y códigos pendientes, con
+      `exigir_sesion` en lugar de `exigir_admin`
+- [x] F7 entra a Productos sin PIN, con el usuario de la caja; si se cambia de usuario (F10), la
+      pantalla pasa al nuevo
+- [x] Protocolo a la **versión 9**: no cambia ningún mensaje, pero un servidor de la 8 les negaría
+      Productos a los cajeros de la secundaria
+- [x] Pruebas: el cajero hace todo, en el servicio y por la red; sin sesión, nada; F7 no pide PIN.
+      Las de "un cajero que cancela no entra" pasan a Usuarios, que sigue siendo del administrador
+- [x] Manual (`docs/manual/manual.html`): tabla de permisos, sección 14 y F7
+- [x] PDF del manual regenerado (`python tools/manual_pdf.py`)
+- [ ] `.exe`, kit del pendrive comprobado archivo por archivo, y actualizar **los dos PC a la vez**
+      (protocolo 9)
 
-- `ui/main_window.py::mostrar_productos` pide el PIN de un administrador **para entrar** a la
-  pantalla (`_asegurar_admin`), y deja ese administrador en `vista_productos.usuario`.
-- `services/catalogo.py`: `crear_producto`, `actualizar_producto`, `desactivar_producto` y
-  `codigos_pendientes` llaman a `exigir_admin`. Es el servicio quien manda, y sirve igual para la
-  caja secundaria por la red.
-- `ui/productos_view.py`: botones Nuevo producto, Editar, Stock, Pendientes y Dar de baja.
-  `ui/efectivo_view.py` ya resuelve "pedir el PIN solo para una acción" con `autorizar_admin`,
-  que fija la ventana: es el patrón a copiar.
+**Riesgo aceptado:** sin la fase 9 (D-018) no queda rastro de quién cambió un precio o un stock.
 
-**Tareas:**
-
-- [ ] Servicio: `crear_producto` exige solo un usuario con sesión, no administrador; el resto
-      sigue igual. Si se confirma, también `codigos_pendientes`
-- [ ] Entrar a Productos sin PIN, con la lista a la vista; Nuevo producto libre
-- [ ] Editar, Stock y Dar de baja piden el PIN de un administrador **en el momento**, como el
-      retiro en Efectivo; el cajero sigue en su sesión
-- [ ] Dejar constancia en el registro de qué producto creó cada usuario (sin D-018 no queda otra
-      huella)
-- [ ] Pruebas: un cajero crea por la pantalla y por la red; no puede editar, ajustar stock ni dar
-      de baja sin PIN, ni por la pantalla ni llamando al servicio; con PIN sí. Con un catálogo de
-      2.000 productos (fase 23)
-- [ ] Manual (sección de Productos) y PDF; `LEEME-PRIMERO.txt` del kit
-- [ ] `.exe`, kit del pendrive comprobado archivo por archivo, y actualizar los dos PC
-
-**Protocolo:** no cambia la forma de ningún mensaje; solo lo que el servidor permite. Aun así las
-dos cajas se actualizan juntas, como siempre.
-
-**Criterio de aceptación:** un cajero da de alta un producto sin que nadie ponga su PIN, en
-cualquiera de las dos cajas; cambiar un precio, el stock o dar de baja sigue pidiendo el PIN del
-dueño; y nada de eso se puede saltar llamando al servidor directamente.
+**Criterio de aceptación:** un cajero crea, edita, ajusta stock y da de baja productos sin que
+nadie ponga su PIN, en cualquiera de las dos cajas; sin sesión no se puede, ni llamando al servidor
+directamente. **Cumplido** en código y pruebas; falta llevarlo a la tienda.
 
 ---
 

@@ -1369,35 +1369,34 @@ iguales para dos cosas distintas confundían.
 
 ---
 
-## D-038 — Los cajeros pueden crear productos; cambiar precio, stock y dar de baja sigue con PIN
+## D-038 — Cualquier empleado administra los productos, sin PIN
 
-*2026-10-05.* **Estado:** aceptada, **sin construir** (fase 24 de `PLAN.md`). **Decide:** Santiago,
-a partir de un pedido del cliente.
+*2026-10-05.* **Estado:** aceptada y construida (fase 24 de `PLAN.md`). **Decide:** Santiago, a
+partir de un pedido del cliente.
 
 **Contexto.** Hasta aquí, toda la pantalla de Productos pedía el PIN de un administrador. Al volver
 de unos días fuera, el dueño escribió el 2026-10-01 por WhatsApp que "cada vez que quieren ingresar
 un producto me piden mi pin", y luego: **"Al ingresar productos al sistema lo puede hacer cualquier
 usuario."** Es un requisito suyo (3.1 de `CLAUDE.md`). Santiago le propuso que los cambios de
-precio y las bajas siguieran con su PIN; el dueño no contestó a eso, solo pagó.
+precio y las bajas siguieran con su PIN; el dueño no contestó a eso.
+
+**Primera versión, descartada el mismo día.** La redacción inicial de esta decisión dejaba a los
+cajeros solo crear, con precio, stock y bajas todavía con PIN, "porque es muy probable que se
+equivoquen". Santiago la cambió antes de construirla: **el cajero hace en Productos todo lo que
+hacía el administrador.**
 
 **Decisión.**
 
-1. **Cualquier usuario con sesión puede crear un producto nuevo**, sin PIN. Es lo que pidió.
-2. **Cambiar el precio, cambiar el stock y dar de baja siguen exigiendo administrador**, también a
-   los cajeros. Lo decidió Santiago: "es muy probable que se equivoquen", y hoy no queda rastro de
-   quién cambió qué (D-018 sin construir), así que un precio mal puesto no se podría explicar.
-3. **El permiso lo decide el servicio**, no la pantalla (`services/catalogo.py`), como todo
-   permiso del sistema: así vale igual para la caja secundaria, que llega por la red.
+1. **Cualquier usuario con sesión** crea productos, cambia precio y stock, da de baja y ve los
+   códigos pendientes. Sin PIN de administrador.
+2. **Sin sesión, nada.** `services/auth.exigir_sesion` lo comprueba; es la misma regla que ya
+   usaba el arqueo, que ahora la comparte.
+3. **El permiso lo decide el servicio**, no la pantalla (`services/catalogo.py`): vale igual para
+   la caja secundaria. Protocolo a la **versión 9**, para que una actualización a medias se note
+   al arrancar.
+4. Usuarios, ventas del día, cierre y retiros **siguen siendo del administrador**.
 
-**Por confirmar al empezar la fase 24** (recomendación entre paréntesis):
-
-- ¿El cajero puede poner **stock inicial** al crear? (Sí: si nace en cero, la primera venta lo
-  deja en negativo. No es "modificar" el stock de un producto que ya existe.)
-- ¿Ve la lista de Productos sin PIN, solo para mirar? (Sí, sin poder tocar nada; si no, no sabe si
-  el producto ya existe antes de crearlo.)
-- ¿Puede ver los **códigos pendientes**? (Sí: son justo los productos que falta crear.)
-
-**Consecuencias.** Se abre una puerta a cajeros en el catálogo, acotada a crear. El riesgo que
-queda es un producto creado con un precio mal tecleado; se reduce con la confirmación del
-formulario y se detecta en la lista, pero corregirlo sigue pidiendo al dueño. Si el cliente
-contesta que los cajeros también deben poder cambiar precios, esta decisión se revisa con él.
+**Consecuencias.** El riesgo que se aceptó: un cajero puede cambiar un precio o el stock por error,
+o a propósito, y **hoy no queda rastro de quién lo hizo** (la trazabilidad, D-018, sigue sin
+construir). Las ventas pasadas no se alteran, porque guardan su propio precio. Si llega a pasar, la
+respuesta es la fase 9, no volver a poner el PIN.

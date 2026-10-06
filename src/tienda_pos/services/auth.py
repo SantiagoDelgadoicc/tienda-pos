@@ -125,6 +125,18 @@ def exigir_admin(usuario: Usuario | None, accion: str) -> None:
         raise PermisoDenegado(accion)
 
 
+def exigir_sesion(usuario: Usuario | None, accion: str) -> Usuario:
+    """Corta la ejecución si nadie ha iniciado sesión. Basta cualquier usuario, cajero o
+    administrador.
+
+    Raises:
+        DatosInvalidos
+    """
+    if usuario is None or usuario.id is None:
+        raise DatosInvalidos(f"Inicie sesión antes de {accion}.")
+    return usuario
+
+
 # --------------------------------------------------------------------------- administración
 #
 # Lo que sigue es la gestión de usuarios que pidió el cliente el 2026-09-18: un usuario por

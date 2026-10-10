@@ -32,6 +32,9 @@ PAGO_EFECTIVO_MAXIMO_CLP = 10_000_000
 #: es de $20.000: dar más vuelto que eso suele ser un cero de más al teclear, no un cliente.
 VUELTO_PARA_REVISAR_CLP = 20_000
 
+#: Los medios que llevan el recargo de los cigarros (fase 26, D-040).
+MEDIOS_CON_RECARGO = (MedioPago.DEBITO, MedioPago.CREDITO)
+
 #: Tope defensivo de unidades por línea. Protege contra el caso real de que la pistola se
 #: quede pegada leyendo el mismo código, o de que alguien mantenga pulsada una tecla.
 CANTIDAD_MAX_POR_LINEA = 999
@@ -59,6 +62,11 @@ class Carrito:
         self._lineas: dict[str, LineaCarrito] = {}
         self._descuento_monto: int = 0
         self._descuento_porcentaje: float | None = None
+        #: El recargo por cajetilla con que la caja calcula lo que muestra (fase 26). Viaja con el
+        #: carrito para que el servidor compruebe que es el vigente: si el dueño lo cambió desde
+        #: la otra caja a mitad de la venta, no se cobra un total distinto del que se mostró.
+        #: None: la caja no lo sabe, y el servidor aplica el suyo.
+        self.recargo_unitario_clp: int | None = None
 
     # ------------------------------------------------------------------ productos
 
@@ -91,6 +99,7 @@ class Carrito:
                 nombre=producto.nombre,
                 precio_unit_clp=producto.precio_clp,
                 cantidad=0,
+                es_cigarro=producto.es_cigarro,
             )
             self._lineas[producto.codigo_barras] = linea
 
@@ -294,7 +303,27 @@ class Carrito:
 
     @property
     def total_clp(self) -> int:
+        """Lo que se cobra en efectivo. Con tarjeta se suma el recargo: ver `total_con`."""
         return self.subtotal_clp - self.descuento_clp
+
+    @property
+    def cajetillas(self) -> int:
+        """Unidades de cigarros en el carrito: las que llevan recargo si se paga con tarjeta."""
+        return sum(l.cantidad for l in self._lineas.values() if l.es_cigarro and not l.por_peso)
+
+    def recargo_clp(self, medio: MedioPago | None) -> int:
+        """El recargo de los cigarros con ese medio de pago (fase 26, D-040).
+
+        $500 —o lo que fije el administrador— por cajetilla, solo con débito o crédito. No se
+        descuenta: los descuentos son sobre los productos, y el recargo es por pagar con tarjeta.
+        """
+        if medio not in MEDIOS_CON_RECARGO or not self.recargo_unitario_clp:
+            return 0
+        return self.cajetillas * self.recargo_unitario_clp
+
+    def total_con(self, medio: MedioPago | None) -> int:
+        """El total que se cobra con ese medio: con tarjeta, más el recargo de los cigarros."""
+        return self.total_clp + self.recargo_clp(medio)
 
     # ------------------------------------------------------------------ serialización
 
@@ -316,11 +345,13 @@ class Carrito:
                     "descuento_monto_clp": linea.descuento_monto_clp,
                     "descuento_porcentaje": linea.descuento_porcentaje,
                     "gramos": linea.gramos,
+                    "es_cigarro": linea.es_cigarro,
                 }
                 for linea in self.lineas
             ],
             "descuento_monto_clp": self._descuento_monto,
             "descuento_porcentaje": self._descuento_porcentaje,
+            "recargo_unitario_clp": self.recargo_unitario_clp,
         }
 
     @classmethod
@@ -343,10 +374,12 @@ class Carrito:
                 descuento_monto_clp=d.get("descuento_monto_clp", 0),
                 descuento_porcentaje=d.get("descuento_porcentaje"),
                 gramos=d.get("gramos"),
+                es_cigarro=bool(d.get("es_cigarro", False)),
             )
             carrito._lineas[linea.codigo_barras] = linea
         carrito._descuento_monto = datos.get("descuento_monto_clp", 0)
         carrito._descuento_porcentaje = datos.get("descuento_porcentaje")
+        carrito.recargo_unitario_clp = datos.get("recargo_unitario_clp")
         return carrito
 
 
@@ -423,7 +456,6 @@ def cerrar_venta(
 
     subtotal = carrito.subtotal_clp
     descuento = carrito.descuento_clp
-    total = subtotal - descuento
 
     try:
         venta = _registrar(
@@ -433,7 +465,6 @@ def cerrar_venta(
             intento_id,
             subtotal,
             descuento,
-            total,
             caja,
             medio,
             exigir_turno,
@@ -449,6 +480,25 @@ def cerrar_venta(
         raise
 
     return venta
+
+
+def _recargo_de(conexion: sqlite3.Connection, carrito: Carrito, medio: MedioPago | None) -> int:
+    """El recargo de los cigarros, calculado aquí con el valor vigente y no con el de la caja.
+
+    La caja manda el que usó para mostrar el total (`Carrito.recargo_unitario_clp`). Si no es el
+    de ahora, no se cobra: el cliente pagaría con tarjeta un monto distinto del que vio.
+    """
+    if medio not in MEDIOS_CON_RECARGO or carrito.cajetillas == 0:
+        return 0
+    from .catalogo import recargo_cigarro  # importación local: evita un ciclo entre servicios
+
+    vigente = recargo_cigarro(conexion)
+    if carrito.recargo_unitario_clp is not None and carrito.recargo_unitario_clp != vigente:
+        raise DatosInvalidos(
+            f"El recargo de los cigarros cambió a {formatear_clp(vigente)} por cajetilla. "
+            "Revise el total con el cliente y vuelva a cobrar."
+        )
+    return carrito.cajetillas * vigente
 
 
 def _validar_medio(valor: MedioPago | str | None) -> MedioPago | None:
@@ -472,7 +522,6 @@ def _registrar(
     intento_id: str | None,
     subtotal: int,
     descuento: int,
-    total: int,
     caja: str | None = None,
     medio_pago: MedioPago | None = None,
     exigir_turno: bool = False,
@@ -504,6 +553,16 @@ def _registrar(
                 _validar_gramos(linea.gramos)
             elif not config.PERMITIR_STOCK_NEGATIVO and producto.stock < linea.cantidad:
                 raise StockInsuficiente(producto.nombre, producto.stock, linea.cantidad)
+            # Como el peso: si alguien lo marcó o desmarcó como cigarro mientras el carrito estaba
+            # abierto, el total que vio el cliente no es el que se cobraría.
+            if producto.es_cigarro != linea.es_cigarro:
+                raise DatosInvalidos(
+                    f"{linea.nombre} cambió de cigarro a no cigarro, o al revés, y con eso el "
+                    "recargo. Quítelo del carrito y vuelva a agregarlo."
+                )
+
+        recargo = _recargo_de(conexion, carrito, medio_pago)
+        total = subtotal - descuento + recargo
 
         venta = Venta(
             folio=repo_ventas.siguiente_folio(conexion),
@@ -517,6 +576,7 @@ def _registrar(
             caja=caja,
             medio_pago=medio_pago,
             turno_id=turno_id,
+            recargo_clp=recargo,
             lineas=[
                 LineaVenta(
                     producto_id=linea.producto_id,

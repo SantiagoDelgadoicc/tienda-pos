@@ -179,6 +179,7 @@ class SesionRemota(Sesion):
         precio_clp: int,
         stock: int,
         por_peso: bool = False,
+        es_cigarro: bool = False,
     ) -> Producto:
         datos = self._llamar(
             "crear_producto",
@@ -189,6 +190,7 @@ class SesionRemota(Sesion):
                 "precio_clp": precio_clp,
                 "stock": stock,
                 "por_peso": por_peso,
+                "es_cigarro": es_cigarro,
             },
         )
         return protocolo.a_producto(datos)
@@ -202,6 +204,7 @@ class SesionRemota(Sesion):
         precio_clp: int,
         stock: int | None,
         por_peso: bool | None = None,
+        es_cigarro: bool | None = None,
     ) -> Producto:
         datos = self._llamar(
             "actualizar_producto",
@@ -213,6 +216,7 @@ class SesionRemota(Sesion):
                 "precio_clp": precio_clp,
                 "stock": stock,
                 "por_peso": por_peso,
+                "es_cigarro": es_cigarro,
             },
         )
         return protocolo.a_producto(datos)
@@ -392,6 +396,14 @@ class SesionRemota(Sesion):
 
     def monto_sugerido(self) -> int | None:
         return self._llamar("monto_sugerido")
+
+    def recargo_cigarro(self) -> int:
+        return self._llamar("recargo_cigarro")
+
+    def fijar_recargo_cigarro(self, admin: Usuario | None, monto_clp: int) -> None:
+        self._llamar(
+            "fijar_recargo_cigarro", {"usuario": self._admin(admin), "monto_clp": monto_clp}
+        )
 
     def fijar_monto_sugerido(self, admin: Usuario | None, monto_clp: int | None) -> None:
         self._llamar(

@@ -118,7 +118,7 @@ def catalogo_demo() -> list[Producto]:
             stock=stock,
         )
         for i, (nombre, precio, stock) in enumerate(_PRODUCTOS)
-    ] + _por_peso_demo()
+    ] + _por_peso_demo() + _cigarros_demo()
 
 
 def _por_peso_demo() -> list[Producto]:
@@ -143,6 +143,30 @@ def _por_peso_demo() -> list[Producto]:
             precio_clp=3990,
             stock=8000,
             por_peso=True,
+        ),
+    ]
+
+
+def _cigarros_demo() -> list[Producto]:
+    """Dos cajetillas de cigarros (fase 26, D-040): con tarjeta llevan recargo por unidad.
+
+    Al final, como los de peso, para no mover ningún código anterior.
+    """
+    siguiente = len(_PRODUCTOS) + 2
+    return [
+        Producto(
+            codigo_barras=codigo_demo(siguiente),
+            nombre="Cigarrillos rubios 20 un.",
+            precio_clp=5200,
+            stock=40,
+            es_cigarro=True,
+        ),
+        Producto(
+            codigo_barras=codigo_demo(siguiente + 1),
+            nombre="Cigarrillos mentolados 20 un.",
+            precio_clp=5400,
+            stock=30,
+            es_cigarro=True,
         ),
     ]
 

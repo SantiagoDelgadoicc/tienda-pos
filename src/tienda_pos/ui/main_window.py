@@ -154,6 +154,9 @@ class VentanaPrincipal(QMainWindow):
         self.vista_efectivo.autorizar_admin = lambda accion: (
             metodo(accion) if (metodo := asegurar_admin()) is not None else None
         )
+        # Lo mismo para el recargo de los cigarros, en Productos (fase 26).
+        self.vista_productos.autorizar_admin = self.vista_efectivo.autorizar_admin
+        self.vista_productos.recargo_cambiado.connect(self.vista_venta.recargo_cambiado)
         for vista in (
             self.vista_venta,
             self.vista_consulta,

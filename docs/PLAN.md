@@ -412,8 +412,8 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 ### Cómo retomar (estado al 2026-10-10)
 
 **Dónde está todo:** rama `diseño`, todo subido a GitHub. `main` tiene hasta la fase 22 (PR #10,
-fusionado); la fase 23 está en el **PR #11**, abierto. **720 pruebas en verde.** Esquema de la base
-en la **versión 7**, protocolo entre cajas en la **9**.
+fusionado); la fase 23 está en el **PR #11**, abierto. **767 pruebas en verde.** Esquema de la base
+en la **versión 8**, protocolo entre cajas en la **10** (fase 26).
 
 **La tienda está en producción con esta versión** desde la visita del **2026-09-26**: los dos PC
 actualizados, usuarios por empleado creados con el dueño, cierre por caja, arqueo y venta por peso.
@@ -426,10 +426,12 @@ el 2026-10-01; Santiago debe confirmar que llegó a su cuenta). El manual en PDF
 WhatsApp. Lo acordado en septiembre sigue: un mes de marcha blanca para fallas, y lo nuevo se
 cotiza aparte.
 
-**Las fases 24 y 25 están construidas** (más abajo): cualquier empleado administra los productos
-sin PIN (D-038); y, pedido en la tienda el 2026-10-10, un campo para buscar por nombre al lado del
-código y la ventana del vuelto en efectivo (D-039). Se llevan con `ACTUALIZAR-ESTE-PC.bat` **en los
-dos PC a la vez** (protocolo 9; la base no se toca).
+**Las fases 24, 25 y 26 están construidas** (más abajo): cualquier empleado administra los
+productos sin PIN (D-038); y, pedido en la tienda el 2026-10-10, un campo para buscar por nombre al
+lado del código, la ventana del vuelto en efectivo (D-039) y el **recargo de $500 por cajetilla de
+cigarros pagada con tarjeta** (D-040). La 26 **migra la base** (esquema 8) y sube el protocolo a
+la 10: se lleva con `ACTUALIZAR-ESTE-PC.bat` **en los dos PC a la vez**, que respalda la base antes.
+Después hay que **marcar los cigarros** en Productos.
 
 **Cómo se trabaja con la tienda:**
 
@@ -844,6 +846,41 @@ directamente. **Cumplido** en código y pruebas; falta llevarlo a la tienda.
 **Criterio de aceptación:** el pan se agrega escribiendo "pan" y Enter, sin abrir ventanas; en
 efectivo se ve el vuelto antes de cobrar; con tarjeta no cambia nada. **Cumplido** en código y
 pruebas.
+
+---
+
+## Fase 26 — Recargo de los cigarros pagados con tarjeta (D-040) ✅
+
+*2026-10-10.* Pedido por el cliente ese día: una casilla para marcar los cigarros, y $500 más por
+cajetilla si se paga con débito o crédito, con el monto modificable. Ver D-040.
+
+- [x] Migración 8: `producto.es_cigarro` y `venta.recargo_clp`, con 0 por defecto; probada desde
+      una base de la versión 7 con datos
+- [x] `catalogo.recargo_cigarro` / `fijar_recargo_cigarro` (en `meta`, solo administrador, de $0
+      a $10.000); un cigarro no se vende por peso
+- [x] El carrito cuenta cajetillas y calcula el recargo por medio; **el servidor lo recalcula** con
+      la base y rechaza el cobro si el monto que mostró la caja ya no es el vigente, o si el
+      producto dejó de ser cigarro (o pasó a serlo) con el carrito abierto
+- [x] Protocolo a la **versión 10**: producto, venta y carrito llevan lo suyo, y dos operaciones
+      nuevas, `recargo_cigarro` y `fijar_recargo_cigarro`
+- [x] Venta: el total cambia al marcar débito o crédito, con una fila "Recargo cigarros · 2 × $500";
+      la confirmación lo dice; si el servidor rechaza por recargo cambiado, la pantalla muestra
+      el total nuevo antes del aviso
+- [x] Arreglado antes de que pasara: el reconocimiento de reintentos comparaba el total del
+      carrito sin recargo, y una venta con tarjeta habría disparado el aviso de "venta
+      registrada en el intento anterior"
+- [x] Productos: casilla "Es cigarro" (se apaga con "por peso"), "· cigarro" en la lista, el filtro
+      "cigarro" los muestra, y abajo el recargo con "Cambiar recargo" (PIN de administrador)
+- [x] Ventas del día y cierre muestran el recargo de cada venta
+- [x] Dos cajetillas en el catálogo de ejemplo, al final para no mover códigos
+- [x] Pruebas (`tests/test_recargo_cigarros.py`, 47): ajuste, carrito, cobro, migración, red y
+      pantallas
+- [ ] `.exe`, pendrive, los dos PC, y **marcar los cigarros del catálogo real**
+
+**Criterio de aceptación:** dos cajetillas pagadas con débito cobran $1.000 más y se ven así en la
+pantalla, en las ventas del día y en el cierre; en efectivo no cambia nada; el dueño cambia el
+monto y vale en las dos cajas; nadie puede cobrar un total distinto del que se mostró.
+**Cumplido** en código y pruebas.
 
 ---
 

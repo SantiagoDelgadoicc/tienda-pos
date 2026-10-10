@@ -66,6 +66,13 @@ CODIGO_LONGITUD_MAX = 32
 #: negocio: sirve para que un cero de más al teclear los gramos no cobre una fortuna.
 GRAMOS_MAX_POR_LINEA = 50_000
 
+#: Recargo por cajetilla de cigarros pagada con débito o crédito (fase 26, D-040), mientras el
+#: administrador no fije otro. Lo pidió el cliente el 2026-10-10: $500 por cajetilla.
+RECARGO_CIGARRO_DEFECTO_CLP = 500
+
+#: Tope del recargo por cajetilla: protege de un cero de más al cambiarlo.
+RECARGO_CIGARRO_MAXIMO_CLP = 10_000
+
 #: Prefijo de los códigos internos que el sistema da a un producto por peso sin código de
 #: barras, como el pan (D-037). El 2 inicial es el que el estándar EAN reserva para uso
 #: interno de cada tienda, así que no choca con ningún código de fábrica.

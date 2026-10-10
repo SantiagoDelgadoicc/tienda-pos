@@ -9,7 +9,7 @@ from __future__ import annotations
 import sqlite3
 
 from .. import config
-from ..db.connection import transaccion
+from ..db.connection import escribir_meta, leer_meta, transaccion
 from ..domain.errors import (
     CodigoInvalido,
     DatosInvalidos,
@@ -19,6 +19,10 @@ from ..domain.models import Producto, Usuario
 from ..repositories import codigos as repo_codigos
 from ..repositories import productos as repo_productos
 from ..utils import codigo_barras as cb
+
+#: Dónde se guarda el recargo por cajetilla (fase 26). En la base y no en las preferencias de
+#: cada PC: tiene que ser el mismo en las dos cajas, y lo aplica el servidor.
+CLAVE_RECARGO_CIGARRO = "recargo_cigarro_tarjeta_clp"
 
 # Límite defensivo para el nombre: evita que un pegado accidental de un texto enorme
 # desfigure la tabla del carrito.
@@ -108,6 +112,46 @@ def _validar_datos(
     return cb.normalizar(codigo), nombre
 
 
+def _validar_cigarro(por_peso: bool, es_cigarro: bool) -> None:
+    """El recargo es por cajetilla: un producto por peso no tiene cajetillas que contar."""
+    if por_peso and es_cigarro:
+        raise DatosInvalidos("Un cigarro se vende por unidad, no por peso.")
+
+
+def recargo_cigarro(conexion: sqlite3.Connection) -> int:
+    """Lo que se suma por cada cajetilla de cigarros pagada con débito o crédito (D-040).
+
+    Mientras el administrador no fije otro, el que pidió el cliente: $500. Un valor ilegible en
+    la base vuelve a ese y no tumba el cobro.
+    """
+    valor = leer_meta(conexion, CLAVE_RECARGO_CIGARRO)
+    try:
+        monto = int(valor) if valor not in (None, "") else config.RECARGO_CIGARRO_DEFECTO_CLP
+    except ValueError:
+        return config.RECARGO_CIGARRO_DEFECTO_CLP
+    return monto if 0 <= monto <= config.RECARGO_CIGARRO_MAXIMO_CLP else config.RECARGO_CIGARRO_DEFECTO_CLP
+
+
+def fijar_recargo_cigarro(
+    conexion: sqlite3.Connection, admin: Usuario | None, monto_clp: int
+) -> None:
+    """Cambia el recargo por cajetilla. Solo administradores: cambia lo que pagan los clientes.
+
+    Cero lo apaga. Vale para las dos cajas desde la próxima venta.
+    """
+    from .auth import exigir_admin
+
+    exigir_admin(admin, "cambiar el recargo de los cigarros")
+    if isinstance(monto_clp, bool) or not isinstance(monto_clp, int):
+        raise DatosInvalidos("El recargo debe ser un monto en pesos, sin decimales.")
+    if not 0 <= monto_clp <= config.RECARGO_CIGARRO_MAXIMO_CLP:
+        raise DatosInvalidos(
+            f"El recargo debe estar entre $0 y ${config.RECARGO_CIGARRO_MAXIMO_CLP:,}.".replace(",", ".")
+        )
+    with transaccion(conexion):
+        escribir_meta(conexion, CLAVE_RECARGO_CIGARRO, str(monto_clp))
+
+
 def crear_producto(
     conexion: sqlite3.Connection,
     usuario: Usuario | None,
@@ -116,8 +160,12 @@ def crear_producto(
     precio_clp: int,
     stock: int = 0,
     por_peso: bool = False,
+    es_cigarro: bool = False,
 ) -> Producto:
     """Da de alta un producto. Cualquier usuario con sesión (D-038).
+
+    Con `es_cigarro` (fase 26, D-040), cada unidad pagada con tarjeta lleva el recargo de
+    `recargo_cigarro`. Un cigarro no se vende por peso.
 
     Con `por_peso` (D-037), `precio_clp` es el precio del kilo y `stock` son gramos. Sin código
     de barras, el sistema le da uno interno: el pan no trae etiqueta y se vende buscándolo.
@@ -132,6 +180,7 @@ def crear_producto(
         if not cb.normalizar(codigo):
             codigo = _codigo_interno(conexion)
         codigo, nombre = _validar_datos(codigo, nombre, precio_clp, stock)
+        _validar_cigarro(bool(por_peso), bool(es_cigarro))
         producto = repo_productos.crear(
             conexion,
             Producto(
@@ -140,6 +189,7 @@ def crear_producto(
                 precio_clp=precio_clp,
                 stock=stock,
                 por_peso=bool(por_peso),
+                es_cigarro=bool(es_cigarro),
             ),
         )
         # Si este código estaba en la lista de "no encontrados", ya dejó de estarlo.
@@ -156,6 +206,7 @@ def actualizar_producto(
     precio_clp: int,
     stock: int | None,
     por_peso: bool | None = None,
+    es_cigarro: bool | None = None,
 ) -> Producto:
     """Modifica un producto existente, precio y stock incluidos. Cualquier usuario con sesión
     (D-038).
@@ -182,6 +233,10 @@ def actualizar_producto(
         codigo, nombre = _validar_datos(codigo, nombre, precio_clp, stock, existente.stock)
         if por_peso is not None:
             existente.por_peso = bool(por_peso)
+        # None lo deja como estaba, como `por_peso`: quien no sabe de cigarros no lo borra.
+        if es_cigarro is not None:
+            existente.es_cigarro = bool(es_cigarro)
+        _validar_cigarro(existente.por_peso, existente.es_cigarro)
 
         existente.codigo_barras = codigo
         existente.nombre = nombre

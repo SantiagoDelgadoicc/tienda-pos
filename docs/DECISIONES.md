@@ -1435,3 +1435,36 @@ contradice D-006 ("sin vuelto") y respondía la pregunta pendiente de si quería
 **Consecuencias.** La actualización es solo del programa, sin migración ni cambio de protocolo:
 las cajas siguen en la versión 9. Si algún día el dueño quiere ver en los informes con cuánto pagó
 cada cliente, hay que guardarlo, y eso sí es una migración.
+
+## D-040 — Recargo por cajetilla de cigarros pagada con tarjeta
+
+*2026-10-10.* **Estado:** aceptada y construida (fase 26 de `PLAN.md`). **Decide:** Santiago, a
+partir de un pedido del cliente.
+
+**Contexto.** El cliente pidió el 2026-10-10 una casilla para marcar un producto como cigarro,
+porque **pagados con débito o crédito se cobran $500 más por cajetilla**. Confirmó a Santiago que
+es por cada cajetilla (tres cajetillas, $1.500), igual en débito y en crédito, y que en su caso es
+legal cobrarlo. Pidió que el monto se pueda cambiar.
+
+**Decisión.**
+
+1. **Una casilla "Es cigarro" en el producto** (`producto.es_cigarro`). Un cigarro no se vende por
+   peso: el recargo es por cajetilla.
+2. **El recargo vive en la venta, no en las líneas** (`venta.recargo_clp`): total = subtotal −
+   descuento + recargo. Así el precio de cada cajetilla y el stock no cambian, los informes por
+   producto siguen iguales, y el recargo se ve aparte en la pantalla, en las ventas del día y en
+   el cierre. Los descuentos no lo tocan: son sobre los productos.
+3. **Lo calcula el servidor**, con el producto y el monto de la base. La caja manda dentro del
+   carrito el monto que usó para mostrar el total; **si no es el vigente, no se cobra** y se avisa,
+   porque el cliente pagaría con tarjeta algo distinto de lo que vio. Lo mismo si el producto dejó
+   de ser cigarro, o pasó a serlo, con el carrito abierto.
+4. **El monto se guarda en la base (`meta`), no en las preferencias de cada PC**: tiene que ser el
+   mismo en las dos cajas. $500 mientras no se cambie; de $0 (sin recargo) a $10.000.
+5. **Se cambia en Productos, con PIN de administrador.** Se pensó en F9, pero F9 guarda ajustes de
+   este equipo y el recargo es de la tienda. Productos es donde se marcan los cigarros, y es de
+   todos (D-038): verlo, sí; cambiarlo, solo el dueño, porque cambia lo que pagan los clientes.
+6. **En efectivo no hay recargo**, y por eso el arqueo no cambia: al cajón entra lo mismo.
+
+**Consecuencias.** Migración de esquema 8 (dos columnas con valor por defecto: nada de lo
+guardado cambia) y protocolo 10: las dos cajas se actualizan en la misma visita, y el script
+respalda la base antes. Los cigarros que ya están cargados hay que marcarlos a mano en Productos.

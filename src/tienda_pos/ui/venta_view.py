@@ -507,6 +507,21 @@ class VentaView(QWidget):
         columna.addWidget(self.fila_descuento)
         self.fila_descuento.hide()
 
+        # Recargo de los cigarros con tarjeta (fase 26, D-040): solo cuando lo hay, y diciendo
+        # cuántas cajetillas y a cuánto, para que el cliente vea de dónde sale la diferencia.
+        self.fila_recargo = QWidget()
+        self.fila_recargo.setObjectName("transparente")
+        interior = QVBoxLayout(self.fila_recargo)
+        interior.setContentsMargins(0, 12, 0, 0)
+        interior.setSpacing(0)
+        self.etiqueta_recargo = self._etiqueta_pequena("Recargo cigarros")
+        self.etiqueta_recargo.setWordWrap(True)
+        self.valor_recargo = QLabel("$0")
+        self.valor_recargo.setObjectName("valorDescuento")
+        interior.addLayout(self._renglon(self.etiqueta_recargo, self.valor_recargo))
+        columna.addWidget(self.fila_recargo)
+        self.fila_recargo.hide()
+
         return tarjeta
 
     def _tarjeta_cobro(self) -> QWidget:
@@ -607,6 +622,28 @@ class VentaView(QWidget):
     def elegir_medio_pago(self, medio: MedioPago) -> None:
         self._medio = medio
         self._botones_medio[medio].setChecked(True)
+        # Con tarjeta, el total puede cambiar por el recargo de los cigarros (fase 26): se lee el
+        # vigente al marcarla, que es justo antes de decirle el total al cliente.
+        if medio in servicio_venta.MEDIOS_CON_RECARGO and self._carrito.cajetillas:
+            self._leer_recargo()
+        if hasattr(self, "valor_total"):
+            self._pintar_totales()
+
+    def _leer_recargo(self) -> None:
+        """Trae del servidor el recargo por cajetilla. Si no se puede, se queda el que había.
+
+        Quedarse con el anterior no cobra de más ni de menos: el servidor compara el que se usó
+        con el vigente y, si no es el mismo, no cobra y lo dice (`_recargo_de`).
+        """
+        try:
+            self._carrito.recargo_unitario_clp = self._sesion.recargo_cigarro()
+        except ErrorDominio:
+            pass
+
+    def recargo_cambiado(self) -> None:
+        """El administrador cambió el recargo en esta caja: se relee y se repinta."""
+        self._leer_recargo()
+        self._pintar_totales()
 
     def alternar_medio_pago(self) -> None:
         """F11: efectivo, débito, crédito y vuelta a empezar. Dos pulsaciones como mucho."""
@@ -630,6 +667,9 @@ class VentaView(QWidget):
         self.elegir_medio_pago(MedioPago.EFECTIVO)
         self._intento_cobro = None
         self._recibido_previo = None
+        # El recargo se vuelve a leer en la próxima venta con cigarros y tarjeta: el dueño pudo
+        # cambiarlo desde la otra caja.
+        self._carrito.recargo_unitario_clp = None
 
     @staticmethod
     def _renglon(etiqueta: QLabel, valor: QLabel) -> QHBoxLayout:
@@ -1200,7 +1240,8 @@ class VentaView(QWidget):
             self.enfocar_escaneo()
             return
 
-        total = formatear_clp(self._carrito.total_clp)
+        total = formatear_clp(self._carrito.total_con(self._medio))
+        recargo = self._carrito.recargo_clp(self._medio)
         recibido: int | None = None
         if self._medio is MedioPago.EFECTIVO and self._carrito.total_clp > 0:
             # En efectivo, la ventana del vuelto (fase 25, D-039). Ya es una confirmación, así
@@ -1218,7 +1259,8 @@ class VentaView(QWidget):
             self,
             "Confirmar venta",
             f"Total a cobrar: {total}\n"
-            f"Pago: {NOMBRE_MEDIO[self._medio]}\n"
+            + (f"Incluye recargo de cigarros: {formatear_clp(recargo)}\n" if recargo else "")
+            + f"Pago: {NOMBRE_MEDIO[self._medio]}\n"
             f"{self._carrito.cantidad_articulos} artículos en {len(self._carrito.lineas)} "
             f"líneas.\n\n¿Confirma la venta?",
             texto_si="Sí, cobrar",
@@ -1317,6 +1359,10 @@ class VentaView(QWidget):
         """
         if not isinstance(error, ServidorNoDisponible):
             self._intento_cobro = None
+            # Si fue porque el recargo de los cigarros cambió (fase 26), el total nuevo tiene que
+            # estar ya en pantalla cuando el cajero lea el aviso y se lo diga al cliente.
+            self._leer_recargo()
+            self._pintar_totales()
         dialogos.mostrar_error(self, str(error))
         self.enfocar_escaneo()
 
@@ -1326,9 +1372,10 @@ class VentaView(QWidget):
         def lineas(pares) -> list[tuple]:
             return sorted((l.codigo_barras, l.cantidad, l.gramos or 0) for l in pares)
 
-        return venta.total_clp == self._carrito.total_clp and lineas(venta.lineas) == lineas(
-            self._carrito.lineas
-        )
+        # Con el recargo de los cigarros, el total de una venta con tarjeta no es el del carrito
+        # a secas (fase 26): se compara con el del medio con que se cobró.
+        total = self._carrito.total_con(venta.medio_pago)
+        return venta.total_clp == total and lineas(venta.lineas) == lineas(self._carrito.lineas)
 
     def _cerrar_venta(self):
         return self._sesion.cerrar_venta(
@@ -1407,22 +1454,43 @@ class VentaView(QWidget):
             if self._carrito.esta_vacio
             else f"{self._carrito.cantidad_articulos} artículos"
         )
-        self.valor_subtotal.setText(formatear_clp(self._carrito.subtotal_clp))
-        self.valor_total.setText(formatear_clp(self._carrito.total_clp))
-        self._ajustar_total()
-
-        descuento = self._carrito.descuento_clp
-        self.fila_descuento.setVisible(descuento > 0)
-        self.valor_descuento.setText(f"-{formatear_clp(descuento)}")
-        # Cuando el descuento viene de varios sitios, el panel dice de dónde: si no, un
-        # total más bajo de lo esperado no tendría explicación a la vista.
-        self.etiqueta_descuento.setText(self._titulo_descuento(hay_descuento_de_linea).upper())
+        self._pintar_totales()
 
         hay_productos = not self._carrito.esta_vacio
         self.boton_cobrar.setEnabled(hay_productos)
         self.boton_quitar.setEnabled(hay_productos)
         self.boton_descuento.setEnabled(hay_productos)
         self.boton_vaciar.setEnabled(hay_productos)
+
+    def _pintar_totales(self) -> None:
+        """Subtotal, descuento, recargo y total. Aparte de la tabla: cambiar de medio no la toca."""
+        carrito = self._carrito
+        if (
+            carrito.cajetillas
+            and self._medio in servicio_venta.MEDIOS_CON_RECARGO
+            and carrito.recargo_unitario_clp is None
+        ):
+            self._leer_recargo()
+        self.valor_subtotal.setText(formatear_clp(carrito.subtotal_clp))
+        self.valor_total.setText(formatear_clp(carrito.total_con(self._medio)))
+        self._ajustar_total()
+
+        descuento = carrito.descuento_clp
+        self.fila_descuento.setVisible(descuento > 0)
+        self.valor_descuento.setText(f"-{formatear_clp(descuento)}")
+        # Cuando el descuento viene de varios sitios, el panel dice de dónde: si no, un
+        # total más bajo de lo esperado no tendría explicación a la vista.
+        hay_descuento_de_linea = any(linea.tiene_descuento for linea in carrito.lineas)
+        self.etiqueta_descuento.setText(self._titulo_descuento(hay_descuento_de_linea).upper())
+
+        recargo = carrito.recargo_clp(self._medio)
+        self.fila_recargo.setVisible(recargo > 0)
+        if recargo:
+            self.etiqueta_recargo.setText(
+                f"RECARGO CIGARROS ({carrito.cajetillas} × "
+                f"{formatear_clp(carrito.recargo_unitario_clp or 0)})"
+            )
+            self.valor_recargo.setText(f"+{formatear_clp(recargo)}")
 
     def _ajustar_total(self) -> None:
         """Pinta el total al mayor tamaño que quepa dentro de la tarjeta.

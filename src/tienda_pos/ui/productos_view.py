@@ -6,6 +6,8 @@ de permisos no vive aquí sino en la capa de servicios: ocultar un botón no es 
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIntValidator
@@ -71,6 +73,11 @@ class DialogoProducto(QDialog):
         self.casilla_peso.toggled.connect(self._rotular)
         columna.addWidget(self.casilla_peso)
 
+        # Cigarros (fase 26, D-040): con débito o crédito, cada cajetilla lleva un recargo.
+        self.casilla_cigarro = QCheckBox("Es cigarro  (recargo por cajetilla con débito o crédito)")
+        self.casilla_cigarro.setChecked(bool(producto and producto.es_cigarro))
+        columna.addWidget(self.casilla_cigarro)
+
         self.rotulo_precio = QLabel("Precio de venta")
         columna.addWidget(self.rotulo_precio)
         self.campo_precio = QLineEdit(str(producto.precio_clp) if producto else "")
@@ -108,7 +115,14 @@ class DialogoProducto(QDialog):
         (self.campo_precio if producto else self.campo_codigo).setFocus()
 
     def _rotular(self, por_peso: bool) -> None:
-        """Los rótulos dicen en qué unidad va cada número, que es lo fácil de confundir."""
+        """Los rótulos dicen en qué unidad va cada número, que es lo fácil de confundir.
+
+        Un producto por peso no puede ser cigarro: el recargo es por cajetilla.
+        """
+        if hasattr(self, "casilla_cigarro"):
+            if por_peso:
+                self.casilla_cigarro.setChecked(False)
+            self.casilla_cigarro.setEnabled(not por_peso)
         if por_peso:
             self.rotulo_precio.setText("Precio de un kilo")
             self.rotulo_stock.setText("Stock en gramos  (no impide vender)")
@@ -148,6 +162,10 @@ class DialogoProducto(QDialog):
             stock,
             self.casilla_peso.isChecked(),
         )
+
+    @property
+    def es_cigarro(self) -> bool:
+        return self.casilla_cigarro.isChecked()
 
 
 class DialogoStock(QDialog):
@@ -280,12 +298,17 @@ class ProductosView(QWidget):
     #: Cuántos productos hay y cuántos se están mostrando. Lo pinta la cabecera de la
     #: ventana: en la fila de acciones no cabía junto al buscador y a cinco botones.
     resumen_cambiado = Signal(str)
+    #: El administrador cambió el recargo de los cigarros: la venta tiene que releerlo.
+    recargo_cambiado = Signal()
 
     def __init__(self, sesion: Sesion, padre: QWidget | None = None) -> None:
         super().__init__(padre)
         self._sesion = sesion
         self.usuario: Usuario | None = None
         self._productos: list[Producto] = []
+        #: Pide el PIN de un administrador para una acción (lo pone la ventana). Productos es
+        #: de todos (D-038), pero el recargo cambia lo que pagan los clientes.
+        self.autorizar_admin: Callable[[str], Usuario | None] = lambda _accion: None
 
         self._construir()
 
@@ -346,13 +369,77 @@ class ProductosView(QWidget):
             self.tabla, (tablas.IZQUIERDA, tablas.IZQUIERDA, tablas.DERECHA, tablas.CENTRO)
         )
         columna.addWidget(self.tabla, stretch=1)
+        columna.addLayout(self._fila_recargo())
+
+    def _fila_recargo(self) -> QHBoxLayout:
+        """El recargo de los cigarros con tarjeta (fase 26), a la vista de todos y debajo de la
+        lista, que es donde se marcan los cigarros. Cambiarlo pide el PIN del dueño."""
+        fila = QHBoxLayout()
+        fila.setSpacing(10)
+        self.etiqueta_recargo = QLabel()
+        self.etiqueta_recargo.setObjectName("subtitulo")
+        fila.addWidget(self.etiqueta_recargo, stretch=1)
+        self.boton_recargo = QPushButton("Cambiar recargo")
+        self.boton_recargo.setToolTip("Pide el PIN de un administrador")
+        self.boton_recargo.clicked.connect(self.cambiar_recargo)
+        fila.addWidget(self.boton_recargo)
+        return fila
 
     # ------------------------------------------------------------------ datos
 
     def recargar(self) -> None:
         self._productos = self._sesion.listar_productos()
         self._pintar()
+        self._pintar_recargo()
         self.campo_filtro.setFocus()
+
+    def _pintar_recargo(self) -> None:
+        try:
+            monto = self._sesion.recargo_cigarro()
+        except ErrorDominio:
+            self.etiqueta_recargo.setText("No se pudo leer el recargo de los cigarros.")
+            return
+        if monto:
+            texto = (
+                f"Cigarros con débito o crédito: {formatear_clp(monto)} más por cajetilla. "
+                "Escriba «cigarro» en el filtro para ver los marcados."
+            )
+        else:
+            texto = "Cigarros con débito o crédito: sin recargo."
+        self.etiqueta_recargo.setText(texto)
+
+    def cambiar_recargo(self) -> None:
+        """Cambia el recargo por cajetilla, para las dos cajas. Solo un administrador."""
+        from .efectivo_view import DialogoMonto
+
+        if self.usuario is not None and self.usuario.es_admin:
+            admin = self.usuario
+        else:
+            admin = self.autorizar_admin("cambiar el recargo de los cigarros")
+        if admin is None:
+            return
+        try:
+            actual = self._sesion.recargo_cigarro()
+        except ErrorDominio as error:
+            dialogos.mostrar_error(self, str(error))
+            return
+        respuesta = DialogoMonto.pedir(
+            "Recargo de los cigarros",
+            "¿Cuánto se suma por cada cajetilla pagada con débito o crédito?",
+            self,
+            ayuda="Vale para las dos cajas desde la próxima venta. Con 0 no se cobra recargo.",
+            valor_inicial=actual,
+            texto_aceptar="Guardar",
+        )
+        if respuesta is None:
+            return
+        try:
+            self._sesion.fijar_recargo_cigarro(admin, respuesta[0])
+        except ErrorDominio as error:
+            dialogos.mostrar_error(self, str(error))
+            return
+        self._pintar_recargo()
+        self.recargo_cambiado.emit()
 
     def repintar(self) -> None:
         """Vuelve a pintar la tabla tras un cambio de tema.
@@ -369,7 +456,9 @@ class ProductosView(QWidget):
         return [
             p
             for p in self._productos
-            if texto in p.nombre.lower() or texto in p.codigo_barras.lower()
+            if texto in p.nombre.lower()
+            or texto in p.codigo_barras.lower()
+            or (p.es_cigarro and texto in "cigarro")
         ]
 
     def _pintar(self) -> None:
@@ -384,7 +473,13 @@ class ProductosView(QWidget):
         with tablas.rellenar(self.tabla, len(visibles)):
             for fila, producto in enumerate(visibles):
                 self.tabla.setItem(fila, 0, QTableWidgetItem(producto.codigo_barras))
-                self.tabla.setItem(fila, 1, QTableWidgetItem(producto.nombre))
+                self.tabla.setItem(
+                    fila,
+                    1,
+                    QTableWidgetItem(
+                        f"{producto.nombre}   · cigarro" if producto.es_cigarro else producto.nombre
+                    ),
+                )
 
                 texto_precio = formatear_clp(producto.precio_clp)
                 precio = QTableWidgetItem(
@@ -425,7 +520,9 @@ class ProductosView(QWidget):
             return
         codigo, nombre, precio, stock, por_peso = dialogo.datos
         try:
-            self._sesion.crear_producto(self.usuario, codigo, nombre, precio, stock, por_peso)
+            self._sesion.crear_producto(
+                self.usuario, codigo, nombre, precio, stock, por_peso, es_cigarro=dialogo.es_cigarro
+            )
         except ErrorDominio as error:
             dialogos.mostrar_error(self, str(error))
             return
@@ -465,7 +562,14 @@ class ProductosView(QWidget):
         codigo, nombre, precio, stock, por_peso = dialogo.datos
         try:
             self._sesion.actualizar_producto(
-                self.usuario, producto.id, codigo, nombre, precio, stock, por_peso
+                self.usuario,
+                producto.id,
+                codigo,
+                nombre,
+                precio,
+                stock,
+                por_peso,
+                es_cigarro=dialogo.es_cigarro,
             )
         except ErrorDominio as error:
             dialogos.mostrar_error(self, str(error))

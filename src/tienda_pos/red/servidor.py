@@ -177,6 +177,7 @@ def _crear_producto(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, Any]:
         a["precio_clp"],
         a.get("stock", 0),
         bool(a.get("por_peso", False)),
+        bool(a.get("es_cigarro", False)),
     )
     return protocolo.de_producto(producto)
 
@@ -191,6 +192,8 @@ def _actualizar_producto(sesion: SesionLocal, a: dict[str, Any]) -> dict[str, An
         # None: no se tocó, queda el de la base (fase 22).
         a.get("stock"),
         a.get("por_peso"),
+        # None: no se tocó, como el peso.
+        a.get("es_cigarro"),
     )
     return protocolo.de_producto(producto)
 
@@ -305,6 +308,15 @@ def _turnos_recientes(sesion: SesionLocal, a: dict[str, Any]) -> list[dict[str, 
     return [protocolo.de_turno(t) for t in sesion.turnos_recientes(_usuario(a))]
 
 
+def _recargo_cigarro(sesion: SesionLocal, a: dict[str, Any]) -> int:
+    return sesion.recargo_cigarro()
+
+
+def _fijar_recargo_cigarro(sesion: SesionLocal, a: dict[str, Any]) -> None:
+    sesion.fijar_recargo_cigarro(_usuario(a), a.get("monto_clp"))
+    return None
+
+
 def _monto_sugerido(sesion: SesionLocal, a: dict[str, Any]) -> int | None:
     return sesion.monto_sugerido()
 
@@ -341,6 +353,8 @@ _OPERACIONES = {
     "turnos_recientes": _turnos_recientes,
     "monto_sugerido": _monto_sugerido,
     "fijar_monto_sugerido": _fijar_monto_sugerido,
+    "recargo_cigarro": _recargo_cigarro,
+    "fijar_recargo_cigarro": _fijar_recargo_cigarro,
 }
 
 

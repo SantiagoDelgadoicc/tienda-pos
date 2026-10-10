@@ -415,7 +415,7 @@
   <ol class="pasos">
     <li><strong>Escanee cada producto</strong> con el lector. Si el código está borrado o no hay lector, escriba el número y pulse <kbd>Enter</kbd>. Si escanea dos veces el mismo, se suma en la misma línea. Si no tiene código, como el pan, escriba parte del nombre en el campo <strong>Por nombre</strong>, al lado del código, y elíjalo con las flechas y <kbd>Enter</kbd>. Si el producto se vende por peso, el programa pide los gramos (sección 6).</li>
     <li><strong>Marque cómo paga el cliente</strong>, bajo el total: <span class="efectivo">Efectivo</span>, <span class="debito">Débito</span> o <span class="credito">Crédito</span>. Con <kbd>F11</kbd> se pasa de uno a otro sin el mouse. Si no toca nada, queda en efectivo.</li>
-    <li><strong>Cobre con <kbd>F12</kbd></strong> o con el botón verde <strong>Cobrar</strong>. <strong>En efectivo</strong> se abre una ventana: escriba con cuánto paga el cliente y el programa muestra el <strong>vuelto</strong> en grande; si paga justo, basta con <kbd>Enter</kbd>. Con tarjeta, solo confirme. La venta queda guardada a su nombre, en su caja y con su medio de pago, y la pantalla queda lista para el siguiente cliente.</li>
+    <li><strong>Cobre con <kbd>F12</kbd></strong> o con el botón verde <strong>Cobrar</strong>. <strong>En efectivo</strong> se abre una ventana: escriba con cuánto paga el cliente y el programa muestra el <strong>vuelto</strong> en grande; si paga justo, basta con <kbd>Enter</kbd>. Con tarjeta, solo confirme; si hay cigarros, el total ya incluye el recargo por cajetilla, que se ve aparte sobre el total. La venta queda guardada a su nombre, en su caja y con su medio de pago, y la pantalla queda lista para el siguiente cliente.</li>
   </ol>
 
   <div class="aviso">
@@ -684,7 +684,7 @@
   <h1 class="seccion"><span class="n">14</span>Productos y precios</h1>
   <p class="entrada">Pulse <kbd>F7</kbd>. Cualquier empleado puede entrar y hacer todo lo de esta pantalla, sin el PIN del dueño.</p>
 
-  <figure style="width:146mm">
+  <figure style="width:122mm">
     <img src="../img/06-productos.png" alt="Catálogo de productos">
     <figcaption>El catálogo. El stock se marca en rojo cuando quedan 5 unidades o menos.</figcaption>
   </figure>
@@ -693,6 +693,7 @@
     <tr><th>Acción</th><th>Cómo</th></tr>
     <tr><td>Buscar</td><td>Escriba parte del nombre o del código en el filtro.</td></tr>
     <tr><td>Nuevo producto</td><td>Lo más cómodo es escanear el código dentro del formulario. Luego el nombre, el precio y el stock.</td></tr>
+    <tr><td>Cigarros</td><td>Marque <strong>Es cigarro</strong>: con débito o crédito, cada cajetilla lleva un recargo (hoy $500). <span class="boton">Cambiar recargo</span>, abajo de la lista, pide el PIN del dueño.</td></tr>
     <tr><td>Producto por peso</td><td>Marque <strong>Se vende por peso</strong>: el precio pasa a ser el del kilo y el stock se anota en gramos. Al llegar a cero se queda en cero. Si no tiene código, como el pan, déjelo vacío y el sistema le pone uno.</td></tr>
     <tr><td>Cambiar un precio</td><td><strong>Editar</strong>, o doble clic en el producto. El precio nuevo se ve al instante en las dos cajas. Las ventas pasadas conservan el precio al que se vendieron.</td></tr>
     <tr><td>Dar de baja</td><td>El producto deja de venderse, pero <strong>no se borra</strong>: las ventas antiguas siguen correctas.</td></tr>

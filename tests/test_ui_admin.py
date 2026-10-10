@@ -224,7 +224,7 @@ class TestPantallaDeProductos:
         monkeypatch.setattr(
             productos_view,
             "DialogoProducto",
-            _DialogoFalso(datos=("7790000000024", "Producto de prueba", 1990, 7, False)),
+            _DialogoFalso(datos=("7790000000024", "Producto de prueba", 1990, 7, False), es_cigarro=False),
         )
         antes = vista.tabla.rowCount()
         vista.crear()
@@ -236,7 +236,7 @@ class TestPantallaDeProductos:
         monkeypatch.setattr(
             productos_view,
             "DialogoProducto",
-            _DialogoFalso(datos=("", "Pan amasado", 2790, 0, True)),
+            _DialogoFalso(datos=("", "Pan amasado", 2790, 0, True), es_cigarro=False),
         )
         vista.crear()
         pan = catalogo.buscar_por_nombre(conexion, "amasado")[0]
@@ -262,7 +262,7 @@ class TestPantallaDeProductos:
         monkeypatch.setattr(
             productos_view,
             "DialogoProducto",
-            _DialogoFalso(datos=(COLA, "Bebida Cola 1.5 L", 2490, 48, False)),
+            _DialogoFalso(datos=(COLA, "Bebida Cola 1.5 L", 2490, 48, False), es_cigarro=False),
         )
         vista.editar()
 

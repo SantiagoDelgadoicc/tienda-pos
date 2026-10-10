@@ -22,8 +22,10 @@ arregló ocho errores (fase 22); el protocolo entre cajas pasó a la **versión 
 principal se congelaba con el catálogo real y se arregló en la visita (fase 23). El cliente pagó.
 El 2026-10-05 se construyó la **fase 24**: cualquier empleado administra los productos sin PIN
 (D-038); protocolo a la **versión 9**. El 2026-10-10, en la tienda, el cliente pidió buscar por
-nombre al lado del código y el vuelto en efectivo: **fase 25** (D-039), construida ese día. Para
-retomar, leer primero "Cómo retomar" en `docs/PLAN.md`.
+nombre al lado del código y el vuelto en efectivo: **fase 25** (D-039), y un recargo de $500 por
+cajetilla de cigarros pagada con tarjeta: **fase 26** (D-040), que migra la base (esquema 8) y
+sube el protocolo a la **versión 10**. Las dos, construidas ese día. Para retomar, leer primero
+"Cómo retomar" en `docs/PLAN.md`.
 
 ## 2. Contexto del cliente
 
@@ -133,6 +135,9 @@ De lo que pidió el 2026-10-10, en la tienda (D-039):
 - **Al pagar en efectivo, una ventana que pregunte con cuánto paga el cliente y diga el vuelto.**
   Contesta la pregunta pendiente sobre el vuelto y modifica D-006. Que el monto no se guarde, que
   Enter vacío sea pago justo y que reemplace a la confirmación lo decidió Santiago.
+- **Una casilla para marcar los cigarros: pagados con débito o crédito, $500 más por cajetilla.**
+  Confirmó que es por cada cajetilla, igual en débito y crédito, que el monto debe poder
+  cambiarse y que cobrarlo es legal en su caso (D-040).
 
 ### 3.2 Decidido por Santiago (dueño del proyecto)
 
@@ -156,7 +161,9 @@ De lo que pidió el 2026-10-10, en la tienda (D-039):
   marca el cajero— y **la caja donde se hizo**, y queda registrada (D-033, D-034; los dos,
   pedidos por el cliente). Sigue sin comprobante impreso y sin boleta electrónica (D-006).
   **Desde el 2026-10-10 muestra el vuelto** en efectivo (D-039, pedido del cliente), sin
-  guardar con cuánto se pagó.
+  guardar con cuánto se pagó. **Desde el 2026-10-10 los cigarros pagados con tarjeta llevan
+  recargo por cajetilla** (D-040, pedido del cliente): lo calcula el servidor, va aparte en la
+  venta y el monto lo cambia el administrador en Productos, para las dos cajas.
 - Stack: Python + PySide6 (Qt) + SQLite.
 - Acceso con PIN de cajero y modo administrador. **Desde el 2026-09-24, un usuario por empleado**
   (pedido del cliente, ver 3.1): el PIN lo genera el sistema y se enseña una vez, **nunca se entra
@@ -304,7 +311,7 @@ src/tienda_pos/
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    720 pruebas
+tests/                    767 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -341,7 +348,7 @@ python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
 python main.py --demo                 # con el catálogo y los usuarios de ejemplo, en una base vacía
 python main.py --reiniciar-admin      # recuperar un administrador; solo en el PC de la base
-pytest                                # pruebas (720, cuatro minutos)
+pytest                                # pruebas (767, cuatro minutos)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

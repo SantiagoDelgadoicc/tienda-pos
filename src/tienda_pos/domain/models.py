@@ -63,6 +63,9 @@ class Producto:
     #: Se vende por peso, como el pan o el jamón (D-037): el precio es por kilo y cada venta
     #: lleva los gramos. Si no, por unidad, como todo lo anterior.
     por_peso: bool = False
+    #: Es una cajetilla de cigarros (fase 26, D-040): pagada con débito o crédito, lleva un
+    #: recargo fijo por unidad. Nunca a la vez que `por_peso`.
+    es_cigarro: bool = False
 
 
 @dataclass(slots=True)
@@ -101,6 +104,9 @@ class LineaCarrito:
     #: Solo en los productos por peso (D-037): los gramos pesados. Entonces `precio_unit_clp` es
     #: el precio del kilo y `cantidad` vale 1, así que la línea cuenta como un artículo.
     gramos: int | None = None
+    #: Copia de `Producto.es_cigarro` al agregarlo (fase 26): cada unidad lleva recargo si se
+    #: paga con tarjeta. El servidor lo vuelve a mirar en la base al cobrar.
+    es_cigarro: bool = False
 
     @property
     def por_peso(self) -> bool:
@@ -173,6 +179,9 @@ class Venta:
     #: El turno de caja en que se cobró (fase 19): decide a qué cajón fue el efectivo. None en
     #: las ventas anteriores al arqueo y en las que no llevan caja.
     turno_id: int | None = None
+    #: Recargo de los cigarros pagados con tarjeta (fase 26, D-040), ya sumado en `total_clp`:
+    #: total = subtotal - descuento + recargo. Cero en efectivo y en las ventas anteriores.
+    recargo_clp: int = 0
     lineas: list[LineaVenta] = field(default_factory=list)
 
     @property

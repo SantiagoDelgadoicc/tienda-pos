@@ -212,10 +212,15 @@ class ReportesView(QWidget):
             if venta.descuento_clp
             else ""
         )
+        # El recargo de los cigarros con tarjeta (fase 26) ya va en el total: se dice cuánto es,
+        # para que el total no parezca mayor que la suma de los productos sin explicación.
+        recargo = (
+            f"  ·  recargo cigarros {formatear_clp(venta.recargo_clp)}" if venta.recargo_clp else ""
+        )
         medio = f"  ·  {_nombre_medio(venta)}" if venta.medio_pago else ""
         self.titulo_detalle.setText(
             f"Venta N° {venta.folio}  ·  {venta.fecha_hora.strftime('%H:%M')}"
-            f"  ·  {formatear_clp(venta.total_clp)}{descuento}{medio}"
+            f"  ·  {formatear_clp(venta.total_clp)}{descuento}{recargo}{medio}"
         )
 
         with tablas.rellenar(self.tabla_detalle, len(venta.lineas)):

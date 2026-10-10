@@ -875,7 +875,13 @@ cajetilla si se paga con débito o crédito, con el monto modificable. Ver D-040
 - [x] Dos cajetillas en el catálogo de ejemplo, al final para no mover códigos
 - [x] Pruebas (`tests/test_recargo_cigarros.py`, 47): ajuste, carrito, cobro, migración, red y
       pantallas
-- [ ] `.exe`, pendrive, los dos PC, y **marcar los cigarros del catálogo real**
+- [x] `.exe` y pendrive, comprobado archivo por archivo. **Migración probada con la base real**
+      (respaldo del PC 1 del 2026-10-10, 11:20: 796 productos, 328 ventas): solo cambia la
+      versión; conteos y sumas idénticos, y el programa arranca contra ella
+- [ ] Instalar en los dos PC y **marcar los cigarros del catálogo real**
+- [ ] **Dato malo encontrado en esa base:** "Leche de Frutilla Soprole 200ml" (código interno
+      2000002) tiene de precio su código de barras, $7.802.900.056.025. Nunca se vendió.
+      Corregirlo en la tienda. *Recomendación, sin pedir:* un tope al precio en el formulario
 
 **Criterio de aceptación:** dos cajetillas pagadas con débito cobran $1.000 más y se ven así en la
 pantalla, en las ventas del día y en el cierre; en efectivo no cambia nada; el dueño cambia el

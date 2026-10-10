@@ -836,7 +836,8 @@ directamente. **Cumplido** en código y pruebas; falta llevarlo a la tienda.
       las destruye al cerrar: vuelto, peso, confirmar, avisos y código no encontrado. Con prueba
 - [x] Pruebas (`tests/test_ui_nombre_y_vuelto.py`), con teclas de verdad para el Enter
 - [x] Manual: secciones 5, 6, 7, 8, 15 y teclas; capturas y PDF regenerados (mismas 19 páginas)
-- [ ] `.exe`, kit del pendrive y los dos PC
+- [x] `.exe` y kit del pendrive (`E:\PUNTO-Y-FAMA`), comprobado archivo por archivo (2026-10-10)
+- [ ] Instalar en los dos PC con `ACTUALIZAR-ESTE-PC.bat`
 
 **Sin cambios de base ni de protocolo:** el monto recibido no se guarda.
 

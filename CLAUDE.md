@@ -21,8 +21,9 @@ arregló ocho errores (fase 22); el protocolo entre cajas pasó a la **versión 
 **Desde el 2026-09-26 la tienda funciona con esta versión**, en los dos PC. Ese día la caja
 principal se congelaba con el catálogo real y se arregló en la visita (fase 23). El cliente pagó.
 El 2026-10-05 se construyó la **fase 24**: cualquier empleado administra los productos sin PIN
-(D-038); protocolo a la **versión 9**. Falta llevarla a la tienda. Para retomar, leer primero
-"Cómo retomar" en `docs/PLAN.md`.
+(D-038); protocolo a la **versión 9**. El 2026-10-10, en la tienda, el cliente pidió buscar por
+nombre al lado del código y el vuelto en efectivo: **fase 25** (D-039), construida ese día. Para
+retomar, leer primero "Cómo retomar" en `docs/PLAN.md`.
 
 ## 2. Contexto del cliente
 
@@ -124,6 +125,15 @@ De sus mensajes por WhatsApp del 2026-10-01, tras unos días fuera del negocio:
   (fase 24, D-038). Se le propuso que los cambios de precio y las bajas siguieran con su PIN; **no
   contestó a eso**: lo decidió Santiago (ver 3.2).
 
+De lo que pidió el 2026-10-10, en la tienda (D-039):
+
+- **Un cuadro al lado del código para agregar productos por nombre**: agregar el pan exigía dar
+  "una buena vuelta" (F3 y dos ventanas).
+- **Mantener que los cajeros entren a Productos** (D-038).
+- **Al pagar en efectivo, una ventana que pregunte con cuánto paga el cliente y diga el vuelto.**
+  Contesta la pregunta pendiente sobre el vuelto y modifica D-006. Que el monto no se guarde, que
+  Enter vacío sea pago justo y que reemplace a la confirmación lo decidió Santiago.
+
 ### 3.2 Decidido por Santiago (dueño del proyecto)
 
 - Alcance: POS con venta e inventario mínimo, no solo consulta de precios.
@@ -144,8 +154,9 @@ De sus mensajes por WhatsApp del 2026-10-01, tras unos días fuera del negocio:
   calendario y en ese caso partiría el turno en dos (añadido a D-036).
 - La venta se cierra con su total, **el medio de pago** —efectivo, débito o crédito, que lo
   marca el cajero— y **la caja donde se hizo**, y queda registrada (D-033, D-034; los dos,
-  pedidos por el cliente). Sigue sin vuelto, sin comprobante impreso y sin boleta electrónica
-  (D-006).
+  pedidos por el cliente). Sigue sin comprobante impreso y sin boleta electrónica (D-006).
+  **Desde el 2026-10-10 muestra el vuelto** en efectivo (D-039, pedido del cliente), sin
+  guardar con cuánto se pagó.
 - Stack: Python + PySide6 (Qt) + SQLite.
 - Acceso con PIN de cajero y modo administrador. **Desde el 2026-09-24, un usuario por empleado**
   (pedido del cliente, ver 3.1): el PIN lo genera el sistema y se enseña una vez, **nunca se entra
@@ -293,7 +304,7 @@ src/tienda_pos/
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    670 pruebas
+tests/                    720 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -330,7 +341,7 @@ python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
 python main.py --demo                 # con el catálogo y los usuarios de ejemplo, en una base vacía
 python main.py --reiniciar-admin      # recuperar un administrador; solo en el PC de la base
-pytest                                # pruebas (670, dos minutos)
+pytest                                # pruebas (720, cuatro minutos)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

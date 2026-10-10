@@ -22,7 +22,15 @@ from ..domain.models import LineaCarrito, LineaVenta, MedioPago, Producto, Usuar
 from ..repositories import arqueo as repo_arqueo
 from ..repositories import productos as repo_productos
 from ..repositories import ventas as repo_ventas
-from ..utils.money import porcentaje_de
+from ..utils.money import formatear_clp, porcentaje_de
+
+#: Lo más que se acepta como pago en efectivo de una venta. Es un tope contra los ceros de más,
+#: no una regla del negocio: ningún cliente paga diez millones en billetes en el mostrador.
+PAGO_EFECTIVO_MAXIMO_CLP = 10_000_000
+
+#: Desde este vuelto se le pide al cajero que revise el monto (fase 25). El billete más grande
+#: es de $20.000: dar más vuelto que eso suele ser un cero de más al teclear, no un cliente.
+VUELTO_PARA_REVISAR_CLP = 20_000
 
 #: Tope defensivo de unidades por línea. Protege contra el caso real de que la pistola se
 #: quede pegada leyendo el mismo código, o de que alguien mantenga pulsada una tecla.
@@ -340,6 +348,25 @@ class Carrito:
         carrito._descuento_monto = datos.get("descuento_monto_clp", 0)
         carrito._descuento_porcentaje = datos.get("descuento_porcentaje")
         return carrito
+
+
+def calcular_vuelto(total_clp: int, recibido_clp: int | None) -> int:
+    """El vuelto de un pago en efectivo (fase 25, D-039).
+
+    `recibido_clp` None es pago justo: el cajero pulsa Enter sin teclear nada, que es lo más
+    común y no debería costar una pulsación más. Solo se calcula: el monto recibido no se guarda
+    con la venta, porque al cajón entra el total y es lo único que necesita el arqueo.
+
+    Raises:
+        DatosInvalidos: si el monto no alcanza o es absurdo.
+    """
+    if recibido_clp is None:
+        return 0
+    if recibido_clp < 0 or recibido_clp > PAGO_EFECTIVO_MAXIMO_CLP:
+        raise DatosInvalidos("Revise el monto con que paga el cliente.")
+    if recibido_clp < total_clp:
+        raise DatosInvalidos(f"Faltan {formatear_clp(total_clp - recibido_clp)}.")
+    return recibido_clp - total_clp
 
 
 def cerrar_venta(

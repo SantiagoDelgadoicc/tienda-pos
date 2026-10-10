@@ -22,6 +22,20 @@ from ..config import NOMBRE_COMERCIAL
 from . import movimiento
 
 
+def ejecutar_y_soltar(dialogo: QDialog) -> int:
+    """Abre una ventana modal y, al cerrarse, la entrega a Qt para que la destruya.
+
+    Sin esto, una ventana creada con la pantalla como madre queda viva y oculta hasta cerrar el
+    programa, con su fundido enganchado (`movimiento.aparecer_al_abrir`). Con el vuelto en cada
+    venta en efectivo (fase 25) eran cientos por caja y por día. Solo sirve para ventanas cuyo
+    resultado se lee antes de soltarlas o que lo guardan en Python, no en sus campos.
+    """
+    try:
+        return dialogo.exec()
+    finally:
+        dialogo.deleteLater()
+
+
 def mostrar_error(padre: QWidget | None, mensaje: str, titulo: str = "No se pudo continuar") -> None:
     """Error previsible: el usuario hizo algo que no corresponde."""
     caja = QMessageBox(padre)
@@ -31,7 +45,7 @@ def mostrar_error(padre: QWidget | None, mensaje: str, titulo: str = "No se pudo
     caja.setStandardButtons(QMessageBox.StandardButton.Ok)
     caja.button(QMessageBox.StandardButton.Ok).setText("Entendido")
     movimiento.aparecer_al_abrir(caja)
-    caja.exec()
+    ejecutar_y_soltar(caja)
 
 
 def mostrar_info(padre: QWidget | None, mensaje: str, titulo: str = NOMBRE_COMERCIAL) -> None:
@@ -42,7 +56,7 @@ def mostrar_info(padre: QWidget | None, mensaje: str, titulo: str = NOMBRE_COMER
     caja.setStandardButtons(QMessageBox.StandardButton.Ok)
     caja.button(QMessageBox.StandardButton.Ok).setText("Aceptar")
     movimiento.aparecer_al_abrir(caja)
-    caja.exec()
+    ejecutar_y_soltar(caja)
 
 
 def confirmar(padre: QWidget | None, titulo: str, mensaje: str, texto_si: str = "Sí") -> bool:
@@ -56,7 +70,7 @@ def confirmar(padre: QWidget | None, titulo: str, mensaje: str, texto_si: str = 
     caja.button(QMessageBox.StandardButton.No).setText("Cancelar")
     caja.setDefaultButton(QMessageBox.StandardButton.No)
     movimiento.aparecer_al_abrir(caja)
-    return caja.exec() == QMessageBox.StandardButton.Yes
+    return ejecutar_y_soltar(caja) == QMessageBox.StandardButton.Yes
 
 
 class DialogoCodigoNoEncontrado(QDialog):
@@ -470,4 +484,129 @@ class DialogoPeso(QDialog):
 
     def pedir(self) -> int | None:
         """Abre el diálogo y devuelve los gramos, o None si se canceló."""
-        return self.gramos if self.exec() else None
+        return self.gramos if ejecutar_y_soltar(self) else None
+
+
+class DialogoVuelto(QDialog):
+    """Pago en efectivo: con cuánto paga el cliente y cuánto vuelto hay que darle (fase 25).
+
+    Lo pidió el cliente el 2026-10-10 (D-039). Reemplaza a la confirmación de cobro cuando se paga
+    en efectivo: ya es una confirmación, y dos ventanas seguidas por venta serían una de más.
+
+    Enter con el campo vacío es **pago justo**, que es lo más frecuente y no debería costar
+    teclear el total. El vuelto se ve mientras se escribe, en grande, porque es lo que el cajero
+    cuenta en la mano. Tras cerrar con Cobrar, `recibido` tiene el monto, o None si fue justo.
+    """
+
+    def __init__(
+        self, total_clp: int, padre: QWidget | None = None, recibido_inicial: int | None = None
+    ) -> None:
+        from PySide6.QtWidgets import QLineEdit
+
+        from ..domain.errors import DatosInvalidos
+        from ..services.venta import VUELTO_PARA_REVISAR_CLP, calcular_vuelto
+        from ..utils.money import formatear_clp, parsear_clp
+
+        super().__init__(padre)
+        movimiento.aparecer_al_abrir(self)
+        self.setWindowTitle("Pago en efectivo")
+        self.setMinimumWidth(440)
+        self._total = total_clp
+        self._calcular = calcular_vuelto
+        self._error_de_datos = DatosInvalidos
+        self._revisar = VUELTO_PARA_REVISAR_CLP
+        self._formatear = formatear_clp
+        self._parsear = parsear_clp
+        self.recibido: int | None = None
+
+        disposicion = QVBoxLayout(self)
+        disposicion.setContentsMargins(26, 24, 26, 20)
+        disposicion.setSpacing(10)
+
+        rotulo = QLabel("Total a pagar")
+        rotulo.setObjectName("etiquetaTotalFuerte")
+        disposicion.addWidget(rotulo)
+        total = QLabel(formatear_clp(total_clp))
+        total.setObjectName("valorTotal")
+        disposicion.addWidget(total)
+        disposicion.addSpacing(6)
+
+        disposicion.addWidget(QLabel("¿Con cuánto paga el cliente?"))
+        self.campo = QLineEdit("" if recibido_inicial is None else formatear_clp(recibido_inicial, False))
+        self.campo.setObjectName("campoPago")
+        self.campo.setPlaceholderText("Vacío = paga justo")
+        self.campo.setMaxLength(14)
+        self.campo.selectAll()
+        self.campo.textChanged.connect(self._actualizar)
+        disposicion.addWidget(self.campo)
+
+        self.vuelto = QLabel()
+        self.vuelto.setObjectName("valorVuelto")
+        disposicion.addWidget(self.vuelto)
+        self.aviso = QLabel()
+        self.aviso.setObjectName("mensajeError")
+        self.aviso.setWordWrap(True)
+        self.aviso.hide()  # su estilo lleva fondo: vacío se vería como un recuadro sin motivo
+        disposicion.addWidget(self.aviso)
+
+        caja = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        self._cobrar = caja.button(QDialogButtonBox.StandardButton.Ok)
+        self._cobrar.setText("Cobrar")
+        self._cobrar.setObjectName("botonAccion")
+        caja.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
+        caja.accepted.connect(self._confirmar)
+        caja.rejected.connect(self.reject)
+        disposicion.addWidget(caja)
+        self.campo.setFocus()
+        self._actualizar()
+
+    def _leer(self) -> int | None:
+        """El monto tecleado; None si el campo está vacío (pago justo).
+
+        Raises:
+            ValueError: si lo escrito no es un monto.
+        """
+        texto = self.campo.text().strip()
+        return self._parsear(texto) if texto else None
+
+    def _vuelto(self) -> tuple[int | None, str]:
+        """El vuelto, o None y el motivo por el que no se puede cobrar todavía."""
+        try:
+            recibido = self._leer()
+        except ValueError:
+            return None, "Escriba el monto en pesos, por ejemplo 20.000."
+        try:
+            return self._calcular(self._total, recibido), ""
+        except self._error_de_datos as error:
+            return None, str(error)
+
+    def _actualizar(self) -> None:
+        vuelto, motivo = self._vuelto()
+        self.aviso.hide()
+        if vuelto is None:
+            self.vuelto.setText(" ")
+            self.aviso.setText(motivo)
+            self.aviso.show()
+            self._cobrar.setEnabled(False)
+            return
+        if not self.campo.text().strip():
+            self.vuelto.setText("Paga justo, sin vuelto")
+        else:
+            self.vuelto.setText(f"Vuelto  {self._formatear(vuelto)}")
+        if vuelto >= self._revisar:
+            self.aviso.setText(f"Revise el monto: el vuelto es de {self._formatear(vuelto)}.")
+            self.aviso.show()
+        self._cobrar.setEnabled(True)
+
+    def _confirmar(self) -> None:
+        vuelto, _ = self._vuelto()
+        if vuelto is None:
+            return
+        self.recibido = self._leer()
+        self.accept()
+
+    def pedir(self) -> tuple[bool, int | None]:
+        """Abre el diálogo. Devuelve si se cobra y el monto recibido (None = pago justo)."""
+        return bool(ejecutar_y_soltar(self)), self.recibido

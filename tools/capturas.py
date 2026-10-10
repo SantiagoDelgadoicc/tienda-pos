@@ -62,6 +62,10 @@ def _silenciar_dialogos() -> None:
     dialogos.confirmar = lambda *args, **kwargs: True
     dialogos.mostrar_info = lambda *args, **kwargs: None
     dialogos.mostrar_error = lambda *args, **kwargs: None
+    # En efectivo, la ventana del vuelto (fase 25): el cliente paga justo.
+    from tienda_pos.ui import venta_view
+
+    venta_view.VentaView.pedir_pago_efectivo = lambda self, total, recibido=None: (True, None)
 
 
 def generar(destino: Path) -> list[Path]:

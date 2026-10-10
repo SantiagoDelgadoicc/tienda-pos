@@ -107,7 +107,7 @@ def ventana(app, conexion, monkeypatch, tmp_path):
     from PySide6.QtWidgets import QApplication
 
     from tienda_pos.db.seed import cargar_datos_demo
-    from tienda_pos.ui import dialogos, efectivo_view
+    from tienda_pos.ui import dialogos, efectivo_view, venta_view
     from tienda_pos.ui.main_window import VentanaPrincipal
 
     with transaccion(conexion):
@@ -124,6 +124,11 @@ def ventana(app, conexion, monkeypatch, tmp_path):
     # El diálogo de montos del efectivo (fase 19) también es modal. Por defecto se cancela; las
     # pruebas del efectivo lo sustituyen por la respuesta que necesitan.
     monkeypatch.setattr(efectivo_view.DialogoMonto, "pedir", classmethod(lambda cls, *a, **k: None))
+    # La ventana del vuelto (fase 25) sale en cada cobro en efectivo. Por defecto el cliente paga
+    # justo; las pruebas del vuelto la sustituyen por el monto que necesitan.
+    monkeypatch.setattr(
+        venta_view.VentaView, "pedir_pago_efectivo", lambda self, total, recibido=None: (True, None)
+    )
 
     # La ventana ya no recibe una conexión sino una Sesion (D-015): así la misma interfaz
     # sirve para la caja principal, que tiene la base al lado, y para la secundaria, que la

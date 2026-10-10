@@ -413,16 +413,16 @@
   </figure>
 
   <ol class="pasos">
-    <li><strong>Escanee cada producto</strong> con el lector. Si el código está borrado o no hay lector, escriba el número y pulse <kbd>Enter</kbd>. Si escanea dos veces el mismo, se suma en la misma línea. Si el producto se vende por peso, el programa pide los gramos (sección 6).</li>
+    <li><strong>Escanee cada producto</strong> con el lector. Si el código está borrado o no hay lector, escriba el número y pulse <kbd>Enter</kbd>. Si escanea dos veces el mismo, se suma en la misma línea. Si no tiene código, como el pan, escriba parte del nombre en el campo <strong>Por nombre</strong>, al lado del código, y elíjalo con las flechas y <kbd>Enter</kbd>. Si el producto se vende por peso, el programa pide los gramos (sección 6).</li>
     <li><strong>Marque cómo paga el cliente</strong>, bajo el total: <span class="efectivo">Efectivo</span>, <span class="debito">Débito</span> o <span class="credito">Crédito</span>. Con <kbd>F11</kbd> se pasa de uno a otro sin el mouse. Si no toca nada, queda en efectivo.</li>
-    <li><strong>Cobre con <kbd>F12</kbd></strong> o con el botón verde <strong>Cobrar</strong>, y confirme. La venta queda guardada a su nombre, en su caja y con su medio de pago, y la pantalla queda lista para el siguiente cliente.</li>
+    <li><strong>Cobre con <kbd>F12</kbd></strong> o con el botón verde <strong>Cobrar</strong>. <strong>En efectivo</strong> se abre una ventana: escriba con cuánto paga el cliente y el programa muestra el <strong>vuelto</strong> en grande; si paga justo, basta con <kbd>Enter</kbd>. Con tarjeta, solo confirme. La venta queda guardada a su nombre, en su caja y con su medio de pago, y la pantalla queda lista para el siguiente cliente.</li>
   </ol>
 
   <div class="aviso">
     <span class="titulo">Importante</span>
     <p>Marque débito o crédito <strong>antes</strong> de cobrar. Una venta con tarjeta cobrada como efectivo hace que al cerrar la caja parezca que falta plata.</p>
   </div>
-  <p style="font-size:9.4pt;color:var(--suave)">El sistema no calcula el vuelto ni imprime boleta. El vuelto se da como siempre; el cajón cuadra igual, porque lo que entra es el total de la venta.</p>
+  <p style="font-size:9.4pt;color:var(--suave)">El sistema no imprime boleta. El vuelto se muestra pero no se guarda: el cajón cuadra igual, porque lo que entra es el total de la venta. Si el monto no alcanza, no deja cobrar.</p>
 </section>
 
 <!-- =============================================================== 6 PESO -->
@@ -442,7 +442,7 @@
     </figure>
     <ol class="pasos">
       <li><strong>Pese el producto</strong> en la balanza.</li>
-      <li><strong>Escanéelo</strong> si tiene código. Si no tiene, como el pan, búsquelo por nombre con <kbd>F3</kbd>.</li>
+      <li><strong>Escanéelo</strong> si tiene código. Si no tiene, como el pan, escriba "pan" en el campo <strong>Por nombre</strong>, al lado del código, y elíjalo con <kbd>Enter</kbd>.</li>
       <li>Se abre una ventana: <strong>escriba los gramos</strong>, por ejemplo 350, y pulse <kbd>Enter</kbd>. El precio se ve antes de aceptar.</li>
     </ol>
   </div>
@@ -472,7 +472,7 @@
       <h2>Cancelar toda la venta</h2>
       <p>Pulse <kbd>F6</kbd> o <span class="boton">Cancelar venta</span>. El programa pide confirmación antes de vaciar el carrito.</p>
       <h2>Buscar por nombre</h2>
-      <p>Si un producto no tiene código legible, pulse <kbd>F3</kbd>, escriba parte del nombre y elíjalo en la lista.</p>
+      <p>Escriba parte del nombre en el campo <strong>Por nombre</strong>, al lado del código (<kbd>F3</kbd> lleva ahí). Sale la lista con el primero marcado: elija con las flechas y pulse <kbd>Enter</kbd>.</p>
     </div>
   </div>
 
@@ -517,7 +517,7 @@
       <figcaption>El aviso de producto no encontrado.</figcaption>
     </figure>
     <div>
-      <p><strong>Si el producto existe pero el código no se lee</strong>, pulse <em>Buscar por nombre</em> (<kbd>F3</kbd>) y elíjalo de la lista.</p>
+      <p><strong>Si el producto existe pero el código no se lee</strong>, búsquelo en el campo <strong>Por nombre</strong> (<kbd>F3</kbd>) y elíjalo de la lista.</p>
       <p><strong>Si el producto no está cargado</strong>, no hace falta anotarlo en un papel: el sistema guarda el código en una lista de pendientes, y cualquiera lo puede cargar después en Productos (sección 14).</p>
     </div>
   </div>
@@ -720,7 +720,7 @@
       <tr><td>Tamaño de letra</td><td><em>Normal</em>, <em>Grande</em> o <em>Muy grande</em>. Se ve al instante.</td></tr>
       <tr><td>Tema</td><td><em>Claro</em> u <em>Oscuro</em>, para poca luz o turnos de noche.</td></tr>
       <tr><td>Sonido al escanear</td><td>El pitido que confirma que el producto entró.</td></tr>
-      <tr><td>Confirmar antes de cobrar</td><td>Si se apaga, <kbd>F12</kbd> cobra de inmediato. Más rápido, pero sin segunda oportunidad.</td></tr>
+      <tr><td>Confirmar antes de cobrar</td><td>Para débito y crédito. Si se apaga, <kbd>F12</kbd> cobra de inmediato. En efectivo siempre sale la ventana del vuelto.</td></tr>
       <tr><td>Barra de atajos</td><td>La franja de teclas al pie de la pantalla.</td></tr>
       <tr><td>Animaciones</td><td>Los destellos y fundidos. Apáguelas si el equipo va lento.</td></tr>
     </table>
@@ -746,7 +746,7 @@
     <div class="fila"><kbd>F4</kbd><span>Descuento</span></div>
     <div class="fila"><kbd>F5</kbd><span>Quitar una unidad</span></div>
     <div class="fila"><kbd>F6</kbd><span>Cancelar la venta</span></div>
-    <div class="fila"><kbd>F3</kbd><span>Buscar un producto por nombre</span></div>
+    <div class="fila"><kbd>F3</kbd><span>Ir a la búsqueda por nombre</span></div>
     <div class="fila"><kbd>Ctrl+C</kbd><span>Copiar el código de la línea</span></div>
 
     <div class="grupo">En el carrito</div>
@@ -807,7 +807,7 @@
   </table>
 
   <h2>Lo que este sistema no hace</h2>
-  <p style="font-size:9.6pt">No emite boletas ni facturas y no está conectado al SII. No imprime comprobantes ni calcula el vuelto. No anula ventas ya cobradas.</p>
+  <p style="font-size:9.6pt">No emite boletas ni facturas y no está conectado al SII. No imprime comprobantes. No anula ventas ya cobradas.</p>
 
   <h2>Soporte</h2>
   <div class="firma">

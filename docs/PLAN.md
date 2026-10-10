@@ -409,10 +409,10 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 | 23 | La caja principal se congelaba en la tienda | ✅ 2026-09-26 |
 | 24 | Los cajeros pueden crear productos (D-038) | **siguiente** |
 
-### Cómo retomar (estado al 2026-10-05)
+### Cómo retomar (estado al 2026-10-10)
 
 **Dónde está todo:** rama `diseño`, todo subido a GitHub. `main` tiene hasta la fase 22 (PR #10,
-fusionado); la fase 23 está en el **PR #11**, abierto. **670 pruebas en verde.** Esquema de la base
+fusionado); la fase 23 está en el **PR #11**, abierto. **720 pruebas en verde.** Esquema de la base
 en la **versión 7**, protocolo entre cajas en la **9**.
 
 **La tienda está en producción con esta versión** desde la visita del **2026-09-26**: los dos PC
@@ -426,10 +426,10 @@ el 2026-10-01; Santiago debe confirmar que llegó a su cuenta). El manual en PDF
 WhatsApp. Lo acordado en septiembre sigue: un mes de marcha blanca para fallas, y lo nuevo se
 cotiza aparte.
 
-**La fase 24 está construida** (más abajo): cualquier empleado administra los productos sin PIN
-(D-038). Falta construir el `.exe`, actualizar el kit del pendrive y
-llevarlo a la tienda con `ACTUALIZAR-ESTE-PC.bat` **en los dos PC a la vez**: el protocolo pasó a
-la versión 9 (la base no se toca).
+**Las fases 24 y 25 están construidas** (más abajo): cualquier empleado administra los productos
+sin PIN (D-038); y, pedido en la tienda el 2026-10-10, un campo para buscar por nombre al lado del
+código y la ventana del vuelto en efectivo (D-039). Se llevan con `ACTUALIZAR-ESTE-PC.bat` **en los
+dos PC a la vez** (protocolo 9; la base no se toca).
 
 **Cómo se trabaja con la tienda:**
 
@@ -444,8 +444,8 @@ la versión 9 (la base no se toca).
 
 - H1d: quién cuenta al cerrar y qué hacen si no cuadra. Mientras tanto, la diferencia se anota y
   no bloquea nada.
-- H3 (otros medios, fiado), H11 (anular ventas), H9, H4 (quién ve el cierre), H5 (imprimirlo), y
-  si quiere que se calcule el vuelto.
+- H3 (otros medios, fiado), H11 (anular ventas), H9, H4 (quién ve el cierre), H5 (imprimirlo).
+  *El vuelto lo pidió el 2026-10-10 (D-039).*
 - ¿Se marcan bien débito y crédito tras dos semanas de uso? Si no, se funden en "tarjeta".
 - La boleta electrónica, que es otro proyecto (`docs/BOLETA-ELECTRONICA-SII.md`).
 
@@ -453,7 +453,9 @@ la versión 9 (la base no se toca).
 `GUION-DEMO.md` y `README.md`).
 
 **Mejoras anotadas, sin pedir:** que el programa se niegue a abrirse dos veces en el mismo PC (hoy
-solo avisa de que el puerto está ocupado); la trazabilidad del stock (fase 9, D-018), que hace más
+solo avisa de que el puerto está ocupado); soltar también las ventanas de Productos, Descuento,
+Efectivo, Usuarios y Configuración, que siguen sin destruirse al cerrar (fase 25: son de uso
+ocasional, y leen sus campos después de cerrarse, así que cada una pide su cambio y su prueba); la trazabilidad del stock (fase 9, D-018), que hace más
 falta ahora que cualquier cajero cambia precios y stock.
 
 ---
@@ -811,6 +813,36 @@ antes de construirla: el cajero hace en Productos todo lo que hacía el administ
 **Criterio de aceptación:** un cajero crea, edita, ajusta stock y da de baja productos sin que
 nadie ponga su PIN, en cualquiera de las dos cajas; sin sesión no se puede, ni llamando al servidor
 directamente. **Cumplido** en código y pruebas; falta llevarlo a la tienda.
+
+---
+
+## Fase 25 — Buscar por nombre al lado del código, y el vuelto en efectivo (D-039) ✅
+
+*2026-10-10.* Pedidas por el cliente ese día, en la tienda. Ver D-039.
+
+- [x] Campo **"Por nombre"** al lado del código: la lista sale al escribir, con el primero
+      marcado; flechas y Enter. F3 lleva ahí. El foco vuelve al código después de agregar
+- [x] Un código escrito o escaneado en el campo del nombre se agrega como código
+- [x] **Error encontrado al construirla:** con un solo resultado, el Enter de la lista llegaba
+      también al campo y el producto entraba dos veces. Arreglado y con prueba
+- [x] `services/venta.calcular_vuelto`: pago justo, no alcanza ("Faltan $500"), montos absurdos
+- [x] **Ventana del vuelto** en efectivo, en lugar de la confirmación: Enter vacío es pago justo,
+      no deja cobrar si no alcanza, pide revisar un vuelto de $20.000 o más. Al reintentar un
+      cobro fallido, trae escrito el monto. El aviso dice el vuelto durante 30 s
+- [x] Textos de ayuda de los dos campos medidos para que quepan a 1280 px con letra muy grande
+- [x] **Ventanas que no se destruían.** Al revisar las capturas salió que cada ventana abierta con
+      `.pedir()` —peso, y ahora vuelto— quedaba viva y oculta hasta cerrar el programa, con su
+      fundido enganchado. Con el vuelto serían cientos por caja y por día. `dialogos.ejecutar_y_soltar`
+      las destruye al cerrar: vuelto, peso, confirmar, avisos y código no encontrado. Con prueba
+- [x] Pruebas (`tests/test_ui_nombre_y_vuelto.py`), con teclas de verdad para el Enter
+- [x] Manual: secciones 5, 6, 7, 8, 15 y teclas; capturas y PDF regenerados (mismas 19 páginas)
+- [ ] `.exe`, kit del pendrive y los dos PC
+
+**Sin cambios de base ni de protocolo:** el monto recibido no se guarda.
+
+**Criterio de aceptación:** el pan se agrega escribiendo "pan" y Enter, sin abrir ventanas; en
+efectivo se ve el vuelto antes de cobrar; con tarjeta no cambia nada. **Cumplido** en código y
+pruebas.
 
 ---
 

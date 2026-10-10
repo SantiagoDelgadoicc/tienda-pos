@@ -110,6 +110,10 @@ correcta, no un descuido.
 > **Modificada parcialmente el 2026-09-24 por [D-034](#d-034).** Decae "sin medios de pago": la
 > venta registra si fue en efectivo, débito o crédito, porque lo pidió el cliente. Todo lo demás
 > sigue en pie: sin vuelto, sin comprobante impreso y sin boleta electrónica.
+>
+> **Y el 2026-10-10 por [D-039](#d-039).** Decae "sin vuelto": en efectivo se pregunta con cuánto
+> paga el cliente y se muestra el vuelto, porque lo pidió el cliente. Se calcula y no se guarda.
+> Siguen sin comprobante impreso y sin boleta electrónica.
 
 **Contexto.** El cliente solo pidió consultar precios. Registrar medios de pago o emitir
 boletas electrónicas abre obligaciones legales y técnicas enormes (certificado digital,
@@ -1400,3 +1404,34 @@ hacía el administrador.**
 o a propósito, y **hoy no queda rastro de quién lo hizo** (la trazabilidad, D-018, sigue sin
 construir). Las ventas pasadas no se alteran, porque guardan su propio precio. Si llega a pasar, la
 respuesta es la fase 9, no volver a poner el PIN.
+
+## D-039 — Buscar por nombre en la pantalla de venta, y el vuelto en efectivo
+
+*2026-10-10.* **Estado:** aceptada y construida (fase 25 de `PLAN.md`). **Decide:** Santiago, a
+partir de lo que pidió el cliente ese día, en la tienda.
+
+**Contexto.** Con unas semanas de uso, el cliente pidió dos cosas. Primero, un cuadro **al lado del
+código** para agregar productos por nombre: el pan, que no trae código, exigía F3, una ventana para
+escribir y otra para elegir ("se tienen que pegar una buena vuelta"). Segundo, que **al pagar en
+efectivo** aparezca una ventana que pregunte con cuánto paga el cliente y diga el vuelto. Lo segundo
+contradice D-006 ("sin vuelto") y respondía la pregunta pendiente de si quería que se calculara.
+
+**Decisión.**
+
+1. **Un campo "Por nombre" al lado del de código**, más angosto. Al escribir sale la lista debajo,
+   con el primero marcado: flechas y Enter. Un producto por peso pide los gramos como siempre.
+   **F3 lleva a ese campo**; las dos ventanas de antes se retiran de la venta.
+2. **El foco vuelve al campo del código después de agregar**, y la búsqueda se vacía. La pistola
+   escribe donde esté el foco: si quedara en el nombre, el siguiente escaneo se perdería. Por si
+   acaso, un código escrito o escaneado en el campo del nombre se agrega como código.
+3. **En efectivo, la ventana del vuelto reemplaza a la de "¿Confirma la venta?"** y aparece
+   siempre, aunque la confirmación esté apagada en F9. Con débito o crédito no cambia nada.
+4. **Enter con el campo vacío es pago justo.** Si el monto no alcanza, no deja cobrar. Si el
+   vuelto pasa de $20.000, pide revisar el monto pero deja cobrar: suele ser un cero de más.
+5. **El monto recibido se muestra y no se guarda.** Al cajón entra el total de la venta, que es lo
+   único que necesita el arqueo, y así no cambian ni la base ni el protocolo entre cajas. El aviso
+   de la venta dice el vuelto durante 30 segundos, lo que tarda contarlo.
+
+**Consecuencias.** La actualización es solo del programa, sin migración ni cambio de protocolo:
+las cajas siguen en la versión 9. Si algún día el dueño quiere ver en los informes con cuánto pagó
+cada cliente, hay que guardarlo, y eso sí es una migración.

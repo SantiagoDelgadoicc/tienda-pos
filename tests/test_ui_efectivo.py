@@ -271,14 +271,17 @@ class TestCobrarConLaCajaCerrada:
         self, cajera, conexion, respuestas, monkeypatch
     ) -> None:
         _cerrar_la_caja(conexion)
-        confirmaciones = []
-        monkeypatch.setattr(dialogos, "confirmar", lambda *a, **k: confirmaciones.append(1) or True)
+        # En efectivo, la confirmación es la ventana del vuelto (fase 25): se pide una sola vez.
+        pagos = []
+        monkeypatch.setattr(
+            cajera.vista_venta, "pedir_pago_efectivo", lambda total, recibido=None: pagos.append(total) or (True, None)
+        )
         respuestas((30_000, ""))
         cajera.vista_venta.agregar_por_codigo(codigo_demo(0))
         cajera.vista_venta.cobrar()
         (venta,) = repo_ventas.del_dia(conexion)
         assert venta.turno_id == arqueo.turno_abierto(conexion, "Caja 1", None).id
-        assert len(confirmaciones) == 1
+        assert len(pagos) == 1
 
     def test_con_la_caja_abierta_no_pregunta_nada(self, cajera, conexion, respuestas) -> None:
         falso = respuestas()

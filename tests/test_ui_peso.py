@@ -64,19 +64,14 @@ class TestAgregar:
         assert vista.carrito.esta_vacio
         assert vista.campo_codigo.hasFocus()
 
-    def test_el_pan_sin_codigo_se_elige_por_nombre(self, ventana, pesos, monkeypatch) -> None:
-        from tienda_pos.ui import buscador
-
+    def test_el_pan_sin_codigo_se_elige_por_nombre(self, ventana, pesos) -> None:
+        # Desde la fase 25, en el campo del nombre, al lado del código: "batido" y Enter.
         respuestas, _ = pesos
         respuestas.append(500)
-        monkeypatch.setattr(
-            dialogos.DialogoTexto, "exec", lambda self: (self.campo.setText("batido"), True)[1]
-        )
-        monkeypatch.setattr(
-            buscador.DialogoResultados, "elegir", lambda self: self._resultados[0]
-        )
         vista = ventana.vista_venta
         vista.buscar_por_nombre()
+        vista.campo_nombre.setText("batido")
+        vista.campo_nombre.returnPressed.emit()
         linea = vista.carrito.lineas[0]
         assert (linea.codigo_barras, linea.gramos, linea.total_clp) == (PAN, 500, 1245)
 

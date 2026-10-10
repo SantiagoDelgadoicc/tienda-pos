@@ -59,7 +59,7 @@ _AYUDA = """<b>Atajos de teclado</b><br><br>
 <table cellpadding="4">
 <tr><td><b>Enter</b></td><td>Agregar el producto escaneado al carrito</td></tr>
 <tr><td><b>F2</b></td><td>Consulta de precio a pantalla completa</td></tr>
-<tr><td><b>F3</b></td><td>Buscar un producto por su nombre</td></tr>
+<tr><td><b>F3</b></td><td>Ir a la búsqueda por nombre, al lado del código</td></tr>
 <tr><td><b>F4</b></td><td>Aplicar un descuento a la venta</td></tr>
 <tr><td><b>F5</b></td><td>Quitar una unidad de la línea seleccionada</td></tr>
 <tr><td><b>↑ ↓</b></td><td>Moverse entre las líneas del carrito</td></tr>

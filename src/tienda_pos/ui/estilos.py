@@ -523,6 +523,37 @@ QLineEdit#campoEscaneo:focus {{
     border: 2px solid {p.acento};
     padding: 15px 19px;
 }}
+/* La búsqueda por nombre, al lado del código (fase 25): misma altura y mismo marco, pero letra
+   de texto y no de cifra, porque ahí se escriben palabras. Escala con la letra elegida. */
+QLineEdit#campoNombre {{
+    background-color: {p.superficie};
+    border: 1px solid {p.borde_fuerte};
+    border-radius: {RADIO_CAMPO}px;
+    padding: 21px 16px;
+    font-size: 19px;
+    font-weight: 600;
+    color: {p.texto};
+}}
+QLineEdit#campoNombre:focus {{
+    border: 2px solid {p.acento};
+    padding: 20px 15px;
+}}
+QListView#listaNombres {{
+    background-color: {p.superficie};
+    color: {p.texto};
+    border: 1px solid {p.borde_fuerte};
+    border-radius: {RADIO_PEQUENO}px;
+    padding: 4px;
+    font-size: 18px;
+    outline: none;
+}}
+QListView#listaNombres::item {{
+    padding: 9px 10px;
+}}
+QListView#listaNombres::item:selected {{
+    background-color: {p.acento_suave};
+    color: {p.acento_fuerte};
+}}
 
 QLineEdit, QSpinBox {{
     background-color: {p.superficie};
@@ -816,6 +847,19 @@ QLabel#valorTotal {{
     font-weight: 700;
     letter-spacing: -1.7px;
     color: {p.exito};
+}}
+/* El vuelto (fase 25): lo que el cajero cuenta en la mano, así que va casi tan grande como el
+   total y en el mismo verde. El monto que se teclea, grande también: se escribe de pie. */
+QLabel#valorVuelto {{
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -1.2px;
+    color: {p.exito};
+}}
+QLineEdit#campoPago {{
+    font-size: 26px;
+    font-weight: 700;
+    padding: 10px 14px;
 }}
 
 /* ------------------------------------------------------------------ consulta */

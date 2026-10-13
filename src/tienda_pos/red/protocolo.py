@@ -43,8 +43,12 @@ _FORMATO_FECHA_HORA = "%Y-%m-%d %H:%M:%S"
 #: Historia: 1, dos cajas (fase 13) · 2, administración de usuarios (fase 15) · 3, cada venta
 #: dice de qué caja viene (fase 16) · 4, y con qué se pagó (fase 17) · 5, el cierre por caja
 #: (fase 18) · 6, el arqueo de caja (fase 19) · 7, la venta por peso (D-037) · 8, editar un
-#: producto sin mandar el stock lo deja como está (fase 22): un servidor de la 7 fallaría con él.
-VERSION_PROTOCOLO = 8
+#: producto sin mandar el stock lo deja como está (fase 22): un servidor de la 7 fallaría con él ·
+#: 9, cualquier empleado administra los productos (D-038): un servidor de la 8 se los negaría a
+#: los cajeros de la secundaria, que ya no ven pedir el PIN · 10, el recargo de los cigarros con
+#: tarjeta (D-040): el producto dice si es cigarro, la venta trae su recargo y hay dos operaciones
+#: nuevas para leerlo y cambiarlo.
+VERSION_PROTOCOLO = 10
 
 
 # --------------------------------------------------------------------------- dominio → JSON
@@ -61,6 +65,7 @@ def de_producto(p: Producto) -> dict[str, Any]:
         "creado_en": p.creado_en,
         "actualizado_en": p.actualizado_en,
         "por_peso": p.por_peso,
+        "es_cigarro": p.es_cigarro,
     }
 
 
@@ -100,6 +105,7 @@ def de_venta(v: Venta) -> dict[str, Any]:
         "caja": v.caja,
         "medio_pago": str(v.medio_pago) if v.medio_pago else None,
         "turno_id": v.turno_id,
+        "recargo_clp": v.recargo_clp,
         "lineas": [de_linea_venta(linea) for linea in v.lineas],
     }
 
@@ -128,6 +134,7 @@ def a_producto(d: dict[str, Any]) -> Producto:
         creado_en=d.get("creado_en"),
         actualizado_en=d.get("actualizado_en"),
         por_peso=bool(d.get("por_peso", False)),
+        es_cigarro=bool(d.get("es_cigarro", False)),
     )
 
 
@@ -165,6 +172,7 @@ def a_venta(d: dict[str, Any]) -> Venta:
         caja=d.get("caja"),
         medio_pago=MedioPago.leer(d.get("medio_pago")),
         turno_id=d.get("turno_id"),
+        recargo_clp=d.get("recargo_clp", 0),
         lineas=[a_linea_venta(x) for x in d.get("lineas", [])],
     )
 

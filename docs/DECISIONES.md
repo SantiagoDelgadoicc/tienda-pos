@@ -110,6 +110,10 @@ correcta, no un descuido.
 > **Modificada parcialmente el 2026-09-24 por [D-034](#d-034).** Decae "sin medios de pago": la
 > venta registra si fue en efectivo, débito o crédito, porque lo pidió el cliente. Todo lo demás
 > sigue en pie: sin vuelto, sin comprobante impreso y sin boleta electrónica.
+>
+> **Y el 2026-10-10 por [D-039](#d-039).** Decae "sin vuelto": en efectivo se pregunta con cuánto
+> paga el cliente y se muestra el vuelto, porque lo pidió el cliente. Se calcula y no se guarda.
+> Siguen sin comprobante impreso y sin boleta electrónica.
 
 **Contexto.** El cliente solo pidió consultar precios. Registrar medios de pago o emitir
 boletas electrónicas abre obligaciones legales y técnicas enormes (certificado digital,
@@ -1369,35 +1373,98 @@ iguales para dos cosas distintas confundían.
 
 ---
 
-## D-038 — Los cajeros pueden crear productos; cambiar precio, stock y dar de baja sigue con PIN
+## D-038 — Cualquier empleado administra los productos, sin PIN
 
-*2026-10-05.* **Estado:** aceptada, **sin construir** (fase 24 de `PLAN.md`). **Decide:** Santiago,
-a partir de un pedido del cliente.
+*2026-10-05.* **Estado:** aceptada y construida (fase 24 de `PLAN.md`). **Decide:** Santiago, a
+partir de un pedido del cliente.
 
 **Contexto.** Hasta aquí, toda la pantalla de Productos pedía el PIN de un administrador. Al volver
 de unos días fuera, el dueño escribió el 2026-10-01 por WhatsApp que "cada vez que quieren ingresar
 un producto me piden mi pin", y luego: **"Al ingresar productos al sistema lo puede hacer cualquier
 usuario."** Es un requisito suyo (3.1 de `CLAUDE.md`). Santiago le propuso que los cambios de
-precio y las bajas siguieran con su PIN; el dueño no contestó a eso, solo pagó.
+precio y las bajas siguieran con su PIN; el dueño no contestó a eso.
+
+**Primera versión, descartada el mismo día.** La redacción inicial de esta decisión dejaba a los
+cajeros solo crear, con precio, stock y bajas todavía con PIN, "porque es muy probable que se
+equivoquen". Santiago la cambió antes de construirla: **el cajero hace en Productos todo lo que
+hacía el administrador.**
 
 **Decisión.**
 
-1. **Cualquier usuario con sesión puede crear un producto nuevo**, sin PIN. Es lo que pidió.
-2. **Cambiar el precio, cambiar el stock y dar de baja siguen exigiendo administrador**, también a
-   los cajeros. Lo decidió Santiago: "es muy probable que se equivoquen", y hoy no queda rastro de
-   quién cambió qué (D-018 sin construir), así que un precio mal puesto no se podría explicar.
-3. **El permiso lo decide el servicio**, no la pantalla (`services/catalogo.py`), como todo
-   permiso del sistema: así vale igual para la caja secundaria, que llega por la red.
+1. **Cualquier usuario con sesión** crea productos, cambia precio y stock, da de baja y ve los
+   códigos pendientes. Sin PIN de administrador.
+2. **Sin sesión, nada.** `services/auth.exigir_sesion` lo comprueba; es la misma regla que ya
+   usaba el arqueo, que ahora la comparte.
+3. **El permiso lo decide el servicio**, no la pantalla (`services/catalogo.py`): vale igual para
+   la caja secundaria. Protocolo a la **versión 9**, para que una actualización a medias se note
+   al arrancar.
+4. Usuarios, ventas del día, cierre y retiros **siguen siendo del administrador**.
 
-**Por confirmar al empezar la fase 24** (recomendación entre paréntesis):
+**Consecuencias.** El riesgo que se aceptó: un cajero puede cambiar un precio o el stock por error,
+o a propósito, y **hoy no queda rastro de quién lo hizo** (la trazabilidad, D-018, sigue sin
+construir). Las ventas pasadas no se alteran, porque guardan su propio precio. Si llega a pasar, la
+respuesta es la fase 9, no volver a poner el PIN.
 
-- ¿El cajero puede poner **stock inicial** al crear? (Sí: si nace en cero, la primera venta lo
-  deja en negativo. No es "modificar" el stock de un producto que ya existe.)
-- ¿Ve la lista de Productos sin PIN, solo para mirar? (Sí, sin poder tocar nada; si no, no sabe si
-  el producto ya existe antes de crearlo.)
-- ¿Puede ver los **códigos pendientes**? (Sí: son justo los productos que falta crear.)
+## D-039 — Buscar por nombre en la pantalla de venta, y el vuelto en efectivo
 
-**Consecuencias.** Se abre una puerta a cajeros en el catálogo, acotada a crear. El riesgo que
-queda es un producto creado con un precio mal tecleado; se reduce con la confirmación del
-formulario y se detecta en la lista, pero corregirlo sigue pidiendo al dueño. Si el cliente
-contesta que los cajeros también deben poder cambiar precios, esta decisión se revisa con él.
+*2026-10-10.* **Estado:** aceptada y construida (fase 25 de `PLAN.md`). **Decide:** Santiago, a
+partir de lo que pidió el cliente ese día, en la tienda.
+
+**Contexto.** Con unas semanas de uso, el cliente pidió dos cosas. Primero, un cuadro **al lado del
+código** para agregar productos por nombre: el pan, que no trae código, exigía F3, una ventana para
+escribir y otra para elegir ("se tienen que pegar una buena vuelta"). Segundo, que **al pagar en
+efectivo** aparezca una ventana que pregunte con cuánto paga el cliente y diga el vuelto. Lo segundo
+contradice D-006 ("sin vuelto") y respondía la pregunta pendiente de si quería que se calculara.
+
+**Decisión.**
+
+1. **Un campo "Por nombre" al lado del de código**, más angosto. Al escribir sale la lista debajo,
+   con el primero marcado: flechas y Enter. Un producto por peso pide los gramos como siempre.
+   **F3 lleva a ese campo**; las dos ventanas de antes se retiran de la venta.
+2. **El foco vuelve al campo del código después de agregar**, y la búsqueda se vacía. La pistola
+   escribe donde esté el foco: si quedara en el nombre, el siguiente escaneo se perdería. Por si
+   acaso, un código escrito o escaneado en el campo del nombre se agrega como código.
+3. **En efectivo, la ventana del vuelto reemplaza a la de "¿Confirma la venta?"** y aparece
+   siempre, aunque la confirmación esté apagada en F9. Con débito o crédito no cambia nada.
+4. **Enter con el campo vacío es pago justo.** Si el monto no alcanza, no deja cobrar. Si el
+   vuelto pasa de $20.000, pide revisar el monto pero deja cobrar: suele ser un cero de más.
+5. **El monto recibido se muestra y no se guarda.** Al cajón entra el total de la venta, que es lo
+   único que necesita el arqueo, y así no cambian ni la base ni el protocolo entre cajas. El aviso
+   de la venta dice el vuelto durante 30 segundos, lo que tarda contarlo.
+
+**Consecuencias.** La actualización es solo del programa, sin migración ni cambio de protocolo:
+las cajas siguen en la versión 9. Si algún día el dueño quiere ver en los informes con cuánto pagó
+cada cliente, hay que guardarlo, y eso sí es una migración.
+
+## D-040 — Recargo por cajetilla de cigarros pagada con tarjeta
+
+*2026-10-10.* **Estado:** aceptada y construida (fase 26 de `PLAN.md`). **Decide:** Santiago, a
+partir de un pedido del cliente.
+
+**Contexto.** El cliente pidió el 2026-10-10 una casilla para marcar un producto como cigarro,
+porque **pagados con débito o crédito se cobran $500 más por cajetilla**. Confirmó a Santiago que
+es por cada cajetilla (tres cajetillas, $1.500), igual en débito y en crédito, y que en su caso es
+legal cobrarlo. Pidió que el monto se pueda cambiar.
+
+**Decisión.**
+
+1. **Una casilla "Es cigarro" en el producto** (`producto.es_cigarro`). Un cigarro no se vende por
+   peso: el recargo es por cajetilla.
+2. **El recargo vive en la venta, no en las líneas** (`venta.recargo_clp`): total = subtotal −
+   descuento + recargo. Así el precio de cada cajetilla y el stock no cambian, los informes por
+   producto siguen iguales, y el recargo se ve aparte en la pantalla, en las ventas del día y en
+   el cierre. Los descuentos no lo tocan: son sobre los productos.
+3. **Lo calcula el servidor**, con el producto y el monto de la base. La caja manda dentro del
+   carrito el monto que usó para mostrar el total; **si no es el vigente, no se cobra** y se avisa,
+   porque el cliente pagaría con tarjeta algo distinto de lo que vio. Lo mismo si el producto dejó
+   de ser cigarro, o pasó a serlo, con el carrito abierto.
+4. **El monto se guarda en la base (`meta`), no en las preferencias de cada PC**: tiene que ser el
+   mismo en las dos cajas. $500 mientras no se cambie; de $0 (sin recargo) a $10.000.
+5. **Se cambia en Productos, con PIN de administrador.** Se pensó en F9, pero F9 guarda ajustes de
+   este equipo y el recargo es de la tienda. Productos es donde se marcan los cigarros, y es de
+   todos (D-038): verlo, sí; cambiarlo, solo el dueño, porque cambia lo que pagan los clientes.
+6. **En efectivo no hay recargo**, y por eso el arqueo no cambia: al cajón entra lo mismo.
+
+**Consecuencias.** Migración de esquema 8 (dos columnas con valor por defecto: nada de lo
+guardado cambia) y protocolo 10: las dos cajas se actualizan en la misma visita, y el script
+respalda la base antes. Los cigarros que ya están cargados hay que marcarlos a mano en Productos.

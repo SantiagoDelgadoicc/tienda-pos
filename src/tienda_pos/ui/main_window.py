@@ -59,7 +59,7 @@ _AYUDA = """<b>Atajos de teclado</b><br><br>
 <table cellpadding="4">
 <tr><td><b>Enter</b></td><td>Agregar el producto escaneado al carrito</td></tr>
 <tr><td><b>F2</b></td><td>Consulta de precio a pantalla completa</td></tr>
-<tr><td><b>F3</b></td><td>Buscar un producto por su nombre</td></tr>
+<tr><td><b>F3</b></td><td>Ir a la búsqueda por nombre, al lado del código</td></tr>
 <tr><td><b>F4</b></td><td>Aplicar un descuento a la venta</td></tr>
 <tr><td><b>F5</b></td><td>Quitar una unidad de la línea seleccionada</td></tr>
 <tr><td><b>↑ ↓</b></td><td>Moverse entre las líneas del carrito</td></tr>
@@ -69,7 +69,7 @@ _AYUDA = """<b>Atajos de teclado</b><br><br>
 <tr><td><b>F6</b></td><td>Cancelar la venta en curso</td></tr>
 <tr><td><b>F11</b></td><td>Cambiar el medio de pago: efectivo, débito, crédito</td></tr>
 <tr><td><b>F12</b></td><td>Cobrar y registrar la venta</td></tr>
-<tr><td><b>F7</b></td><td>Administrar productos <i>(administrador)</i></td></tr>
+<tr><td><b>F7</b></td><td>Administrar productos</td></tr>
 <tr><td><b>F8</b></td><td>Ventas del día <i>(administrador)</i></td></tr>
 <tr><td><b>F9</b></td><td>Configuración</td></tr>
 <tr><td><b>F10</b></td><td>Cambiar de usuario</td></tr>
@@ -154,6 +154,9 @@ class VentanaPrincipal(QMainWindow):
         self.vista_efectivo.autorizar_admin = lambda accion: (
             metodo(accion) if (metodo := asegurar_admin()) is not None else None
         )
+        # Lo mismo para el recargo de los cigarros, en Productos (fase 26).
+        self.vista_productos.autorizar_admin = self.vista_efectivo.autorizar_admin
+        self.vista_productos.recargo_cambiado.connect(self.vista_venta.recargo_cambiado)
         for vista in (
             self.vista_venta,
             self.vista_consulta,
@@ -301,11 +304,10 @@ class VentanaPrincipal(QMainWindow):
             self.mostrar_consulta()
 
     def mostrar_productos(self) -> None:
-        """Catálogo. Si quien opera no es administrador, se le pide el PIN de uno."""
-        administrador = self._asegurar_admin("administrar los productos")
-        if administrador is None:
+        """Catálogo. Para cualquier empleado, sin PIN de administrador (D-038)."""
+        if self.usuario is None:
             return
-        self.vista_productos.usuario = administrador
+        self.vista_productos.usuario = self.usuario
         # Primero se cambia de pantalla y después se recarga: al recargar, la vista anuncia
         # cuántos productos hay y la cabecera solo lo recoge si ya está mostrándola.
         self._ir_a("productos", self.vista_productos)
@@ -520,6 +522,8 @@ class VentanaPrincipal(QMainWindow):
         self.usuario = usuario
         self.vista_venta.usuario = usuario
         self.vista_efectivo.usuario = usuario
+        # Si se cambia de usuario con Productos a la vista, lo que se cree después es del nuevo.
+        self.vista_productos.usuario = usuario
         self.barra_lateral.establecer_usuario(usuario, self._sesion.caja)
 
     def _actualizar_reloj(self) -> None:

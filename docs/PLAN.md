@@ -409,27 +409,26 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 | 23 | La caja principal se congelaba en la tienda | ✅ 2026-09-26 |
 | 24 | Los cajeros pueden crear productos (D-038) | **siguiente** |
 
-### Cómo retomar (estado al 2026-10-05)
+### Cómo retomar (estado al 2026-10-12)
 
-**Dónde está todo:** rama `diseño`, todo subido a GitHub. `main` tiene hasta la fase 22 (PR #10,
-fusionado); la fase 23 está en el **PR #11**, abierto. **667 pruebas en verde.** Esquema de la base
-en la **versión 7**, protocolo entre cajas en la **8**.
+**Dónde está todo:** rama `diseño`, todo subido a GitHub. `main` tiene hasta la fase 24 anotada
+(PR #12, fusionado); **las fases 24 a 26 están en `diseño` sin PR** (5 commits por delante de
+`main`). **767 pruebas en verde.** Esquema de la base en la **versión 8**, protocolo entre cajas en
+la **10**.
 
-**La tienda está en producción con esta versión** desde la visita del **2026-09-26**: los dos PC
-actualizados, usuarios por empleado creados con el dueño, cierre por caja, arqueo y venta por peso.
-Ese día la caja principal se congelaba al moverse entre pantallas; se arregló en el momento (fase
-23) y el dueño confirmó que ya no pasa. El detalle de la instalación está en
-`docs/DESPLIEGUE-TIENDA.md`, secciones 1 y 11.
+**La tienda funciona con la versión de la fase 26** desde el **2026-10-10**: los dos PC
+actualizados con `ACTUALIZAR-ESTE-PC.bat`, y Santiago informó que todo salió bien. Fue la primera
+actualización con migración de la base desde que la tienda está en producción. Lo que tiene hoy:
+usuarios por empleado, cierre por caja, arqueo, venta por peso, Productos para todos (D-038),
+buscar por nombre al lado del código y vuelto en efectivo (D-039), y recargo de los cigarros con
+tarjeta (D-040). El detalle está en `docs/DESPLIEGUE-TIENDA.md`, secciones 1 y 11.
 
-**El cliente pagó** el trabajo de esta etapa (comprobante de transferencia recibido por WhatsApp
-el 2026-10-01; Santiago debe confirmar que llegó a su cuenta). El manual en PDF se le entregó por
-WhatsApp. Lo acordado en septiembre sigue: un mes de marcha blanca para fallas, y lo nuevo se
-cotiza aparte.
+**El cliente pagó** la tercera etapa (comprobante por WhatsApp el 2026-10-01). Lo pedido el
+2026-10-10 (fases 25 y 26) es trabajo nuevo: **se cotiza aparte**, según lo acordado en septiembre.
 
-**Lo siguiente es la fase 24** (más abajo): que los cajeros puedan crear productos sin PIN, con
-precio, stock y bajas todavía con PIN (D-038). Antes de construirla hay tres cosas por confirmar
-con Santiago, listadas en D-038. Después, construir el `.exe`, actualizar el kit del pendrive y
-llevarlo a la tienda con `ACTUALIZAR-ESTE-PC.bat` en los dos PC (la base no se toca).
+**Por confirmar de la última visita:** que se marcaron los cigarros en Productos (la migración los
+deja sin marcar, y sin marca no hay recargo) y que se corrigió el precio de la "Leche de Frutilla
+Soprole 200ml" (tenía su código de barras como precio; sección 11 de `DESPLIEGUE-TIENDA.md`).
 
 **Cómo se trabaja con la tienda:**
 
@@ -442,20 +441,23 @@ llevarlo a la tienda con `ACTUALIZAR-ESTE-PC.bat` en los dos PC (la base no se t
 
 **Pendiente del cliente** (detalle en `docs/PREGUNTAS-CIERRE-Y-USUARIOS.md`):
 
-- Si los cajeros también deben poder cambiar precios (D-038). Se le propuso que no; no contestó.
 - H1d: quién cuenta al cerrar y qué hacen si no cuadra. Mientras tanto, la diferencia se anota y
   no bloquea nada.
-- H3 (otros medios, fiado), H11 (anular ventas), H9, H4 (quién ve el cierre), H5 (imprimirlo), y
-  si quiere que se calcule el vuelto.
+- H3 (otros medios, fiado), H11 (anular ventas), H9, H4 (quién ve el cierre), H5 (imprimirlo).
+  *El vuelto lo pidió el 2026-10-10 (D-039).*
 - ¿Se marcan bien débito y crédito tras dos semanas de uso? Si no, se funden en "tarjeta".
 - La boleta electrónica, que es otro proyecto (`docs/BOLETA-ELECTRONICA-SII.md`).
 
-**Pendiente de Santiago:** fusionar el PR #11; confirmar el pago; cerrar la fase 20 (faltan
-`GUION-DEMO.md` y `README.md`).
+**Pendiente de Santiago:** abrir y fusionar el PR de las fases 24 a 26; cotizar las fases 25 y
+26; cerrar la fase 20 (falta `GUION-DEMO.md`; el `README.md` se puso al día el 2026-10-12).
 
-**Mejoras anotadas, sin pedir:** que el programa se niegue a abrirse dos veces en el mismo PC (hoy
-solo avisa de que el puerto está ocupado); la trazabilidad del stock (fase 9, D-018), que hace más
-falta ahora que los cajeros van a crear productos.
+**Mejoras anotadas, sin pedir:** un **tope al precio** en el formulario de producto (fase 26: un
+código de barras escaneado en el precio quedó guardado como $7,8 billones); que el programa se
+niegue a abrirse dos veces en el mismo PC (hoy solo avisa de que el puerto está ocupado); soltar también las ventanas de Productos, Descuento,
+Efectivo, Usuarios y Configuración, que siguen sin destruirse al cerrar (fase 25: son de uso
+ocasional, y leen sus campos después de cerrarse, así que cada una pide su cambio y su prueba); la
+trazabilidad del stock (fase 9, D-018), que hace más falta ahora que cualquier cajero cambia
+precios y stock.
 
 ---
 
@@ -786,45 +788,104 @@ no se notaba. "Ventas del día" tenía lo mismo, en menor medida: más de 2 segu
 
 ---
 
-## Fase 24 — Los cajeros pueden crear productos (D-038) ← lo siguiente
+## Fase 24 — Cualquier empleado administra los productos (D-038) ✅
 
-*Anotada el 2026-10-05, sin empezar.* Pedida por el cliente el 2026-10-01: "Al ingresar productos al
-sistema lo puede hacer cualquier usuario." Santiago decidió que **cambiar precio, cambiar stock y
-dar de baja sigan con PIN de administrador también para los cajeros**, porque es muy probable que
-se equivoquen. Ver D-038, con tres puntos a confirmar antes de empezar.
+*2026-10-05.* Pedida por el cliente el 2026-10-01: "Al ingresar productos al sistema lo puede hacer
+cualquier usuario." La primera redacción dejaba precio, stock y bajas con PIN; **Santiago la cambió
+antes de construirla: el cajero hace en Productos todo lo que hacía el administrador.** Ver D-038.
 
-**Cómo está hoy** (para no tener que buscarlo):
+- [x] `services/auth.exigir_sesion`: basta un usuario con sesión. La usa también el arqueo, que
+      tenía su propia copia
+- [x] `services/catalogo.py`: crear, actualizar, dar de baja y códigos pendientes, con
+      `exigir_sesion` en lugar de `exigir_admin`
+- [x] F7 entra a Productos sin PIN, con el usuario de la caja; si se cambia de usuario (F10), la
+      pantalla pasa al nuevo
+- [x] Protocolo a la **versión 9**: no cambia ningún mensaje, pero un servidor de la 8 les negaría
+      Productos a los cajeros de la secundaria
+- [x] Pruebas: el cajero hace todo, en el servicio y por la red; sin sesión, nada; F7 no pide PIN.
+      Las de "un cajero que cancela no entra" pasan a Usuarios, que sigue siendo del administrador
+- [x] Manual (`docs/manual/manual.html`): tabla de permisos, sección 14 y F7
+- [x] PDF del manual regenerado (`python tools/manual_pdf.py`)
+- [x] `.exe`, kit del pendrive y los dos PC: instalada el 2026-10-10, junto con las fases 25 y 26
 
-- `ui/main_window.py::mostrar_productos` pide el PIN de un administrador **para entrar** a la
-  pantalla (`_asegurar_admin`), y deja ese administrador en `vista_productos.usuario`.
-- `services/catalogo.py`: `crear_producto`, `actualizar_producto`, `desactivar_producto` y
-  `codigos_pendientes` llaman a `exigir_admin`. Es el servicio quien manda, y sirve igual para la
-  caja secundaria por la red.
-- `ui/productos_view.py`: botones Nuevo producto, Editar, Stock, Pendientes y Dar de baja.
-  `ui/efectivo_view.py` ya resuelve "pedir el PIN solo para una acción" con `autorizar_admin`,
-  que fija la ventana: es el patrón a copiar.
+**Riesgo aceptado:** sin la fase 9 (D-018) no queda rastro de quién cambió un precio o un stock.
 
-**Tareas:**
+**Criterio de aceptación:** un cajero crea, edita, ajusta stock y da de baja productos sin que
+nadie ponga su PIN, en cualquiera de las dos cajas; sin sesión no se puede, ni llamando al servidor
+directamente. **Cumplido**, e instalado en la tienda el 2026-10-10.
 
-- [ ] Servicio: `crear_producto` exige solo un usuario con sesión, no administrador; el resto
-      sigue igual. Si se confirma, también `codigos_pendientes`
-- [ ] Entrar a Productos sin PIN, con la lista a la vista; Nuevo producto libre
-- [ ] Editar, Stock y Dar de baja piden el PIN de un administrador **en el momento**, como el
-      retiro en Efectivo; el cajero sigue en su sesión
-- [ ] Dejar constancia en el registro de qué producto creó cada usuario (sin D-018 no queda otra
-      huella)
-- [ ] Pruebas: un cajero crea por la pantalla y por la red; no puede editar, ajustar stock ni dar
-      de baja sin PIN, ni por la pantalla ni llamando al servicio; con PIN sí. Con un catálogo de
-      2.000 productos (fase 23)
-- [ ] Manual (sección de Productos) y PDF; `LEEME-PRIMERO.txt` del kit
-- [ ] `.exe`, kit del pendrive comprobado archivo por archivo, y actualizar los dos PC
+---
 
-**Protocolo:** no cambia la forma de ningún mensaje; solo lo que el servidor permite. Aun así las
-dos cajas se actualizan juntas, como siempre.
+## Fase 25 — Buscar por nombre al lado del código, y el vuelto en efectivo (D-039) ✅
 
-**Criterio de aceptación:** un cajero da de alta un producto sin que nadie ponga su PIN, en
-cualquiera de las dos cajas; cambiar un precio, el stock o dar de baja sigue pidiendo el PIN del
-dueño; y nada de eso se puede saltar llamando al servidor directamente.
+*2026-10-10.* Pedidas por el cliente ese día, en la tienda. Ver D-039.
+
+- [x] Campo **"Por nombre"** al lado del código: la lista sale al escribir, con el primero
+      marcado; flechas y Enter. F3 lleva ahí. El foco vuelve al código después de agregar
+- [x] Un código escrito o escaneado en el campo del nombre se agrega como código
+- [x] **Error encontrado al construirla:** con un solo resultado, el Enter de la lista llegaba
+      también al campo y el producto entraba dos veces. Arreglado y con prueba
+- [x] `services/venta.calcular_vuelto`: pago justo, no alcanza ("Faltan $500"), montos absurdos
+- [x] **Ventana del vuelto** en efectivo, en lugar de la confirmación: Enter vacío es pago justo,
+      no deja cobrar si no alcanza, pide revisar un vuelto de $20.000 o más. Al reintentar un
+      cobro fallido, trae escrito el monto. El aviso dice el vuelto durante 30 s
+- [x] Textos de ayuda de los dos campos medidos para que quepan a 1280 px con letra muy grande
+- [x] **Ventanas que no se destruían.** Al revisar las capturas salió que cada ventana abierta con
+      `.pedir()` —peso, y ahora vuelto— quedaba viva y oculta hasta cerrar el programa, con su
+      fundido enganchado. Con el vuelto serían cientos por caja y por día. `dialogos.ejecutar_y_soltar`
+      las destruye al cerrar: vuelto, peso, confirmar, avisos y código no encontrado. Con prueba
+- [x] Pruebas (`tests/test_ui_nombre_y_vuelto.py`), con teclas de verdad para el Enter
+- [x] Manual: secciones 5, 6, 7, 8, 15 y teclas; capturas y PDF regenerados (mismas 19 páginas)
+- [x] `.exe` y kit del pendrive (`E:\PUNTO-Y-FAMA`), comprobado archivo por archivo (2026-10-10)
+- [x] Instalado en los dos PC con `ACTUALIZAR-ESTE-PC.bat` (2026-10-10)
+
+**Sin cambios de base ni de protocolo:** el monto recibido no se guarda.
+
+**Criterio de aceptación:** el pan se agrega escribiendo "pan" y Enter, sin abrir ventanas; en
+efectivo se ve el vuelto antes de cobrar; con tarjeta no cambia nada. **Cumplido** en código y
+pruebas, e instalado en la tienda el 2026-10-10.
+
+---
+
+## Fase 26 — Recargo de los cigarros pagados con tarjeta (D-040) ✅
+
+*2026-10-10.* Pedido por el cliente ese día: una casilla para marcar los cigarros, y $500 más por
+cajetilla si se paga con débito o crédito, con el monto modificable. Ver D-040.
+
+- [x] Migración 8: `producto.es_cigarro` y `venta.recargo_clp`, con 0 por defecto; probada desde
+      una base de la versión 7 con datos
+- [x] `catalogo.recargo_cigarro` / `fijar_recargo_cigarro` (en `meta`, solo administrador, de $0
+      a $10.000); un cigarro no se vende por peso
+- [x] El carrito cuenta cajetillas y calcula el recargo por medio; **el servidor lo recalcula** con
+      la base y rechaza el cobro si el monto que mostró la caja ya no es el vigente, o si el
+      producto dejó de ser cigarro (o pasó a serlo) con el carrito abierto
+- [x] Protocolo a la **versión 10**: producto, venta y carrito llevan lo suyo, y dos operaciones
+      nuevas, `recargo_cigarro` y `fijar_recargo_cigarro`
+- [x] Venta: el total cambia al marcar débito o crédito, con una fila "Recargo cigarros · 2 × $500";
+      la confirmación lo dice; si el servidor rechaza por recargo cambiado, la pantalla muestra
+      el total nuevo antes del aviso
+- [x] Arreglado antes de que pasara: el reconocimiento de reintentos comparaba el total del
+      carrito sin recargo, y una venta con tarjeta habría disparado el aviso de "venta
+      registrada en el intento anterior"
+- [x] Productos: casilla "Es cigarro" (se apaga con "por peso"), "· cigarro" en la lista, el filtro
+      "cigarro" los muestra, y abajo el recargo con "Cambiar recargo" (PIN de administrador)
+- [x] Ventas del día y cierre muestran el recargo de cada venta
+- [x] Dos cajetillas en el catálogo de ejemplo, al final para no mover códigos
+- [x] Pruebas (`tests/test_recargo_cigarros.py`, 47): ajuste, carrito, cobro, migración, red y
+      pantallas
+- [x] `.exe` y pendrive, comprobado archivo por archivo. **Migración probada con la base real**
+      (respaldo del PC 1 del 2026-10-10, 11:20: 796 productos, 328 ventas): solo cambia la
+      versión; conteos y sumas idénticos, y el programa arranca contra ella
+- [x] Instalado en los dos PC (2026-10-10)
+- [ ] **Por confirmar:** que se marcaron los cigarros del catálogo real
+- [ ] **Por confirmar — dato malo encontrado en esa base:** "Leche de Frutilla Soprole 200ml" (código interno
+      2000002) tiene de precio su código de barras, $7.802.900.056.025. Nunca se vendió.
+      Corregirlo en la tienda. *Recomendación, sin pedir:* un tope al precio en el formulario
+
+**Criterio de aceptación:** dos cajetillas pagadas con débito cobran $1.000 más y se ven así en la
+pantalla, en las ventas del día y en el cierre; en efectivo no cambia nada; el dueño cambia el
+monto y vale en las dos cajas; nadie puede cobrar un total distinto del que se mostró.
+**Cumplido**, e instalado en la tienda el 2026-10-10.
 
 ---
 

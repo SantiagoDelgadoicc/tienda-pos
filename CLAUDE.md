@@ -20,8 +20,13 @@ arregló ocho errores (fase 22); el protocolo entre cajas pasó a la **versión 
 
 **Desde el 2026-09-26 la tienda funciona con esta versión**, en los dos PC. Ese día la caja
 principal se congelaba con el catálogo real y se arregló en la visita (fase 23). El cliente pagó.
-**Lo siguiente es la fase 24**: que los cajeros puedan crear productos (D-038). Para retomar, leer
-primero "Cómo retomar" en `docs/PLAN.md`.
+El 2026-10-05 se construyó la **fase 24**: cualquier empleado administra los productos sin PIN
+(D-038); protocolo a la **versión 9**. El 2026-10-10, en la tienda, el cliente pidió buscar por
+nombre al lado del código y el vuelto en efectivo: **fase 25** (D-039), y un recargo de $500 por
+cajetilla de cigarros pagada con tarjeta: **fase 26** (D-040), que migra la base (esquema 8) y
+sube el protocolo a la **versión 10**. Las dos se construyeron ese día y **están instaladas en los
+dos PC desde el 2026-10-10**, junto con la 24. Para retomar, leer primero "Cómo retomar" en
+`docs/PLAN.md`.
 
 ## 2. Contexto del cliente
 
@@ -119,9 +124,21 @@ De lo que contó el 2026-09-25, que se le había olvidado:
 De sus mensajes por WhatsApp del 2026-10-01, tras unos días fuera del negocio:
 
 - **"Al ingresar productos al sistema lo puede hacer cualquier usuario."** Le extrañó que a sus
-  empleados se les pidiera su PIN para cargar un producto. → Los cajeros podrán crear productos
+  empleados se les pidiera su PIN para cargar un producto. → Los cajeros administran los productos
   (fase 24, D-038). Se le propuso que los cambios de precio y las bajas siguieran con su PIN; **no
   contestó a eso**: lo decidió Santiago (ver 3.2).
+
+De lo que pidió el 2026-10-10, en la tienda (D-039):
+
+- **Un cuadro al lado del código para agregar productos por nombre**: agregar el pan exigía dar
+  "una buena vuelta" (F3 y dos ventanas).
+- **Mantener que los cajeros entren a Productos** (D-038).
+- **Al pagar en efectivo, una ventana que pregunte con cuánto paga el cliente y diga el vuelto.**
+  Contesta la pregunta pendiente sobre el vuelto y modifica D-006. Que el monto no se guarde, que
+  Enter vacío sea pago justo y que reemplace a la confirmación lo decidió Santiago.
+- **Una casilla para marcar los cigarros: pagados con débito o crédito, $500 más por cajetilla.**
+  Confirmó que es por cada cajetilla, igual en débito y crédito, que el monto debe poder
+  cambiarse y que cobrarlo es legal en su caso (D-040).
 
 ### 3.2 Decidido por Santiago (dueño del proyecto)
 
@@ -143,8 +160,11 @@ De sus mensajes por WhatsApp del 2026-10-01, tras unos días fuera del negocio:
   calendario y en ese caso partiría el turno en dos (añadido a D-036).
 - La venta se cierra con su total, **el medio de pago** —efectivo, débito o crédito, que lo
   marca el cajero— y **la caja donde se hizo**, y queda registrada (D-033, D-034; los dos,
-  pedidos por el cliente). Sigue sin vuelto, sin comprobante impreso y sin boleta electrónica
-  (D-006).
+  pedidos por el cliente). Sigue sin comprobante impreso y sin boleta electrónica (D-006).
+  **Desde el 2026-10-10 muestra el vuelto** en efectivo (D-039, pedido del cliente), sin
+  guardar con cuánto se pagó. **Desde el 2026-10-10 los cigarros pagados con tarjeta llevan
+  recargo por cajetilla** (D-040, pedido del cliente): lo calcula el servidor, va aparte en la
+  venta y el monto lo cambia el administrador en Productos, para las dos cajas.
 - Stack: Python + PySide6 (Qt) + SQLite.
 - Acceso con PIN de cajero y modo administrador. **Desde el 2026-09-24, un usuario por empleado**
   (pedido del cliente, ver 3.1): el PIN lo genera el sistema y se enseña una vez, **nunca se entra
@@ -157,10 +177,9 @@ De sus mensajes por WhatsApp del 2026-10-01, tras unos días fuera del negocio:
 - Rubro asumido para el catálogo demo: almacén / minimarket.
 - Reportes mínimos: ventas del día.
 - Descuento manual aplicable a la venta entera o a un producto concreto.
-- **Productos, desde el 2026-10-05 (D-038, sin construir):** cualquier usuario crea productos sin
-  PIN, que es lo que pidió el cliente; **cambiar precio, cambiar stock y dar de baja siguen con PIN
-  de administrador, también para los cajeros**, porque es muy probable que se equivoquen y no
-  queda rastro de quién cambió qué (D-018).
+- **Productos, desde el 2026-10-05 (D-038):** cualquier usuario con sesión hace en Productos lo
+  mismo que el administrador —crear, cambiar precio y stock, dar de baja, ver pendientes— sin PIN.
+  Se aceptó el riesgo de que hoy no queda rastro de quién cambió qué (D-018, sin construir).
 - Tema claro y tema oscuro, elegibles desde una pantalla de configuración (F9), junto con el
   sonido, la confirmación de cobro, la barra de atajos y el **tamaño de letra** (este último,
   pedido por el cliente: ver 3.1 y D-031). Se guardan en `preferencias.json`, dentro de la
@@ -293,7 +312,7 @@ src/tienda_pos/
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    667 pruebas
+tests/                    767 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -330,7 +349,7 @@ python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
 python main.py --demo                 # con el catálogo y los usuarios de ejemplo, en una base vacía
 python main.py --reiniciar-admin      # recuperar un administrador; solo en el PC de la base
-pytest                                # pruebas (667, dos minutos)
+pytest                                # pruebas (767, cuatro minutos)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

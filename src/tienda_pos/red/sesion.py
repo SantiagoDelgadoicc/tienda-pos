@@ -87,6 +87,7 @@ class Sesion(ABC):
         precio_clp: int,
         stock: int,
         por_peso: bool = False,
+        es_cigarro: bool = False,
     ) -> Producto: ...
 
     @abstractmethod
@@ -99,6 +100,7 @@ class Sesion(ABC):
         precio_clp: int,
         stock: int | None,
         por_peso: bool | None = None,
+        es_cigarro: bool | None = None,
     ) -> Producto: ...
 
     @abstractmethod
@@ -106,6 +108,13 @@ class Sesion(ABC):
 
     @abstractmethod
     def codigos_pendientes(self, usuario: Usuario | None) -> list[CodigoNoEncontrado]: ...
+
+    @abstractmethod
+    def recargo_cigarro(self) -> int:
+        """Lo que se suma por cajetilla de cigarros pagada con tarjeta (fase 26, D-040)."""
+
+    @abstractmethod
+    def fijar_recargo_cigarro(self, admin: Usuario | None, monto_clp: int) -> None: ...
 
     # ------------------------------------------------------------------ venta
 
@@ -287,9 +296,10 @@ class SesionLocal(Sesion):
         precio_clp: int,
         stock: int,
         por_peso: bool = False,
+        es_cigarro: bool = False,
     ) -> Producto:
         return catalogo.crear_producto(
-            self._conexion, usuario, codigo, nombre, precio_clp, stock, por_peso
+            self._conexion, usuario, codigo, nombre, precio_clp, stock, por_peso, es_cigarro
         )
 
     @_serializado
@@ -302,9 +312,18 @@ class SesionLocal(Sesion):
         precio_clp: int,
         stock: int | None,
         por_peso: bool | None = None,
+        es_cigarro: bool | None = None,
     ) -> Producto:
         return catalogo.actualizar_producto(
-            self._conexion, usuario, producto_id, codigo, nombre, precio_clp, stock, por_peso
+            self._conexion,
+            usuario,
+            producto_id,
+            codigo,
+            nombre,
+            precio_clp,
+            stock,
+            por_peso,
+            es_cigarro,
         )
 
     @_serializado
@@ -314,6 +333,14 @@ class SesionLocal(Sesion):
     @_serializado
     def codigos_pendientes(self, usuario: Usuario | None) -> list[CodigoNoEncontrado]:
         return catalogo.codigos_pendientes(self._conexion, usuario)
+
+    @_serializado
+    def recargo_cigarro(self) -> int:
+        return catalogo.recargo_cigarro(self._conexion)
+
+    @_serializado
+    def fijar_recargo_cigarro(self, admin: Usuario | None, monto_clp: int) -> None:
+        catalogo.fijar_recargo_cigarro(self._conexion, admin, monto_clp)
 
     # ------------------------------------------------------------------ venta
 

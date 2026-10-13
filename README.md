@@ -11,22 +11,24 @@ Alrededor de eso, el prototipo demuestra una venta completa e inventario mínimo
 
 ## Qué hace
 
-- **Consulta de precio** a pantalla completa (F2), con el precio en letra grande.
-- **Venta**: escaneo, carrito con agrupación de repetidos, descuento por monto o porcentaje,
-  y cierre que registra la venta y descuenta el stock.
-- **Catálogo**: alta, edición y baja de productos, con filtro y aviso de stock bajo.
-- **Ventas del día**: total, número de ventas, artículos y detalle de cada una.
-- **Acceso con PIN** y rol de administrador para lo que puede hacer daño.
-- **Códigos no encontrados**: lo que se escanea y no existe queda anotado para cargarlo luego.
+- **Venta**: escaneo, carrito con agrupación de repetidos, **búsqueda por nombre al lado del
+  código**, descuento por monto o porcentaje, **venta por peso** (pan, jamón), medio de pago
+  (efectivo, débito o crédito), **vuelto** en efectivo y **recargo por cajetilla de cigarros**
+  pagada con tarjeta.
+- **Dos cajas** sobre la red local: la principal guarda la base y la secundaria se la pide.
+- **Usuarios por empleado**, cada uno con su PIN, y administrador para lo delicado.
+- **Arqueo de caja**: apertura, retiros y pagos a proveedor, cierre contando a ciegas.
+- **Informes**: ventas del día y cierre diario por caja, por medio de pago y por empleado.
+- **Catálogo** para todos los empleados: alta, edición, stock, baja y códigos pendientes.
+- **Consulta de precio** a pantalla completa (F2).
 - Funciona **sin internet**, con respaldo automático de la base de datos en cada arranque.
 
 ## Estado
 
-Prototipo funcional, ya presentado al cliente. **Hoy funciona en un solo PC.** Tras la primera
-reunión se abrió una segunda etapa con lo que él sí pidió: rendimiento medido, importación de su
-catálogo antiguo, dos cajas e instalador. Nada de eso está construido todavía: ver
-[docs/PLAN.md](docs/PLAN.md), fases 8 a 14. *(Las familias y el precio de compra estuvieron en esa
-lista hasta el 2026-09-14, cuando el cliente dijo que no le interesan.)*
+**En producción en la tienda del cliente** (Punto y Fama, botillería y market) desde el
+2026-09-26, en dos PC. La última actualización instalada es la de las fases 25 y 26 (2026-10-10).
+Qué está hecho, qué falta y cómo retomar: [docs/PLAN.md](docs/PLAN.md), apartado "Cómo retomar".
+Cómo está instalado: [docs/DESPLIEGUE-TIENDA.md](docs/DESPLIEGUE-TIENDA.md).
 
 ## Requisitos
 
@@ -74,8 +76,7 @@ Para comprobar la instalación en otro equipo: `PuntoYFamaCaja.exe --verificar`.
 
 ## Aviso
 
-Este es un **prototipo de demostración**. No emite boletas ni facturas, no está conectado al
-SII, no registra medios de pago, **todavía** no funciona en varias cajas simultáneas, no maneja
-familias ni precio de compra, no importa datos de otros sistemas, no maneja productos
-por peso y no permite crear usuarios ni cambiar sus PIN desde el programa. Los productos y
-precios que trae son un catálogo de ejemplo inventado.
+No emite boletas ni facturas y no está conectado al SII (ver
+[docs/BOLETA-ELECTRONICA-SII.md](docs/BOLETA-ELECTRONICA-SII.md)). No imprime comprobantes, no
+anula ventas cobradas y no guarda historial de quién cambió un precio o un stock (D-018). Con
+`--demo`, los productos y precios son un catálogo de ejemplo inventado.

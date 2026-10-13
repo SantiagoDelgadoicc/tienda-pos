@@ -15,7 +15,7 @@ import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 
-VERSION_ESQUEMA = 7
+VERSION_ESQUEMA = 8
 
 _RUTA_ESQUEMA = Path(__file__).with_name("schema.sql")
 
@@ -196,6 +196,23 @@ def _venta_por_peso(conexion: sqlite3.Connection) -> None:
     )
 
 
+def _recargo_cigarros(conexion: sqlite3.Connection) -> None:
+    """Añade el recargo de los cigarros pagados con tarjeta (fase 26, D-040).
+
+    `producto.es_cigarro` en 0 para todo lo que ya existía: los cigarros se marcan a mano en
+    Productos. `venta.recargo_clp` en 0 en las ventas anteriores, que no lo tenían; su total ya
+    era subtotal menos descuento, y sumarle cero lo deja igual.
+    """
+    conexion.execute(
+        "ALTER TABLE producto ADD COLUMN es_cigarro INTEGER NOT NULL DEFAULT 0 "
+        "CHECK (es_cigarro IN (0, 1))"
+    )
+    conexion.execute(
+        "ALTER TABLE venta ADD COLUMN recargo_clp INTEGER NOT NULL DEFAULT 0 "
+        "CHECK (recargo_clp >= 0)"
+    )
+
+
 # Versión de destino -> función que lleva la base desde la versión anterior hasta ella.
 _MIGRACIONES: dict[int, Callable[[sqlite3.Connection], None]] = {
     1: _crear_esquema_inicial,
@@ -205,6 +222,7 @@ _MIGRACIONES: dict[int, Callable[[sqlite3.Connection], None]] = {
     5: _medio_de_pago,
     6: _arqueo_de_caja,
     7: _venta_por_peso,
+    8: _recargo_cigarros,
 }
 
 

@@ -34,7 +34,7 @@ python main.py
 pytest
 ```
 
-369 pruebas, alrededor de un minuto. No necesitan pantalla: las de interfaz usan la plataforma
+767 pruebas, unos cuatro minutos. No necesitan pantalla: las de interfaz usan la plataforma
 `offscreen` de Qt, que `tests/conftest.py` activa automáticamente.
 
 ```bash
@@ -58,6 +58,15 @@ Los archivos de prueba, y qué cubre cada uno:
 | `test_ui_configuracion.py` | Rueda de configuración y cambio de tema en caliente |
 | `test_robustez.py` | Respaldos, registro, errores, detección de lector |
 | `test_rendimiento.py` | Búsqueda con 5.000 productos y uso del índice |
+| `test_red.py`, `test_caja.py` | Dos cajas por la red: protocolo, versiones, permisos, de qué caja es cada venta |
+| `test_medio_pago.py` | Efectivo, débito y crédito (D-034) |
+| `test_cierre.py`, `test_ui_cierre.py` | Cierre diario por caja (D-035) |
+| `test_arqueo.py`, `test_ui_efectivo.py` | Arqueo: abrir, retiros y pagos, cerrar contando (D-036) |
+| `test_venta_por_peso.py`, `test_ui_peso.py` | Venta por peso (D-037) |
+| `test_ui_usuarios.py` | Usuarios por empleado y PIN generado (D-032) |
+| `test_ui_movimiento.py` | Animaciones y los arreglos de la fase 23 |
+| `test_ui_nombre_y_vuelto.py` | Buscar por nombre al lado del código, vuelto, ventanas que se sueltan (D-039) |
+| `test_recargo_cigarros.py` | Recargo de los cigarros con tarjeta: servicio, cobro, migración, red y pantallas (D-040) |
 
 ## 4. Estructura
 
@@ -76,6 +85,7 @@ src/tienda_pos/
   domain/                   modelos y errores (sin dependencias)
   repositories/             acceso a datos, un módulo por entidad
   services/                 lógica de negocio (NO importa Qt)
+  red/                      sesión local o remota, servidor de la caja principal y protocolo (D-015)
   ui/                       todo lo que sabe de Qt
   utils/                    dinero, códigos, lector, sonido, registro
 tools/                      construir, icono, capturas, acceso directo
@@ -94,10 +104,12 @@ SQLite en `%LOCALAPPDATA%\TiendaPOS\tienda.db`, en modo WAL y con `foreign_keys 
 |---|---|
 | `producto` | Catálogo. Baja lógica con `activo` |
 | `usuario` | Nombre, rol, PIN con hash scrypt y sal propia |
-| `venta` | Cabecera: folio, fecha, subtotal, descuento, total |
+| `producto` (columnas nuevas) | `por_peso` (D-037), `es_cigarro` (D-040) |
+| `venta` | Cabecera: folio, fecha, subtotal, descuento, recargo de cigarros, total, caja, medio de pago, turno |
 | `venta_linea` | Detalle, con **copia** del código, nombre y precio del momento, y el descuento de la línea |
 | `codigo_no_encontrado` | Códigos escaneados que no están en el catálogo |
-| `meta` | Pares clave/valor |
+| `turno_caja`, `movimiento_efectivo` | Arqueo: apertura, retiros, pagos, ingresos y cierre de cada caja (D-036) |
+| `meta` | Pares clave/valor: el monto sugerido de apertura y el recargo por cajetilla |
 
 Dos cosas que hay que respetar al tocar esto:
 
@@ -158,11 +170,12 @@ Sin `--demo`, una instalación nueva arranca vacía y pide crear al administrado
 sin usuario**. `--reiniciar-admin` funciona con diálogos y no por consola porque el ejecutable se
 construye sin ella.
 
-**Protocolo entre cajas.** Versión 1, dos cajas (fase 13) · 2, administración de usuarios
-(fase 15) · 3, cada venta dice de qué caja viene (fase 16) · 4, y con qué se pagó (fase 17) ·
-5, el cierre por caja (fase 18) · **6**, el arqueo de caja (fase 19). **Esquema de la base: 6**
-(`venta.caja`, `venta.medio_pago`, `venta.turno_id`, y las tablas `turno_caja` y
-`movimiento_efectivo`).
+**Protocolo entre cajas: versión 10. Esquema de la base: versión 8** (al 2026-10-12). La historia
+de cada número está en `red/protocolo.py` (`VERSION_PROTOCOLO`) y en `db/migrations.py`; en breve:
+protocolo 1, dos cajas (fase 13) · 2, usuarios (fase 15) · 3, caja de la venta (fase 16) · 4, medio
+de pago (fase 17) · 5, cierre por caja (fase 18) · 6, arqueo (fase 19) · 7, venta por peso (D-037)
+· 8, editar sin mandar el stock (fase 22) · 9, Productos para todos (D-038) · 10, recargo de los
+cigarros (D-040). Esquema 7, venta por peso; **8, `producto.es_cigarro` y `venta.recargo_clp`**.
 Sube también cuando solo se añaden operaciones: así una actualización a medias se detecta al
 arrancar y no en mitad de una pantalla. Hay que actualizar las dos cajas a la vez.
 

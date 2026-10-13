@@ -13,7 +13,8 @@ from ..domain.errors import ProductoDuplicado
 from ..domain.models import Producto
 
 _COLUMNAS = (
-    "id, codigo_barras, nombre, precio_clp, stock, activo, creado_en, actualizado_en, por_peso"
+    "id, codigo_barras, nombre, precio_clp, stock, activo, creado_en, actualizado_en, por_peso, "
+    "es_cigarro"
 )
 
 
@@ -28,6 +29,7 @@ def _a_producto(fila: sqlite3.Row) -> Producto:
         creado_en=fila["creado_en"],
         actualizado_en=fila["actualizado_en"],
         por_peso=bool(fila["por_peso"]),
+        es_cigarro=bool(fila["es_cigarro"]),
     )
 
 
@@ -90,8 +92,8 @@ def crear(conexion: sqlite3.Connection, producto: Producto) -> Producto:
     """
     try:
         cursor = conexion.execute(
-            "INSERT INTO producto (codigo_barras, nombre, precio_clp, stock, activo, por_peso) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO producto (codigo_barras, nombre, precio_clp, stock, activo, por_peso, "
+            "es_cigarro) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 producto.codigo_barras,
                 producto.nombre,
@@ -99,6 +101,7 @@ def crear(conexion: sqlite3.Connection, producto: Producto) -> Producto:
                 producto.stock,
                 int(producto.activo),
                 int(producto.por_peso),
+                int(producto.es_cigarro),
             ),
         )
     except sqlite3.IntegrityError as exc:
@@ -114,7 +117,8 @@ def actualizar(conexion: sqlite3.Connection, producto: Producto) -> None:
     try:
         conexion.execute(
             "UPDATE producto SET codigo_barras = ?, nombre = ?, precio_clp = ?, stock = ?, "
-            "activo = ?, por_peso = ?, actualizado_en = datetime('now', 'localtime') WHERE id = ?",
+            "activo = ?, por_peso = ?, es_cigarro = ?, actualizado_en = datetime('now', 'localtime') "
+            "WHERE id = ?",
             (
                 producto.codigo_barras,
                 producto.nombre,
@@ -122,6 +126,7 @@ def actualizar(conexion: sqlite3.Connection, producto: Producto) -> None:
                 producto.stock,
                 int(producto.activo),
                 int(producto.por_peso),
+                int(producto.es_cigarro),
                 producto.id,
             ),
         )

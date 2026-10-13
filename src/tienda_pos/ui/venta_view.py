@@ -7,23 +7,35 @@ y si el foco se pierde el siguiente escaneo se pierde con él.
 
 from __future__ import annotations
 
+import re
 import uuid
 
 
-from PySide6.QtCore import QEvent, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QGuiApplication, QKeyEvent
+from PySide6.QtCore import QEvent, QModelIndex, Qt, QTimer, Signal
+from PySide6.QtGui import (
+    QColor,
+    QFont,
+    QFontMetrics,
+    QGuiApplication,
+    QKeyEvent,
+    QStandardItem,
+    QStandardItemModel,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
+    QCompleter,
     QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
+    QListView,
     QPushButton,
     QStackedWidget,
     QStyle,
     QStyledItemDelegate,
+    QSizePolicy,
     QStyleOptionViewItem,
     QTableWidget,
     QTableWidgetItem,
@@ -46,6 +58,21 @@ from .efectivo_view import pedir_apertura
 
 # Cuánto tiempo permanece visible un mensaje de éxito o de error antes de desvanecerse.
 _MENSAJE_MS = 5000
+
+#: Pausa de tecleo tras la que se busca por nombre. Lo bastante corta para que la lista salga
+#: sin esperar, y lo bastante larga para no consultar la base con cada letra de "marraqueta".
+_ESPERA_NOMBRE_MS = 180
+
+#: Lo que se muestra de la búsqueda por nombre. El repositorio ya corta en 50.
+_MAX_NOMBRES = 30
+
+#: Cuánto se queda a la vista el aviso de una venta con vuelto: lo que dura contar el vuelto en
+#: la mano, no los cinco segundos de un escaneo. El siguiente producto lo reemplaza igual.
+_MENSAJE_VUELTO_MS = 30_000
+
+#: Un código de barras al final de lo escrito en la búsqueda por nombre: alguien empezó a
+#: escribir, se arrepintió y pasó el producto por la pistola sin volver al campo del código.
+_CODIGO_AL_FINAL = re.compile(r"(\d{7,})$")
 
 # Margen que se espera tras una ráfaga de lector antes de confirmar sin Enter. Suficiente
 # para que llegue el Enter si el lector lo envía, e imperceptible si no lo hace.
@@ -146,6 +173,9 @@ class VentaView(QWidget):
         self._sesion = sesion
         #: Intento de cobro en curso. Ver `cobrar`.
         self._intento_cobro: str | None = None
+        #: Con cuánto pagó el cliente en el último intento de cobro en efectivo que no llegó a
+        #: registrarse. Si el cajero reintenta, la ventana del vuelto ya lo trae escrito.
+        self._recibido_previo: int | None = None
         self._carrito = Carrito()
         self.usuario: Usuario | None = None
         self.preferencias = Preferencias()
@@ -153,6 +183,20 @@ class VentaView(QWidget):
         self._auto = QTimer(self)
         self._auto.setSingleShot(True)
         self._auto.timeout.connect(self._confirmar_automatico)
+        # La búsqueda por nombre (fase 25): espera a que se deje de teclear, y lo elegido en la
+        # lista se agrega en el siguiente giro del bucle y no dentro del evento de la lista, que
+        # abriría la ventana del peso en medio de la tecla Enter (ver `_nombre_elegido`).
+        self._detector_nombre = DetectorLector()
+        self._espera_nombre = QTimer(self)
+        self._espera_nombre.setSingleShot(True)
+        self._espera_nombre.timeout.connect(self._buscar_nombres)
+        self._auto_nombre = QTimer(self)
+        self._auto_nombre.setSingleShot(True)
+        self._auto_nombre.timeout.connect(self._codigo_en_el_campo_nombre)
+        self._codigo_elegido: str | None = None
+        self._agregar_elegido = QTimer(self)
+        self._agregar_elegido.setSingleShot(True)
+        self._agregar_elegido.timeout.connect(self._agregar_codigo_elegido)
         #: Último tamaño aplicado al total. Evita repintar la etiqueta en cada escaneo.
         self._tamano_total: int | None = None
         # Un único temporizador para el aviso, reutilizado en cada mensaje. Ver `_avisar`.
@@ -196,14 +240,27 @@ class VentaView(QWidget):
         return contenedor
 
     def _campo_de_escaneo(self) -> QWidget:
-        """El campo grande, con el icono del lector dentro.
+        """El campo del código y, a su lado, el de buscar por nombre (fase 25).
 
-        Va suelto sobre el lienzo y no dentro de una tarjeta: es el único sitio donde el
-        cajero escribe, y meterlo en una caja dentro de otra caja solo le quitaba peso.
+        Van sueltos sobre el lienzo y no dentro de una tarjeta: son los únicos sitios donde el
+        cajero escribe, y meterlos en una caja dentro de otra caja solo les quitaba peso. El
+        del código se lleva más ancho porque es el de siempre, y el foco vuelve a él después
+        de cada producto: la pistola escribe donde esté el foco.
         """
+        fila = QWidget()
+        fila.setObjectName("transparente")
+        disposicion = QHBoxLayout(fila)
+        disposicion.setContentsMargins(0, 0, 0, 0)
+        disposicion.setSpacing(12)
+        disposicion.addWidget(self._campo_codigo(), stretch=3)
+        disposicion.addWidget(self._campo_nombre(), stretch=2)
+        return fila
+
+    def _campo_codigo(self) -> QLineEdit:
+        """El campo grande, con el icono del lector dentro."""
         self.campo_codigo = QLineEdit()
         self.campo_codigo.setObjectName("campoEscaneo")
-        self.campo_codigo.setPlaceholderText("Escanee o escriba el código de barras")
+        self.campo_codigo.setPlaceholderText("Código de barras")
         self.campo_codigo.setClearButtonEnabled(True)
         self.campo_codigo.returnPressed.connect(self._procesar_codigo)
         self.campo_codigo.textEdited.connect(self._teclear)
@@ -214,6 +271,42 @@ class VentaView(QWidget):
             QLineEdit.ActionPosition.LeadingPosition,
         )
         return self.campo_codigo
+
+    def _campo_nombre(self) -> QLineEdit:
+        """Buscar por nombre sin abrir ventanas: se escribe "pan" y la lista sale debajo.
+
+        Lo pidió el cliente el 2026-10-10: agregar el pan, que no trae código, exigía F3, una
+        ventana para escribir y otra para elegir. Ahora es escribir, flechas y Enter. La lista
+        llega con el primero marcado, así que si es ese basta con Enter.
+        """
+        self.campo_nombre = QLineEdit()
+        self.campo_nombre.setObjectName("campoNombre")
+        self.campo_nombre.setPlaceholderText("Por nombre (F3)")
+        self.campo_nombre.setClearButtonEnabled(True)
+        # Igual de alto que el del código, que lleva letra más grande.
+        self.campo_nombre.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
+        self.campo_nombre.textEdited.connect(self._teclear_nombre)
+        self.campo_nombre.returnPressed.connect(self._enter_en_nombre)
+        self._icono_nombre = self.campo_nombre.addAction(
+            iconos.icono("buscar", 20, estilos.actual.texto_apagado),
+            QLineEdit.ActionPosition.LeadingPosition,
+        )
+
+        # El completador se monta a mano —`setWidget` y no `setCompleter`— para que no escriba
+        # en el campo lo elegido ni filtre por su cuenta: la lista es la que dio la base.
+        self._modelo_nombres = QStandardItemModel(self)
+        self._completador = QCompleter(self._modelo_nombres, self)
+        self._completador.setWidget(self.campo_nombre)
+        self._completador.setCompletionMode(QCompleter.CompletionMode.UnfilteredPopupCompletion)
+        self._completador.setMaxVisibleItems(10)
+        lista = QListView()
+        lista.setObjectName("listaNombres")
+        lista.setUniformItemSizes(True)
+        self._completador.setPopup(lista)
+        self._completador.activated[QModelIndex].connect(self._nombre_elegido)
+        return self.campo_nombre
 
     def _tarjeta_carrito(self) -> QWidget:
         tarjeta = QFrame()
@@ -414,6 +507,21 @@ class VentaView(QWidget):
         columna.addWidget(self.fila_descuento)
         self.fila_descuento.hide()
 
+        # Recargo de los cigarros con tarjeta (fase 26, D-040): solo cuando lo hay, y diciendo
+        # cuántas cajetillas y a cuánto, para que el cliente vea de dónde sale la diferencia.
+        self.fila_recargo = QWidget()
+        self.fila_recargo.setObjectName("transparente")
+        interior = QVBoxLayout(self.fila_recargo)
+        interior.setContentsMargins(0, 12, 0, 0)
+        interior.setSpacing(0)
+        self.etiqueta_recargo = self._etiqueta_pequena("Recargo cigarros")
+        self.etiqueta_recargo.setWordWrap(True)
+        self.valor_recargo = QLabel("$0")
+        self.valor_recargo.setObjectName("valorDescuento")
+        interior.addLayout(self._renglon(self.etiqueta_recargo, self.valor_recargo))
+        columna.addWidget(self.fila_recargo)
+        self.fila_recargo.hide()
+
         return tarjeta
 
     def _tarjeta_cobro(self) -> QWidget:
@@ -514,6 +622,28 @@ class VentaView(QWidget):
     def elegir_medio_pago(self, medio: MedioPago) -> None:
         self._medio = medio
         self._botones_medio[medio].setChecked(True)
+        # Con tarjeta, el total puede cambiar por el recargo de los cigarros (fase 26): se lee el
+        # vigente al marcarla, que es justo antes de decirle el total al cliente.
+        if medio in servicio_venta.MEDIOS_CON_RECARGO and self._carrito.cajetillas:
+            self._leer_recargo()
+        if hasattr(self, "valor_total"):
+            self._pintar_totales()
+
+    def _leer_recargo(self) -> None:
+        """Trae del servidor el recargo por cajetilla. Si no se puede, se queda el que había.
+
+        Quedarse con el anterior no cobra de más ni de menos: el servidor compara el que se usó
+        con el vigente y, si no es el mismo, no cobra y lo dice (`_recargo_de`).
+        """
+        try:
+            self._carrito.recargo_unitario_clp = self._sesion.recargo_cigarro()
+        except ErrorDominio:
+            pass
+
+    def recargo_cambiado(self) -> None:
+        """El administrador cambió el recargo en esta caja: se relee y se repinta."""
+        self._leer_recargo()
+        self._pintar_totales()
 
     def alternar_medio_pago(self) -> None:
         """F11: efectivo, débito, crédito y vuelta a empezar. Dos pulsaciones como mucho."""
@@ -536,6 +666,10 @@ class VentaView(QWidget):
         """
         self.elegir_medio_pago(MedioPago.EFECTIVO)
         self._intento_cobro = None
+        self._recibido_previo = None
+        # El recargo se vuelve a leer en la próxima venta con cigarros y tarjeta: el dueño pudo
+        # cambiarlo desde la otra caja.
+        self._carrito.recargo_unitario_clp = None
 
     @staticmethod
     def _renglon(etiqueta: QLabel, valor: QLabel) -> QHBoxLayout:
@@ -584,6 +718,7 @@ class VentaView(QWidget):
         self._icono_campo.setIcon(
             iconos.icono("escanear", 24, estilos.actual.texto_apagado)
         )
+        self._icono_nombre.setIcon(iconos.icono("buscar", 20, estilos.actual.texto_apagado))
         self._icono_vacio.setPixmap(
             iconos.pixmap("escanear", 44, estilos.actual.texto_apagado)
         )
@@ -601,7 +736,12 @@ class VentaView(QWidget):
         self._refrescar()
 
     def enfocar_escaneo(self) -> None:
-        """Devuelve el foco al campo de escaneo y deja el campo listo para el siguiente."""
+        """Devuelve el foco al campo de escaneo y deja el campo listo para el siguiente.
+
+        La búsqueda por nombre se vacía: es de un momento, y una palabra olvidada ahí haría
+        que el próximo F3 abriera la lista de un producto de hace rato.
+        """
+        self._limpiar_nombre()
         self.campo_codigo.setFocus()
         self.campo_codigo.selectAll()
 
@@ -706,36 +846,149 @@ class VentaView(QWidget):
 
     def _codigo_no_encontrado(self, codigo: str) -> None:
         dialogo = dialogos.DialogoCodigoNoEncontrado(codigo.strip(), self)
-        dialogo.exec()
+        dialogos.ejecutar_y_soltar(dialogo)
         if dialogo.buscar_por_nombre:
             self.buscar_por_nombre()
         else:
             self.enfocar_escaneo()
 
     def buscar_por_nombre(self) -> None:
-        dialogo = dialogos.DialogoTexto(
-            "Buscar producto",
-            "Escriba parte del nombre del producto:",
-            self,
-            ayuda="Por ejemplo: leche, papas, detergente.",
-        )
-        if not dialogo.exec():
-            self.enfocar_escaneo()
-            return
+        """F3, o "Buscar por nombre" en el aviso de código no encontrado: al campo del nombre."""
+        self.campo_nombre.setFocus()
+        self.campo_nombre.selectAll()
 
-        resultados = self._sesion.buscar_por_nombre(dialogo.texto)
+    def _limpiar_nombre(self) -> None:
+        self._espera_nombre.stop()
+        self._auto_nombre.stop()
+        self._detector_nombre.reiniciar()
+        self._completador.popup().hide()
+        self.campo_nombre.clear()
+
+    def _teclear_nombre(self, texto: str) -> None:
+        """Programa la búsqueda, salvo que lo que llega sea una pistola."""
+        self._espera_nombre.stop()
+        self._auto_nombre.stop()
+        if not texto.strip():
+            self._detector_nombre.reiniciar()
+            self._completador.popup().hide()
+            return
+        self._detector_nombre.registrar()
+        if self._detector_nombre.es_lector:
+            # Un lector sin Enter: como en el campo del código, se confirma solo.
+            self._auto_nombre.start(_ESPERA_LECTOR_MS)
+            return
+        self._espera_nombre.start(_ESPERA_NOMBRE_MS)
+
+    @staticmethod
+    def _codigo_en_nombre(texto: str) -> str | None:
+        """El código de barras que haya en lo escrito, si lo que se escribió es un código."""
+        texto = texto.strip()
+        if texto.isdigit():
+            return texto
+        coincidencia = _CODIGO_AL_FINAL.search(texto)
+        return coincidencia.group(1) if coincidencia else None
+
+    def _codigo_en_el_campo_nombre(self) -> None:
+        codigo = self._codigo_en_nombre(self.campo_nombre.text())
+        if codigo is not None:
+            self._limpiar_nombre()
+            self.agregar_por_codigo(codigo)
+
+    def _consultar_nombres(self, texto: str):
+        """Los productos que contienen `texto`, o None si no se pudo preguntar (y ya se avisó)."""
+        try:
+            return self._sesion.buscar_por_nombre(texto)[:_MAX_NOMBRES]
+        except ErrorDominio as error:
+            self._avisar(str(error), exito=False)
+            return None
+
+    def _buscar_nombres(self) -> None:
+        """Rellena la lista con lo que hay escrito. Con menos de dos letras, sin lista."""
+        texto = self.campo_nombre.text().strip()
+        if len(texto) < 2 or self._codigo_en_nombre(texto) is not None:
+            self._completador.popup().hide()
+            return
+        resultados = self._consultar_nombres(texto)
+        if resultados is not None:
+            self._mostrar_nombres(resultados)
+
+    def _mostrar_nombres(self, resultados) -> None:
+        self._modelo_nombres.clear()
+        if not resultados:
+            vacio = QStandardItem("No hay productos con ese nombre")
+            vacio.setFlags(Qt.ItemFlag.NoItemFlags)
+            self._modelo_nombres.appendRow(vacio)
+        for producto in resultados:
+            precio = formatear_clp(producto.precio_clp)
+            if producto.por_peso:
+                precio += " el kilo"
+            fila = QStandardItem(f"{producto.nombre}   ·   {precio}")
+            fila.setData(producto.codigo_barras, Qt.ItemDataRole.UserRole)
+            fila.setEditable(False)
+            self._modelo_nombres.appendRow(fila)
+
+        # Al menos tan ancha como el campo, y más si los nombres lo piden: un nombre cortado en
+        # "Pan amasa..." no deja distinguir el amasado del de molde.
+        lista = self._completador.popup()
+        ancho = max(
+            self.campo_nombre.width(),
+            min(560, lista.sizeHintForColumn(0) + 40) if resultados else 0,
+        )
+        rectangulo = self.campo_nombre.rect()
+        rectangulo.setWidth(ancho)
+        self._completador.complete(rectangulo)
+        if resultados:
+            lista.setCurrentIndex(self._completador.completionModel().index(0, 0))
+
+    def _enter_en_nombre(self) -> None:
+        """Enter en el campo del nombre, sin nada marcado en la lista.
+
+        Si lo escrito es un código, se agrega como código. Si el nombre da un solo producto, se
+        agrega. Si da varios, se abre la lista con el primero marcado.
+        """
+        # Qt entrega el mismo Enter a la lista y al campo. Si en la lista había algo marcado, el
+        # Enter es de ella (`_nombre_elegido`): atenderlo aquí también agregaba el producto dos
+        # veces cuando el nombre daba un solo resultado. Según el orden en que llegue, o la lista
+        # sigue abierta o el campo ya está vacío; las dos cosas se miran.
+        lista = self._completador.popup()
+        if lista.isVisible() and lista.currentIndex().isValid():
+            return
+        texto = self.campo_nombre.text().strip()
+        if not texto:
+            return
+        codigo = self._codigo_en_nombre(texto)
+        if codigo is not None:
+            self._limpiar_nombre()
+            self.agregar_por_codigo(codigo)
+            return
+        self._espera_nombre.stop()
+        if len(texto) < 2:
+            self._avisar("Escriba al menos dos letras del nombre.", exito=False)
+            return
+        resultados = self._consultar_nombres(texto)
+        if resultados is None:
+            return
+        if len(resultados) == 1:
+            self._limpiar_nombre()
+            self.agregar_por_codigo(resultados[0].codigo_barras)
+            return
+        self._mostrar_nombres(resultados)
         if not resultados:
             self._avisar("No se encontró ningún producto con ese nombre.", exito=False)
-            self.enfocar_escaneo()
+
+    def _nombre_elegido(self, indice: QModelIndex) -> None:
+        """Enter o clic en la lista. Se agrega en el siguiente giro, fuera de este evento."""
+        codigo = indice.data(Qt.ItemDataRole.UserRole)
+        if not codigo:
             return
+        self._codigo_elegido = codigo
+        self._limpiar_nombre()
+        self._agregar_elegido.start(0)
 
-        from .buscador import DialogoResultados
-
-        seleccion = DialogoResultados(resultados, self).elegir()
-        if seleccion is not None:
-            self.agregar_por_codigo(seleccion.codigo_barras)
-        else:
-            self.enfocar_escaneo()
+    def _agregar_codigo_elegido(self) -> None:
+        codigo, self._codigo_elegido = self._codigo_elegido, None
+        if codigo:
+            self.agregar_por_codigo(codigo)
 
     # ------------------------------------------------------------------ teclado
 
@@ -987,14 +1240,27 @@ class VentaView(QWidget):
             self.enfocar_escaneo()
             return
 
-        total = formatear_clp(self._carrito.total_clp)
+        total = formatear_clp(self._carrito.total_con(self._medio))
+        recargo = self._carrito.recargo_clp(self._medio)
+        recibido: int | None = None
+        if self._medio is MedioPago.EFECTIVO and self._carrito.total_clp > 0:
+            # En efectivo, la ventana del vuelto (fase 25, D-039). Ya es una confirmación, así
+            # que reemplaza a la otra y aparece aunque la confirmación esté apagada en F9.
+            cobrar, recibido = self.pedir_pago_efectivo(
+                self._carrito.total_clp, self._recibido_previo
+            )
+            if not cobrar:
+                self.enfocar_escaneo()
+                return
+            self._recibido_previo = recibido
         # La confirmación se puede desactivar desde la configuración: en una caja con mucho
         # movimiento, un diálogo por venta son cientos de pulsaciones al día.
-        if self.preferencias.confirmar_cobro and not dialogos.confirmar(
+        elif self.preferencias.confirmar_cobro and not dialogos.confirmar(
             self,
             "Confirmar venta",
             f"Total a cobrar: {total}\n"
-            f"Pago: {NOMBRE_MEDIO[self._medio]}\n"
+            + (f"Incluye recargo de cigarros: {formatear_clp(recargo)}\n" if recargo else "")
+            + f"Pago: {NOMBRE_MEDIO[self._medio]}\n"
             f"{self._carrito.cantidad_articulos} artículos en {len(self._carrito.lineas)} "
             f"líneas.\n\n¿Confirma la venta?",
             texto_si="Sí, cobrar",
@@ -1039,10 +1305,19 @@ class VentaView(QWidget):
         # en un reintento el servidor devuelve la venta original, con el medio con que se
         # guardó, y es eso lo que el cajero tiene que ver.
         medio = f" · {NOMBRE_MEDIO[venta.medio_pago]}" if venta.medio_pago else ""
-        self._avisar(
-            f"Venta N° {venta.folio} registrada por {formatear_clp(venta.total_clp)}{medio}.",
-            exito=True,
-        )
+        vuelto = self._vuelto_de(venta, recibido)
+        if vuelto:
+            self._avisar(
+                f"Venta N° {venta.folio} registrada por {formatear_clp(venta.total_clp)}{medio}."
+                f"\nVuelto: {formatear_clp(vuelto)}",
+                exito=True,
+                duracion_ms=_MENSAJE_VUELTO_MS,
+            )
+        else:
+            self._avisar(
+                f"Venta N° {venta.folio} registrada por {formatear_clp(venta.total_clp)}{medio}.",
+                exito=True,
+            )
         self.venta_registrada.emit()
         if not es_lo_de_pantalla:
             dialogos.mostrar_error(
@@ -1055,6 +1330,26 @@ class VentaView(QWidget):
             )
         self.enfocar_escaneo()
 
+    def pedir_pago_efectivo(
+        self, total_clp: int, recibido_inicial: int | None = None
+    ) -> tuple[bool, int | None]:
+        """Con cuánto paga el cliente. Aparte para que las pruebas contesten sin abrir la ventana."""
+        return dialogos.DialogoVuelto(total_clp, self, recibido_inicial).pedir()
+
+    @staticmethod
+    def _vuelto_de(venta, recibido: int | None) -> int | None:
+        """El vuelto de la venta registrada, con su total y no con el del carrito.
+
+        En un reintento el servidor devuelve la venta del primer intento, cuyo total puede no
+        ser el que se tecleó; si el monto no alcanza para esa, no se inventa un vuelto.
+        """
+        if recibido is None or venta.medio_pago is not MedioPago.EFECTIVO:
+            return None
+        try:
+            return servicio_venta.calcular_vuelto(venta.total_clp, recibido)
+        except ErrorDominio:
+            return None
+
     def _cobro_fallido(self, error: ErrorDominio) -> None:
         """Explica por qué no se cobró y decide si el próximo intento es el mismo cobro.
 
@@ -1064,6 +1359,10 @@ class VentaView(QWidget):
         """
         if not isinstance(error, ServidorNoDisponible):
             self._intento_cobro = None
+            # Si fue porque el recargo de los cigarros cambió (fase 26), el total nuevo tiene que
+            # estar ya en pantalla cuando el cajero lea el aviso y se lo diga al cliente.
+            self._leer_recargo()
+            self._pintar_totales()
         dialogos.mostrar_error(self, str(error))
         self.enfocar_escaneo()
 
@@ -1073,9 +1372,10 @@ class VentaView(QWidget):
         def lineas(pares) -> list[tuple]:
             return sorted((l.codigo_barras, l.cantidad, l.gramos or 0) for l in pares)
 
-        return venta.total_clp == self._carrito.total_clp and lineas(venta.lineas) == lineas(
-            self._carrito.lineas
-        )
+        # Con el recargo de los cigarros, el total de una venta con tarjeta no es el del carrito
+        # a secas (fase 26): se compara con el del medio con que se cobró.
+        total = self._carrito.total_con(venta.medio_pago)
+        return venta.total_clp == total and lineas(venta.lineas) == lineas(self._carrito.lineas)
 
     def _cerrar_venta(self):
         return self._sesion.cerrar_venta(
@@ -1154,22 +1454,43 @@ class VentaView(QWidget):
             if self._carrito.esta_vacio
             else f"{self._carrito.cantidad_articulos} artículos"
         )
-        self.valor_subtotal.setText(formatear_clp(self._carrito.subtotal_clp))
-        self.valor_total.setText(formatear_clp(self._carrito.total_clp))
-        self._ajustar_total()
-
-        descuento = self._carrito.descuento_clp
-        self.fila_descuento.setVisible(descuento > 0)
-        self.valor_descuento.setText(f"-{formatear_clp(descuento)}")
-        # Cuando el descuento viene de varios sitios, el panel dice de dónde: si no, un
-        # total más bajo de lo esperado no tendría explicación a la vista.
-        self.etiqueta_descuento.setText(self._titulo_descuento(hay_descuento_de_linea).upper())
+        self._pintar_totales()
 
         hay_productos = not self._carrito.esta_vacio
         self.boton_cobrar.setEnabled(hay_productos)
         self.boton_quitar.setEnabled(hay_productos)
         self.boton_descuento.setEnabled(hay_productos)
         self.boton_vaciar.setEnabled(hay_productos)
+
+    def _pintar_totales(self) -> None:
+        """Subtotal, descuento, recargo y total. Aparte de la tabla: cambiar de medio no la toca."""
+        carrito = self._carrito
+        if (
+            carrito.cajetillas
+            and self._medio in servicio_venta.MEDIOS_CON_RECARGO
+            and carrito.recargo_unitario_clp is None
+        ):
+            self._leer_recargo()
+        self.valor_subtotal.setText(formatear_clp(carrito.subtotal_clp))
+        self.valor_total.setText(formatear_clp(carrito.total_con(self._medio)))
+        self._ajustar_total()
+
+        descuento = carrito.descuento_clp
+        self.fila_descuento.setVisible(descuento > 0)
+        self.valor_descuento.setText(f"-{formatear_clp(descuento)}")
+        # Cuando el descuento viene de varios sitios, el panel dice de dónde: si no, un
+        # total más bajo de lo esperado no tendría explicación a la vista.
+        hay_descuento_de_linea = any(linea.tiene_descuento for linea in carrito.lineas)
+        self.etiqueta_descuento.setText(self._titulo_descuento(hay_descuento_de_linea).upper())
+
+        recargo = carrito.recargo_clp(self._medio)
+        self.fila_recargo.setVisible(recargo > 0)
+        if recargo:
+            self.etiqueta_recargo.setText(
+                f"RECARGO CIGARROS ({carrito.cajetillas} × "
+                f"{formatear_clp(carrito.recargo_unitario_clp or 0)})"
+            )
+            self.valor_recargo.setText(f"+{formatear_clp(recargo)}")
 
     def _ajustar_total(self) -> None:
         """Pinta el total al mayor tamaño que quepa dentro de la tarjeta.
@@ -1327,7 +1648,7 @@ class VentaView(QWidget):
             rect.setRight(self.tabla.viewport().width())
             self.tabla.viewport().update(rect)
 
-    def _avisar(self, texto: str, exito: bool) -> None:
+    def _avisar(self, texto: str, exito: bool, duracion_ms: int = _MENSAJE_MS) -> None:
         """Muestra un mensaje breve en la columna de totales. Ver `_aviso`."""
         sonido.exito() if exito else sonido.error()
         self.mensaje.setText(texto)
@@ -1340,7 +1661,7 @@ class VentaView(QWidget):
         # temporizador nuevo sin cancelar el anterior, así que escanear un producto a los
         # 4,8 s del anterior hacía que el temporizador viejo escondiera el mensaje nuevo a
         # los 200 ms. Parecía un fallo de pintado y era un temporizador de más.
-        self._temporizador_mensaje.start(_MENSAJE_MS)
+        self._temporizador_mensaje.start(duracion_ms)
 
     # ------------------------------------------------------------------ consultas
 

@@ -471,6 +471,17 @@ class CierreView(QWidget):
                 for columna in range(len(_COLUMNAS_VENTAS)):
                     hija.setForeground(columna, suave)
                 fila.addChild(hija)
+            if venta.recargo_clp:
+                # Fase 26: con él, lo de abajo suma el total de la venta.
+                hija = QTreeWidgetItem(
+                    ["Recargo cigarros con tarjeta", "", "", "", formatear_clp(venta.recargo_clp)]
+                )
+                hija.setTextAlignment(
+                    4, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+                )
+                for columna in range(len(_COLUMNAS_VENTAS)):
+                    hija.setForeground(columna, suave)
+                fila.addChild(hija)
             self.arbol_ventas.addTopLevelItem(fila)
         # Todas plegadas al abrir: doscientas ventas desplegadas no las lee nadie.
         self.arbol_ventas.collapseAll()

@@ -152,7 +152,7 @@ Actualizado tras la reunión del 2026-09-13. Lo que sigue sin hacer, dicho en vo
 
 - El sistema **no emite boletas ni facturas** y no está conectado al SII. Si esto es lo que le
   gustaba de LocalShop, hay que decírselo en la misma frase en que se menciona.
-- **No registra medios de pago** ni calcula vuelto.
+- ~~**No registra medios de pago** ni calcula vuelto.~~ *Ya los registra (D-034) y calcula el vuelto (D-039).*
 - **Todavía no funciona en dos cajas.** Está planificado (fase 13) y decidido cómo hacerlo (D-015),
   pero hoy no existe. Es la promesa más fácil de dar por error en una conversación.
 - **No maneja productos por peso.**

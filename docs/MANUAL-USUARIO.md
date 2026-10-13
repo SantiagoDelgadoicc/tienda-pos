@@ -1,7 +1,7 @@
 # Manual de usuario
 
 El manual que se entrega al cliente es el PDF
-**[Manual-de-usuario-Punto-y-Fama.pdf](Manual-de-usuario-Punto-y-Fama.pdf)**: 18 páginas A4, con
+**[Manual-de-usuario-Punto-y-Fama.pdf](Manual-de-usuario-Punto-y-Fama.pdf)**: 19 páginas A4, con
 las capturas del programa, escrito para quien atiende la caja y, en su segunda parte, para el
 dueño.
 

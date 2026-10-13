@@ -24,8 +24,9 @@ El 2026-10-05 se construyó la **fase 24**: cualquier empleado administra los pr
 (D-038); protocolo a la **versión 9**. El 2026-10-10, en la tienda, el cliente pidió buscar por
 nombre al lado del código y el vuelto en efectivo: **fase 25** (D-039), y un recargo de $500 por
 cajetilla de cigarros pagada con tarjeta: **fase 26** (D-040), que migra la base (esquema 8) y
-sube el protocolo a la **versión 10**. Las dos, construidas ese día. Para retomar, leer primero
-"Cómo retomar" en `docs/PLAN.md`.
+sube el protocolo a la **versión 10**. Las dos se construyeron ese día y **están instaladas en los
+dos PC desde el 2026-10-10**, junto con la 24. Para retomar, leer primero "Cómo retomar" en
+`docs/PLAN.md`.
 
 ## 2. Contexto del cliente
 

@@ -44,9 +44,10 @@ Enlace                 cable de red directo, ~30 m por el techo
 | Respaldos | `%LOCALAPPDATA%\TiendaPOS\backups\` |
 | Registro | `%LOCALAPPDATA%\TiendaPOS\logs\tienda_pos.log` |
 
-**Estado al 2026-10-05:** esquema de base de datos en la **7**, protocolo de red en la **8**. Los dos
-PC se actualizaron en la visita del **2026-09-26** con la versión de la fase 22, y ese mismo día,
-con la de la fase 23, que arregla el congelamiento del PC 1 (sección 11). El PC 1 firma sus ventas
+**Estado al 2026-10-12:** esquema de base de datos en la **8**, protocolo de red en la **10**. Los
+dos PC se actualizaron el **2026-10-10** con las fases 24 a 26: productos para todos los empleados,
+buscar por nombre al lado del código, vuelto en efectivo y recargo de los cigarros con tarjeta
+(sección 11). Antes, en la visita del **2026-09-26**, con las fases 22 y 23. El PC 1 firma sus ventas
 como **"Caja Principal"**. Hay usuarios por empleado: al menos `Emmily` (cajera), `Rodrigo` y
 `Rodrigo Fredes` (administradores), según el registro de ese día.
 *(El 2026-09-15 quedó en esquema 3 y protocolo 1.)*
@@ -550,6 +551,22 @@ cosas, arregladas. *Lección:* mirar `tienda_pos.log` del PC 1 tras cada visita.
 
 **El registro de la tienda fue lo que resolvió el problema.** Está en
 `%LOCALAPPDATA%\TiendaPOS\logs\tienda_pos.log`; se trae en el pendrive.
+
+### Actualización del 2026-10-10: fases 24, 25 y 26
+
+En la tienda, el cliente pidió el campo para buscar por nombre, el vuelto y el recargo de los
+cigarros (D-039, D-040); se construyeron ese día y se instalaron con `ACTUALIZAR-ESTE-PC.bat`
+en los dos PC. **Santiago informó que todo salió bien.**
+
+- **Primera actualización con migración desde que la tienda está en producción** (esquema 7 → 8).
+  Antes de llevarla se probó con una copia del respaldo del PC 1 de ese mismo día, a las 11:20
+  (`RESPALDOS\PC1-20261010-112020`: 796 productos, 328 ventas): solo cambió la versión, y los
+  conteos y las sumas de totales, stock y precios quedaron idénticos.
+- **Dato malo en el catálogo real**, visto en esa copia: "Leche de Frutilla Soprole 200ml" (código
+  interno 2000002) tenía de precio su código de barras, $7.802.900.056.025. Nunca se vendió. Se le
+  pidió a Santiago corregirlo en la tienda. El formulario no pone tope al precio.
+- **Después de instalar hay que marcar los cigarros** en Productos ("Es cigarro"): la migración los
+  deja a todos sin marcar.
 
 ---
 

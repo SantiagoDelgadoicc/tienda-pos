@@ -409,29 +409,26 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 | 23 | La caja principal se congelaba en la tienda | ✅ 2026-09-26 |
 | 24 | Los cajeros pueden crear productos (D-038) | **siguiente** |
 
-### Cómo retomar (estado al 2026-10-10)
+### Cómo retomar (estado al 2026-10-12)
 
-**Dónde está todo:** rama `diseño`, todo subido a GitHub. `main` tiene hasta la fase 22 (PR #10,
-fusionado); la fase 23 está en el **PR #11**, abierto. **767 pruebas en verde.** Esquema de la base
-en la **versión 8**, protocolo entre cajas en la **10** (fase 26).
+**Dónde está todo:** rama `diseño`, todo subido a GitHub. `main` tiene hasta la fase 24 anotada
+(PR #12, fusionado); **las fases 24 a 26 están en `diseño` sin PR** (5 commits por delante de
+`main`). **767 pruebas en verde.** Esquema de la base en la **versión 8**, protocolo entre cajas en
+la **10**.
 
-**La tienda está en producción con esta versión** desde la visita del **2026-09-26**: los dos PC
-actualizados, usuarios por empleado creados con el dueño, cierre por caja, arqueo y venta por peso.
-Ese día la caja principal se congelaba al moverse entre pantallas; se arregló en el momento (fase
-23) y el dueño confirmó que ya no pasa. El detalle de la instalación está en
-`docs/DESPLIEGUE-TIENDA.md`, secciones 1 y 11.
+**La tienda funciona con la versión de la fase 26** desde el **2026-10-10**: los dos PC
+actualizados con `ACTUALIZAR-ESTE-PC.bat`, y Santiago informó que todo salió bien. Fue la primera
+actualización con migración de la base desde que la tienda está en producción. Lo que tiene hoy:
+usuarios por empleado, cierre por caja, arqueo, venta por peso, Productos para todos (D-038),
+buscar por nombre al lado del código y vuelto en efectivo (D-039), y recargo de los cigarros con
+tarjeta (D-040). El detalle está en `docs/DESPLIEGUE-TIENDA.md`, secciones 1 y 11.
 
-**El cliente pagó** el trabajo de esta etapa (comprobante de transferencia recibido por WhatsApp
-el 2026-10-01; Santiago debe confirmar que llegó a su cuenta). El manual en PDF se le entregó por
-WhatsApp. Lo acordado en septiembre sigue: un mes de marcha blanca para fallas, y lo nuevo se
-cotiza aparte.
+**El cliente pagó** la tercera etapa (comprobante por WhatsApp el 2026-10-01). Lo pedido el
+2026-10-10 (fases 25 y 26) es trabajo nuevo: **se cotiza aparte**, según lo acordado en septiembre.
 
-**Las fases 24, 25 y 26 están construidas** (más abajo): cualquier empleado administra los
-productos sin PIN (D-038); y, pedido en la tienda el 2026-10-10, un campo para buscar por nombre al
-lado del código, la ventana del vuelto en efectivo (D-039) y el **recargo de $500 por cajetilla de
-cigarros pagada con tarjeta** (D-040). La 26 **migra la base** (esquema 8) y sube el protocolo a
-la 10: se lleva con `ACTUALIZAR-ESTE-PC.bat` **en los dos PC a la vez**, que respalda la base antes.
-Después hay que **marcar los cigarros** en Productos.
+**Por confirmar de la última visita:** que se marcaron los cigarros en Productos (la migración los
+deja sin marcar, y sin marca no hay recargo) y que se corrigió el precio de la "Leche de Frutilla
+Soprole 200ml" (tenía su código de barras como precio; sección 11 de `DESPLIEGUE-TIENDA.md`).
 
 **Cómo se trabaja con la tienda:**
 
@@ -451,14 +448,16 @@ Después hay que **marcar los cigarros** en Productos.
 - ¿Se marcan bien débito y crédito tras dos semanas de uso? Si no, se funden en "tarjeta".
 - La boleta electrónica, que es otro proyecto (`docs/BOLETA-ELECTRONICA-SII.md`).
 
-**Pendiente de Santiago:** fusionar el PR #11; confirmar el pago; cerrar la fase 20 (faltan
-`GUION-DEMO.md` y `README.md`).
+**Pendiente de Santiago:** abrir y fusionar el PR de las fases 24 a 26; cotizar las fases 25 y
+26; cerrar la fase 20 (falta `GUION-DEMO.md`; el `README.md` se puso al día el 2026-10-12).
 
-**Mejoras anotadas, sin pedir:** que el programa se niegue a abrirse dos veces en el mismo PC (hoy
-solo avisa de que el puerto está ocupado); soltar también las ventanas de Productos, Descuento,
+**Mejoras anotadas, sin pedir:** un **tope al precio** en el formulario de producto (fase 26: un
+código de barras escaneado en el precio quedó guardado como $7,8 billones); que el programa se
+niegue a abrirse dos veces en el mismo PC (hoy solo avisa de que el puerto está ocupado); soltar también las ventanas de Productos, Descuento,
 Efectivo, Usuarios y Configuración, que siguen sin destruirse al cerrar (fase 25: son de uso
-ocasional, y leen sus campos después de cerrarse, así que cada una pide su cambio y su prueba); la trazabilidad del stock (fase 9, D-018), que hace más
-falta ahora que cualquier cajero cambia precios y stock.
+ocasional, y leen sus campos después de cerrarse, así que cada una pide su cambio y su prueba); la
+trazabilidad del stock (fase 9, D-018), que hace más falta ahora que cualquier cajero cambia
+precios y stock.
 
 ---
 
@@ -807,14 +806,13 @@ antes de construirla: el cajero hace en Productos todo lo que hacía el administ
       Las de "un cajero que cancela no entra" pasan a Usuarios, que sigue siendo del administrador
 - [x] Manual (`docs/manual/manual.html`): tabla de permisos, sección 14 y F7
 - [x] PDF del manual regenerado (`python tools/manual_pdf.py`)
-- [ ] `.exe`, kit del pendrive comprobado archivo por archivo, y actualizar **los dos PC a la vez**
-      (protocolo 9)
+- [x] `.exe`, kit del pendrive y los dos PC: instalada el 2026-10-10, junto con las fases 25 y 26
 
 **Riesgo aceptado:** sin la fase 9 (D-018) no queda rastro de quién cambió un precio o un stock.
 
 **Criterio de aceptación:** un cajero crea, edita, ajusta stock y da de baja productos sin que
 nadie ponga su PIN, en cualquiera de las dos cajas; sin sesión no se puede, ni llamando al servidor
-directamente. **Cumplido** en código y pruebas; falta llevarlo a la tienda.
+directamente. **Cumplido**, e instalado en la tienda el 2026-10-10.
 
 ---
 
@@ -839,13 +837,13 @@ directamente. **Cumplido** en código y pruebas; falta llevarlo a la tienda.
 - [x] Pruebas (`tests/test_ui_nombre_y_vuelto.py`), con teclas de verdad para el Enter
 - [x] Manual: secciones 5, 6, 7, 8, 15 y teclas; capturas y PDF regenerados (mismas 19 páginas)
 - [x] `.exe` y kit del pendrive (`E:\PUNTO-Y-FAMA`), comprobado archivo por archivo (2026-10-10)
-- [ ] Instalar en los dos PC con `ACTUALIZAR-ESTE-PC.bat`
+- [x] Instalado en los dos PC con `ACTUALIZAR-ESTE-PC.bat` (2026-10-10)
 
 **Sin cambios de base ni de protocolo:** el monto recibido no se guarda.
 
 **Criterio de aceptación:** el pan se agrega escribiendo "pan" y Enter, sin abrir ventanas; en
 efectivo se ve el vuelto antes de cobrar; con tarjeta no cambia nada. **Cumplido** en código y
-pruebas.
+pruebas, e instalado en la tienda el 2026-10-10.
 
 ---
 
@@ -878,15 +876,16 @@ cajetilla si se paga con débito o crédito, con el monto modificable. Ver D-040
 - [x] `.exe` y pendrive, comprobado archivo por archivo. **Migración probada con la base real**
       (respaldo del PC 1 del 2026-10-10, 11:20: 796 productos, 328 ventas): solo cambia la
       versión; conteos y sumas idénticos, y el programa arranca contra ella
-- [ ] Instalar en los dos PC y **marcar los cigarros del catálogo real**
-- [ ] **Dato malo encontrado en esa base:** "Leche de Frutilla Soprole 200ml" (código interno
+- [x] Instalado en los dos PC (2026-10-10)
+- [ ] **Por confirmar:** que se marcaron los cigarros del catálogo real
+- [ ] **Por confirmar — dato malo encontrado en esa base:** "Leche de Frutilla Soprole 200ml" (código interno
       2000002) tiene de precio su código de barras, $7.802.900.056.025. Nunca se vendió.
       Corregirlo en la tienda. *Recomendación, sin pedir:* un tope al precio en el formulario
 
 **Criterio de aceptación:** dos cajetillas pagadas con débito cobran $1.000 más y se ven así en la
 pantalla, en las ventas del día y en el cierre; en efectivo no cambia nada; el dueño cambia el
 monto y vale en las dos cajas; nadie puede cobrar un total distinto del que se mostró.
-**Cumplido** en código y pruebas.
+**Cumplido**, e instalado en la tienda el 2026-10-10.
 
 ---
 

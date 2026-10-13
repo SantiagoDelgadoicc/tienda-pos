@@ -68,6 +68,20 @@ def precio_por_gramos(precio_kilo_clp: int, gramos: int) -> int:
     return (int(precio_kilo_clp) * int(gramos) + 500) // 1000
 
 
+def gramos_por_monto(precio_kilo_clp: int, monto_clp: int) -> int:
+    """Los gramos que hay que dar cuando el cliente pide "deme $2.000 de pan" (fase 27).
+
+    Al gramo más cercano, la mitad hacia arriba, y al menos uno: $2.000 a $1.300 el kilo son
+    1.538,46 g, que se pesan 1.538 g. **Se cobra el monto pedido, no el precio de esos gramos**
+    (`LineaCarrito.monto_clp`): lo pidió el cliente, a quien la fracción de gramo no le importa.
+    Devuelve 0 si el monto o el precio del kilo no son positivos.
+    """
+    precio_kilo_clp, monto_clp = int(precio_kilo_clp), int(monto_clp)
+    if precio_kilo_clp <= 0 or monto_clp <= 0:
+        return 0
+    return max(1, (monto_clp * 1000 * 2 + precio_kilo_clp) // (precio_kilo_clp * 2))
+
+
 def formatear_peso(gramos: int) -> str:
     """Un peso para leerlo en la caja: "350 g" hasta el kilo, "1,25 kg" desde ahí.
 

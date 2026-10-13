@@ -1363,6 +1363,19 @@ unidad".** Lo decidieron Santiago y el cliente; el diseño concreto lo aprobó S
 9. **No se leen etiquetas de balanza** con el peso o el precio dentro del código (los EAN que
    empiezan por 2 que imprimen algunas balanzas). El cliente no las mencionó; si las usa, es otra
    cosa y se puede agregar.
+10. *Añadido el 2026-10-12 (fase 27), pedido por el cliente:* **también se puede pedir por
+    monto**. El cliente dice "deme $2.000 de marraqueta" y el cajero hacía la cuenta de cabeza.
+    La ventana del peso tiene al lado un campo **"En pesos"**, y cada campo llena el otro.
+    **Lo pedido por monto se cobra justo** (decidido por Santiago el 2026-10-12, a la vista de
+    la primera versión, que cobraba el precio del peso más cercano y avisaba de la diferencia):
+    $2.000 de marraqueta a $1.300 el kilo son 1.538,46 g, se pesan 1.538 g y se cobran $2.000.
+    La fracción de gramo no importa. Es una excepción al punto 3: la línea del carrito lleva
+    `monto_clp` y, si lo tiene, su importe es ese y no kilo × gramos
+    (`utils/money.gramos_por_monto` da los gramos, al gramo más cercano). Sumar a una línea
+    conserva lo que costaba cada parte; volver a pesar escribiendo gramos la devuelve al precio
+    de los gramos. **Sin cambio de base**: `venta_linea.subtotal_clp` ya guardaba el importe de
+    cada línea, y los informes lo leen de ahí. **Protocolo a la versión 11**: el monto viaja con
+    el carrito, y el servidor comprueba que corresponda a los gramos.
 
 **Consecuencias.** Esquema y protocolo a la **versión 7**: las dos cajas se actualizan juntas, como
 siempre. 53 pruebas nuevas (`test_venta_por_peso.py`, `test_ui_peso.py` y en catálogo), entre ellas

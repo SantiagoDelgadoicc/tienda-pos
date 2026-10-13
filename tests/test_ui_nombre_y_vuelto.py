@@ -33,7 +33,7 @@ PAN = "2000001"  # Pan batido, por peso
 @pytest.fixture
 def vista(ventana, monkeypatch):
     """La pantalla de venta, con la ventana del peso contestando 500 g."""
-    monkeypatch.setattr(ventana.vista_venta, "pedir_gramos", lambda *a, **k: 500)
+    monkeypatch.setattr(ventana.vista_venta, "pedir_gramos", lambda *a, **k: (500, None))
     return ventana.vista_venta
 
 
@@ -228,7 +228,7 @@ class TestVentanaDelVuelto:
         d.deleteLater()
 
     def test_vacio_es_pago_justo(self, dialogo) -> None:
-        assert dialogo.vuelto.text() == "Paga justo, sin vuelto"
+        assert (dialogo.rotulo_vuelto.text(), dialogo.vuelto.text()) == ("Paga justo", "$0")
         assert dialogo._cobrar.isEnabled()
         dialogo._confirmar()
         assert dialogo.result() and dialogo.recibido is None
@@ -236,7 +236,7 @@ class TestVentanaDelVuelto:
     @pytest.mark.parametrize("texto", ["5000", "5.000", "$5.000", " 5000 "])
     def test_calcula_el_vuelto_mientras_se_escribe(self, dialogo, texto) -> None:
         dialogo.campo.setText(texto)
-        assert dialogo.vuelto.text() == "Vuelto  $1.500"
+        assert (dialogo.rotulo_vuelto.text(), dialogo.vuelto.text()) == ("Vuelto", "$1.500")
         assert dialogo._cobrar.isEnabled()
         assert dialogo.aviso.isHidden()
 
@@ -255,7 +255,7 @@ class TestVentanaDelVuelto:
     def test_un_vuelto_muy_grande_pide_revisar_pero_deja_cobrar(self, dialogo) -> None:
         # "200000" en vez de "20000": un cero de más. Se avisa; no se prohíbe.
         dialogo.campo.setText("200000")
-        assert dialogo.vuelto.text() == "Vuelto  $196.500"
+        assert dialogo.vuelto.text() == "$196.500"
         assert "Revise el monto" in dialogo.aviso.text()
         assert dialogo._cobrar.isEnabled()
 
@@ -267,7 +267,7 @@ class TestVentanaDelVuelto:
     def test_trae_escrito_el_monto_de_un_intento_anterior(self, ventana) -> None:
         d = dialogos.DialogoVuelto(3500, ventana, recibido_inicial=10_000)
         assert d.campo.text() == "10.000"
-        assert d.vuelto.text() == "Vuelto  $6.500"
+        assert d.vuelto.text() == "$6.500"
         d.deleteLater()
 
 
@@ -422,7 +422,7 @@ class TestLasVentanasNoSeAcumulan:
     def test_la_del_peso_se_destruye_al_cerrar(self, vista) -> None:
         for _ in range(5):
             self._cerrar_al_aparecer(lambda d: (d.campo.setText("350"), d._confirmar()))
-            assert dialogos.DialogoPeso("Pan batido", 2490, vista).pedir() == 350
+            assert dialogos.DialogoPeso("Pan batido", 2490, vista).pedir() == (350, None)
         assert self._vivas(vista) == []
 
     def test_cancelar_tambien_la_suelta(self, vista) -> None:

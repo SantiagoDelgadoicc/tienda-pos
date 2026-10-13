@@ -22,7 +22,7 @@ from ..domain.models import LineaCarrito, LineaVenta, MedioPago, Producto, Usuar
 from ..repositories import arqueo as repo_arqueo
 from ..repositories import productos as repo_productos
 from ..repositories import ventas as repo_ventas
-from ..utils.money import formatear_clp, porcentaje_de
+from ..utils.money import formatear_clp, porcentaje_de, precio_por_gramos
 
 #: Lo más que se acepta como pago en efectivo de una venta. Es un tope contra los ceros de más,
 #: no una regla del negocio: ningún cliente paga diez millones en billetes en el mostrador.
@@ -50,6 +50,20 @@ def _validar_gramos(gramos: object) -> None:
         )
 
 
+def _validar_monto(precio_kilo_clp: int, gramos: int, monto: object) -> None:
+    """Un monto pedido (fase 27) que corresponde a sus gramos.
+
+    Los gramos salen del monto redondeados al gramo, y al sumar dos pedidos en la misma línea
+    se suman los redondeos; por eso se tolera algo más que un gramo. Es una defensa contra un
+    carrito incoherente, no una regla del negocio.
+    """
+    if not isinstance(monto, int) or isinstance(monto, bool) or monto <= 0:
+        raise DatosInvalidos("El monto debe ser un número de pesos mayor que cero.")
+    holgura = 2 * (precio_kilo_clp // 1000 + 1) + monto // 100
+    if precio_kilo_clp <= 0 or abs(precio_por_gramos(precio_kilo_clp, gramos) - monto) > holgura:
+        raise DatosInvalidos("El monto no corresponde al peso. Vuelva a pesar el producto.")
+
+
 class Carrito:
     """La venta en curso.
 
@@ -71,7 +85,11 @@ class Carrito:
     # ------------------------------------------------------------------ productos
 
     def agregar(
-        self, producto: Producto, cantidad: int = 1, gramos: int | None = None
+        self,
+        producto: Producto,
+        cantidad: int = 1,
+        gramos: int | None = None,
+        monto_clp: int | None = None,
     ) -> LineaCarrito:
         """Añade un producto, o suma unidades si ya estaba en el carrito.
 
@@ -79,14 +97,17 @@ class Carrito:
         gramos se suman en la misma línea: dos trozos de jamón al mismo precio por kilo cuestan
         lo mismo juntos que por separado, y el cajero ve una sola línea, como con los yogures.
 
+        Con `monto_clp` (fase 27) el cliente pidió un monto, y se cobra ese monto justo; los
+        gramos son los que corresponden. Si se suma a una línea, lo que ya costaba se conserva.
+
         Raises:
             DatosInvalidos: si la cantidad o el peso no son positivos o superan su tope, o si se
                 dan gramos a un producto por unidad o se omiten en uno por peso.
         """
         assert producto.id is not None, "El producto debe venir de la base de datos"
         if producto.por_peso:
-            return self._agregar_por_peso(producto, gramos)
-        if gramos is not None:
+            return self._agregar_por_peso(producto, gramos, monto_clp)
+        if gramos is not None or monto_clp is not None:
             raise DatosInvalidos(f"{producto.nombre} se vende por unidad, no por peso.")
         if cantidad <= 0:
             raise DatosInvalidos("La cantidad debe ser mayor que cero.")
@@ -112,11 +133,15 @@ class Carrito:
         linea.cantidad = nueva_cantidad
         return linea
 
-    def _agregar_por_peso(self, producto: Producto, gramos: int | None) -> LineaCarrito:
+    def _agregar_por_peso(
+        self, producto: Producto, gramos: int | None, monto_clp: int | None = None
+    ) -> LineaCarrito:
         assert producto.id is not None
         if gramos is None:
             raise DatosInvalidos(f"{producto.nombre} se vende por peso: indique los gramos.")
         _validar_gramos(gramos)
+        if monto_clp is not None:
+            _validar_monto(producto.precio_clp, gramos, monto_clp)
         linea = self._lineas.get(producto.codigo_barras)
         total = gramos + ((linea.gramos or 0) if linea else 0)
         _validar_gramos(total)
@@ -128,14 +153,30 @@ class Carrito:
                 precio_unit_clp=producto.precio_clp,
                 cantidad=1,
                 gramos=total,
+                monto_clp=monto_clp,
             )
             self._lineas[producto.codigo_barras] = linea
         else:
+            # Si alguna de las dos partes se pidió por monto, la línea pasa a cobrar la suma de
+            # lo que costaba cada una: así lo que ya se le dijo al cliente no cambia.
+            if monto_clp is not None or linea.monto_clp is not None:
+                nuevo = (
+                    monto_clp
+                    if monto_clp is not None
+                    else precio_por_gramos(linea.precio_unit_clp, gramos)
+                )
+                linea.monto_clp = linea.subtotal_clp + nuevo
             linea.gramos = total
         return linea
 
-    def cambiar_gramos(self, codigo_barras: str, gramos: int) -> None:
-        """Fija el peso de una línea por peso. Con 0 gramos la línea se elimina."""
+    def cambiar_gramos(
+        self, codigo_barras: str, gramos: int, monto_clp: int | None = None
+    ) -> None:
+        """Fija el peso de una línea por peso. Con 0 gramos la línea se elimina.
+
+        Con `monto_clp`, el peso salió de un monto pedido y se cobra ese monto (fase 27); sin él,
+        la línea vuelve a cobrar lo que cuestan sus gramos.
+        """
         linea = self._linea(codigo_barras)
         if not linea.por_peso:
             raise DatosInvalidos(f"{linea.nombre} se vende por unidad, no por peso.")
@@ -143,7 +184,10 @@ class Carrito:
             del self._lineas[codigo_barras]
             return
         _validar_gramos(gramos)
+        if monto_clp is not None:
+            _validar_monto(linea.precio_unit_clp, gramos, monto_clp)
         linea.gramos = gramos
+        linea.monto_clp = monto_clp
 
     def cambiar_cantidad(self, codigo_barras: str, cantidad: int) -> None:
         """Fija la cantidad de una línea. Con cantidad 0 la línea se elimina.
@@ -346,6 +390,7 @@ class Carrito:
                     "descuento_porcentaje": linea.descuento_porcentaje,
                     "gramos": linea.gramos,
                     "es_cigarro": linea.es_cigarro,
+                    "monto_clp": linea.monto_clp,
                 }
                 for linea in self.lineas
             ],
@@ -375,6 +420,7 @@ class Carrito:
                 descuento_porcentaje=d.get("descuento_porcentaje"),
                 gramos=d.get("gramos"),
                 es_cigarro=bool(d.get("es_cigarro", False)),
+                monto_clp=d.get("monto_clp"),
             )
             carrito._lineas[linea.codigo_barras] = linea
         carrito._descuento_monto = datos.get("descuento_monto_clp", 0)
@@ -551,6 +597,8 @@ def _registrar(
             if linea.por_peso:
                 assert linea.gramos is not None
                 _validar_gramos(linea.gramos)
+                if linea.monto_clp is not None:
+                    _validar_monto(linea.precio_unit_clp, linea.gramos, linea.monto_clp)
             elif not config.PERMITIR_STOCK_NEGATIVO and producto.stock < linea.cantidad:
                 raise StockInsuficiente(producto.nombre, producto.stock, linea.cantidad)
             # Como el peso: si alguien lo marcó o desmarcó como cigarro mientras el carrito estaba

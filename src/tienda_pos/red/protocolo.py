@@ -47,8 +47,10 @@ _FORMATO_FECHA_HORA = "%Y-%m-%d %H:%M:%S"
 #: 9, cualquier empleado administra los productos (D-038): un servidor de la 8 se los negaría a
 #: los cajeros de la secundaria, que ya no ven pedir el PIN · 10, el recargo de los cigarros con
 #: tarjeta (D-040): el producto dice si es cigarro, la venta trae su recargo y hay dos operaciones
-#: nuevas para leerlo y cambiarlo.
-VERSION_PROTOCOLO = 10
+#: nuevas para leerlo y cambiarlo · 11, pedir por monto lo que se vende por peso (fase 27): la
+#: línea del carrito trae el monto que se cobra, y un servidor de la 10 lo ignoraría y cobraría
+#: el precio de los gramos.
+VERSION_PROTOCOLO = 11
 
 
 # --------------------------------------------------------------------------- dominio → JSON

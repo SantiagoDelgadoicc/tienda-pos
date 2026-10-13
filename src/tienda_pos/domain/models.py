@@ -107,6 +107,9 @@ class LineaCarrito:
     #: Copia de `Producto.es_cigarro` al agregarlo (fase 26): cada unidad lleva recargo si se
     #: paga con tarjeta. El servidor lo vuelve a mirar en la base al cobrar.
     es_cigarro: bool = False
+    #: Solo por peso, si el cliente pidió un monto ("deme $2.000 de pan", fase 27): se cobra eso
+    #: justo, y `gramos` son los que corresponden, al gramo más cercano. None si se pesó.
+    monto_clp: int | None = None
 
     @property
     def por_peso(self) -> bool:
@@ -115,6 +118,8 @@ class LineaCarrito:
     @property
     def subtotal_clp(self) -> int:
         """Importe bruto de la línea, antes de su descuento."""
+        if self.gramos is not None and self.monto_clp is not None:
+            return self.monto_clp
         if self.gramos is not None:
             from ..utils.money import precio_por_gramos
 

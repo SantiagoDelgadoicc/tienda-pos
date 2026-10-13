@@ -140,6 +140,12 @@ De lo que pidió el 2026-10-10, en la tienda (D-039):
   Confirmó que es por cada cajetilla, igual en débito y crédito, que el monto debe poder
   cambiarse y que cobrarlo es legal en su caso (D-040).
 
+Pedido el 2026-10-12 (fase 27, D-037 punto 10):
+
+- **En la venta por peso, poder escribir el monto** ("deme $2.000 de pan") y que el programa
+  calcule los gramos, manteniendo lo de escribir los gramos. **Se cobra el monto justo**; la
+  fracción de gramo no importa (Santiago, tras probarlo). Protocolo a la **versión 11**.
+
 ### 3.2 Decidido por Santiago (dueño del proyecto)
 
 - Alcance: POS con venta e inventario mínimo, no solo consulta de precios.
@@ -312,7 +318,7 @@ src/tienda_pos/
     movimiento.py         duraciones, curvas y animaciones compartidas
   utils/                  dinero, códigos de barras, lector, sonido, registro
 tools/                    construir, icono, capturas, acceso directo
-tests/                    767 pruebas
+tests/                    798 pruebas
 ```
 
 **Regla dura: `services/` y `domain/` no importan nada de Qt.** Así la lógica de negocio se
@@ -349,7 +355,7 @@ python main.py                        # ejecutar
 python main.py --verificar            # arrancar sin interfaz y comprobar que todo va bien
 python main.py --demo                 # con el catálogo y los usuarios de ejemplo, en una base vacía
 python main.py --reiniciar-admin      # recuperar un administrador; solo en el PC de la base
-pytest                                # pruebas (767, cuatro minutos)
+pytest                                # pruebas (798, cuatro minutos)
 pytest --cov=tienda_pos               # con cobertura
 
 python tools/construir.py             # empaquetar PuntoYFamaCaja.exe

@@ -411,10 +411,9 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 
 ### Cómo retomar (estado al 2026-10-12)
 
-**Dónde está todo:** rama `diseño`, todo subido a GitHub. `main` tiene hasta la fase 24 anotada
-(PR #12, fusionado); **las fases 24 a 26 están en `diseño` sin PR** (5 commits por delante de
-`main`). **767 pruebas en verde.** Esquema de la base en la **versión 8**, protocolo entre cajas en
-la **10**.
+**Dónde está todo:** rama `diseño`, todo subido a GitHub. `main` tiene hasta la fase 26 (PR #13,
+fusionado); **la fase 27 va en un PR aparte**, abierto el 2026-10-13. **798 pruebas en verde.** Esquema de la base en la **versión 8**, protocolo entre cajas en
+la **11**.
 
 **La tienda funciona con la versión de la fase 26** desde el **2026-10-10**: los dos PC
 actualizados con `ACTUALIZAR-ESTE-PC.bat`, y Santiago informó que todo salió bien. Fue la primera
@@ -448,8 +447,12 @@ Soprole 200ml" (tenía su código de barras como precio; sección 11 de `DESPLIE
 - ¿Se marcan bien débito y crédito tras dos semanas de uso? Si no, se funden en "tarjeta".
 - La boleta electrónica, que es otro proyecto (`docs/BOLETA-ELECTRONICA-SII.md`).
 
-**Pendiente de Santiago:** abrir y fusionar el PR de las fases 24 a 26; cotizar las fases 25 y
-26; cerrar la fase 20 (falta `GUION-DEMO.md`; el `README.md` se puso al día el 2026-10-12).
+**Fase 27 (2026-10-12), hecha en código y sin instalar:** pedir un producto por peso dando el
+monto, que se cobra justo, y la ventana del vuelto rediseñada. **Protocolo a la 11**: los dos PC
+se actualizan juntos. Falta regenerar capturas y PDF, el pendrive y llevarla a la tienda.
+
+**Pendiente de Santiago:** fusionar el PR de la fase 27; cotizar las fases 25 a
+27; cerrar la fase 20 (falta `GUION-DEMO.md`; el `README.md` se puso al día el 2026-10-12).
 
 **Mejoras anotadas, sin pedir:** un **tope al precio** en el formulario de producto (fase 26: un
 código de barras escaneado en el precio quedó guardado como $7,8 billones); que el programa se
@@ -886,6 +889,36 @@ cajetilla si se paga con débito o crédito, con el monto modificable. Ver D-040
 pantalla, en las ventas del día y en el cierre; en efectivo no cambia nada; el dueño cambia el
 monto y vale en las dos cajas; nadie puede cobrar un total distinto del que se mostró.
 **Cumplido**, e instalado en la tienda el 2026-10-10.
+
+---
+
+## Fase 27 — Pedir un producto por peso dando el monto ✅ en código
+
+*2026-10-12.* Pedido por el cliente: cuando le piden "deme $2.000 de marraqueta", el cajero
+calculaba de cabeza cuántos gramos son. Ahora escribe el monto y el programa dice los gramos,
+sin perder lo de siempre (gramos → precio). Ver D-037, punto 10.
+
+- [x] `utils/money.gramos_por_monto`: los gramos de un monto, al gramo más cercano
+- [x] Ventana del peso: campo **"En pesos"** al lado de los gramos (`Tab` para pasar), cada uno
+      llena el otro
+- [x] **Se cobra el monto justo** (Santiago, 2026-10-12, tras probar la primera versión, que
+      cobraba el peso más cercano y avisaba de la diferencia): `LineaCarrito.monto_clp`. Sumar a
+      la línea conserva lo de cada parte; volver a pesar con gramos vuelve al precio del peso
+- [x] El servidor comprueba que el monto corresponda a los gramos. **Protocolo a la versión 11**
+- [x] Montos que no son montos, negativos, de más de 50 kg y productos a $0 el kilo
+- [x] Pruebas en `test_venta_por_peso.py` y `test_ui_peso.py`, con teclas de verdad
+- [x] **Ventana del vuelto rediseñada** (pedido de Santiago, de paso): sin el texto de relleno en
+      letra gigante, "Paga con" con una pista debajo, y el vuelto en una franja verde con su
+      rótulo al lado
+- [x] Manual, sección 6: "Deme dos mil pesos de pan"
+- [ ] Capturas y PDF del manual regenerados
+- [ ] Pendrive e instalación en los dos PC
+
+**Sin cambio de base** (`venta_linea.subtotal_clp` ya guardaba el importe de la línea), pero
+**protocolo a la 11**: los dos PC se actualizan juntos.
+
+**Criterio de aceptación:** "$2.000 de marraqueta" a $1.300 el kilo dice 1.538 g y cobra
+$2.000 justos, en la pantalla y en la venta guardada; escribir los gramos funciona como antes.
 
 ---
 

@@ -411,9 +411,8 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 
 ### Cómo retomar (estado al 2026-10-12)
 
-**Dónde está todo:** rama `diseño`, todo subido a GitHub. `main` tiene hasta la fase 24 anotada
-(PR #12, fusionado); **las fases 24 a 27 están en `diseño` sin PR** (7 commits por delante de
-`main`). **798 pruebas en verde.** Esquema de la base en la **versión 8**, protocolo entre cajas en
+**Dónde está todo:** rama `diseño`, todo subido a GitHub. `main` tiene hasta la fase 26 (PR #13,
+fusionado); **la fase 27 va en un PR aparte**, abierto el 2026-10-13. **798 pruebas en verde.** Esquema de la base en la **versión 8**, protocolo entre cajas en
 la **11**.
 
 **La tienda funciona con la versión de la fase 26** desde el **2026-10-10**: los dos PC
@@ -452,7 +451,7 @@ Soprole 200ml" (tenía su código de barras como precio; sección 11 de `DESPLIE
 monto, que se cobra justo, y la ventana del vuelto rediseñada. **Protocolo a la 11**: los dos PC
 se actualizan juntos. Falta regenerar capturas y PDF, el pendrive y llevarla a la tienda.
 
-**Pendiente de Santiago:** abrir y fusionar el PR de las fases 24 a 27; cotizar las fases 25 a
+**Pendiente de Santiago:** fusionar el PR de la fase 27; cotizar las fases 25 a
 27; cerrar la fase 20 (falta `GUION-DEMO.md`; el `README.md` se puso al día el 2026-10-12).
 
 **Mejoras anotadas, sin pedir:** un **tope al precio** en el formulario de producto (fase 26: un

@@ -142,6 +142,78 @@ class TestDialogoPeso:
         dialogo._confirmar()
         assert dialogo.gramos is None
 
+    def test_los_gramos_escriben_el_monto(self, ventana) -> None:
+        dialogo = dialogos.DialogoPeso("Jamón pierna", 7990, ventana)
+        dialogo.campo.setText("350")
+        assert dialogo.campo_pesos.text() == "2.797"
+        assert dialogo.nota.isHidden()
+
+    def test_al_reabrir_trae_el_monto_de_la_linea(self, ventana) -> None:
+        dialogo = dialogos.DialogoPeso("Jamón pierna", 7990, ventana, gramos_iniciales=350)
+        assert dialogo.campo_pesos.text() == "2.797"
+
+    def test_el_monto_dice_cuantos_gramos_son(self, ventana) -> None:
+        """Fase 27: "deme $2.000 de marraqueta"."""
+        dialogo = dialogos.DialogoPeso("Pan marraqueta", 2990, ventana)
+        dialogo.campo_pesos.setText("2.000")
+        assert dialogo.campo.text() == "669"
+        assert dialogo.vista.text() == "669 g  ·  $2.000"
+        assert dialogo.nota.isHidden()
+        assert dialogo.campo_pesos.text() == "2.000"  # no se reescribe lo que tecleó
+        dialogo._confirmar()
+        assert dialogo.gramos == 669
+
+    def test_si_el_kilo_no_da_justo_dice_lo_que_se_cobra(self, ventana) -> None:
+        dialogo = dialogos.DialogoPeso("Jamón pierna", 7990, ventana)
+        dialogo.campo_pesos.setText("$2000")
+        assert dialogo.vista.text() == "250 g  ·  $1.998"
+        assert not dialogo.nota.isHidden()
+        assert dialogo.nota.text() == "Lo más cercano a $2.000: se cobran $1.998."
+        dialogo._confirmar()
+        assert dialogo.gramos == 250
+
+    def test_volver_a_los_gramos_olvida_el_monto(self, ventana) -> None:
+        dialogo = dialogos.DialogoPeso("Jamón pierna", 7990, ventana)
+        dialogo.campo_pesos.setText("2000")
+        dialogo.campo.setText("300")
+        assert dialogo.campo_pesos.text() == "2.397"
+        assert dialogo.nota.isHidden()
+
+    def test_un_monto_que_no_es_monto(self, ventana) -> None:
+        dialogo = dialogos.DialogoPeso("Pan marraqueta", 2990, ventana)
+        for texto in ("dos mil", "-500"):
+            dialogo.campo_pesos.setText(texto)
+            assert not dialogo._aceptar.isEnabled()
+            assert "2.000" in dialogo.error.text()
+            assert dialogo.campo.text() == ""
+        dialogo.campo_pesos.setText("")
+        assert not dialogo._aceptar.isEnabled()
+        assert dialogo.error.isHidden()
+
+    def test_un_monto_de_mas_de_50_kilos(self, ventana) -> None:
+        dialogo = dialogos.DialogoPeso("Pan marraqueta", 2990, ventana)
+        dialogo.campo_pesos.setText("1.000.000")
+        assert not dialogo._aceptar.isEnabled()
+        assert "50 kg" in dialogo.error.text()
+        dialogo._confirmar()
+        assert dialogo.gramos is None
+
+    def test_a_cero_pesos_el_kilo_no_se_puede_pedir_por_monto(self, ventana) -> None:
+        assert not dialogos.DialogoPeso("Pan", 0, ventana).campo_pesos.isEnabled()
+
+    def test_con_teclas_de_verdad(self, ventana) -> None:
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QTest
+
+        dialogo = dialogos.DialogoPeso("Pan marraqueta", 2990, ventana)
+        dialogo.show()
+        dialogo.campo_pesos.setFocus()
+        QTest.keyClicks(dialogo.campo_pesos, "2000")
+        assert dialogo.campo.text() == "669"
+        QTest.keyClick(dialogo.campo_pesos, Qt.Key.Key_Return)
+        assert dialogo.gramos == 669
+        dialogo.deleteLater()
+
     def test_el_descuento_de_una_linea_por_peso_dice_los_gramos(self, ventana, pesos) -> None:
         """Fase 22: decía "(1 unidad)", que en 350 g de jamón no significa nada."""
         respuestas, _ = pesos

@@ -412,8 +412,8 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 ### Cómo retomar (estado al 2026-10-12)
 
 **Dónde está todo:** rama `diseño`, todo subido a GitHub. `main` tiene hasta la fase 24 anotada
-(PR #12, fusionado); **las fases 24 a 26 están en `diseño` sin PR** (5 commits por delante de
-`main`). **767 pruebas en verde.** Esquema de la base en la **versión 8**, protocolo entre cajas en
+(PR #12, fusionado); **las fases 24 a 27 están en `diseño` sin PR** (6 commits por delante de
+`main`). **793 pruebas en verde.** Esquema de la base en la **versión 8**, protocolo entre cajas en
 la **10**.
 
 **La tienda funciona con la versión de la fase 26** desde el **2026-10-10**: los dos PC
@@ -448,8 +448,11 @@ Soprole 200ml" (tenía su código de barras como precio; sección 11 de `DESPLIE
 - ¿Se marcan bien débito y crédito tras dos semanas de uso? Si no, se funden en "tarjeta".
 - La boleta electrónica, que es otro proyecto (`docs/BOLETA-ELECTRONICA-SII.md`).
 
-**Pendiente de Santiago:** abrir y fusionar el PR de las fases 24 a 26; cotizar las fases 25 y
-26; cerrar la fase 20 (falta `GUION-DEMO.md`; el `README.md` se puso al día el 2026-10-12).
+**Fase 27 (2026-10-12), hecha en código y sin instalar:** pedir un producto por peso dando el
+monto. Falta regenerar capturas y PDF, el `.exe`, el pendrive y llevarla a la tienda.
+
+**Pendiente de Santiago:** abrir y fusionar el PR de las fases 24 a 27; cotizar las fases 25 a
+27; cerrar la fase 20 (falta `GUION-DEMO.md`; el `README.md` se puso al día el 2026-10-12).
 
 **Mejoras anotadas, sin pedir:** un **tope al precio** en el formulario de producto (fase 26: un
 código de barras escaneado en el precio quedó guardado como $7,8 billones); que el programa se
@@ -886,6 +889,31 @@ cajetilla si se paga con débito o crédito, con el monto modificable. Ver D-040
 pantalla, en las ventas del día y en el cierre; en efectivo no cambia nada; el dueño cambia el
 monto y vale en las dos cajas; nadie puede cobrar un total distinto del que se mostró.
 **Cumplido**, e instalado en la tienda el 2026-10-10.
+
+---
+
+## Fase 27 — Pedir un producto por peso dando el monto ✅ en código
+
+*2026-10-12.* Pedido por el cliente: cuando le piden "deme $2.000 de marraqueta", el cajero
+calculaba de cabeza cuántos gramos son. Ahora escribe el monto y el programa dice los gramos,
+sin perder lo de siempre (gramos → precio). Ver D-037, punto 10.
+
+- [x] `utils/money.gramos_por_monto`: el peso cuyo precio más se acerca al monto; si hay uno
+      justo, ese. Probado contra la fuerza bruta con ocho precios por kilo
+- [x] Ventana del peso: campo **"o en pesos"** al lado de los gramos (`Tab` para pasar), cada uno
+      llena el otro; si el kilo no da justo, una línea dice lo que se cobra de verdad
+- [x] Montos que no son montos, negativos, de más de 50 kg y productos a $0 el kilo
+- [x] Pruebas en `test_venta_por_peso.py` y `test_ui_peso.py`, con teclas de verdad
+- [x] Manual, sección 6: "Deme dos mil pesos de pan"
+- [ ] Capturas y PDF del manual regenerados
+- [ ] `.exe`, pendrive e instalación en los dos PC
+
+**Sin cambios de base ni de protocolo:** la línea sigue guardando gramos y el monto no se
+guarda. Basta actualizar los dos PC; da igual cuál primero.
+
+**Criterio de aceptación:** "$2.000 de marraqueta" a $2.990 el kilo dice 669 g y cobra $2.000;
+"$2.000 de jamón" a $7.990 dice 250 g y avisa que se cobran $1.998; escribir los gramos funciona
+como antes.
 
 ---
 

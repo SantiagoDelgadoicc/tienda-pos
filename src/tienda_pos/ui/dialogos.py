@@ -386,6 +386,11 @@ class DialogoPeso(QDialog):
     Se ve el precio antes de aceptar porque es lo que el cajero le dice al cliente: "son 350
     gramos, $2.797". Solo admite gramos enteros, que es como marca la balanza, y avisa del tope
     en lugar de aceptar un cero de más. Tras cerrar con Aceptar, `gramos` tiene el peso.
+
+    Desde la fase 27 también se puede escribir **el monto**, al lado: el cliente pide "deme
+    $2.000 de marraqueta" y el programa dice cuántos gramos son. Los dos campos se llenan el uno
+    al otro; el de los gramos es siempre el que vale, porque la línea guarda gramos y el precio
+    sale de ellos. Si el kilo no da justo, se dice cuánto se cobra de verdad.
     """
 
     def __init__(
@@ -399,7 +404,13 @@ class DialogoPeso(QDialog):
         from PySide6.QtWidgets import QLineEdit
 
         from ..config import GRAMOS_MAX_POR_LINEA
-        from ..utils.money import formatear_clp, formatear_peso, precio_por_gramos
+        from ..utils.money import (
+            formatear_clp,
+            formatear_peso,
+            gramos_por_monto,
+            parsear_clp,
+            precio_por_gramos,
+        )
 
         super().__init__(padre)
         movimiento.aparecer_al_abrir(self)
@@ -410,6 +421,13 @@ class DialogoPeso(QDialog):
         self._formatear_clp = formatear_clp
         self._formatear_peso = formatear_peso
         self._precio_por_gramos = precio_por_gramos
+        self._gramos_por_monto = gramos_por_monto
+        self._parsear_clp = parsear_clp
+        # Lo que pidió el cliente en pesos, si lo último que se escribió fue el monto.
+        self._monto_pedido: int | None = None
+        self._monto_invalido = False
+        # Mientras un campo llena al otro, el otro no contesta: si no, se persiguen.
+        self._llenando = False
         self.gramos: int | None = None
 
         disposicion = QVBoxLayout(self)
@@ -424,17 +442,38 @@ class DialogoPeso(QDialog):
         precio.setObjectName("subtitulo")
         disposicion.addWidget(precio)
 
-        disposicion.addWidget(QLabel("Peso en gramos"))
+        campos = QHBoxLayout()
+        campos.setSpacing(16)
+        columna_gramos = QVBoxLayout()
+        columna_gramos.addWidget(QLabel("Peso en gramos"))
         self.campo = QLineEdit("" if gramos_iniciales is None else str(gramos_iniciales))
         self.campo.setValidator(QIntValidator(0, 10 * GRAMOS_MAX_POR_LINEA, self))
         self.campo.setPlaceholderText("Por ejemplo: 350")
         self.campo.selectAll()
-        self.campo.textChanged.connect(self._actualizar)
-        disposicion.addWidget(self.campo)
+        self.campo.textChanged.connect(self._gramos_escritos)
+        columna_gramos.addWidget(self.campo)
+        campos.addLayout(columna_gramos, 1)
+
+        columna_pesos = QVBoxLayout()
+        columna_pesos.addWidget(QLabel("o en pesos"))
+        self.campo_pesos = QLineEdit()
+        self.campo_pesos.setPlaceholderText("Por ejemplo: 2.000")
+        self.campo_pesos.setMaxLength(12)
+        self.campo_pesos.textChanged.connect(self._pesos_escritos)
+        # Un producto a $0 el kilo no tiene peso para ningún monto.
+        self.campo_pesos.setEnabled(precio_kilo_clp > 0)
+        columna_pesos.addWidget(self.campo_pesos)
+        campos.addLayout(columna_pesos, 1)
+        disposicion.addLayout(campos)
 
         self.vista = QLabel()
         self.vista.setObjectName("valorSubtotal")
         disposicion.addWidget(self.vista)
+        self.nota = QLabel()
+        self.nota.setObjectName("subtitulo")
+        self.nota.setWordWrap(True)
+        self.nota.hide()
+        disposicion.addWidget(self.nota)
         self.error = QLabel()
         self.error.setObjectName("mensajeError")
         self.error.setWordWrap(True)
@@ -451,16 +490,65 @@ class DialogoPeso(QDialog):
         caja.accepted.connect(self._confirmar)
         caja.rejected.connect(self.reject)
         disposicion.addWidget(caja)
-        self._actualizar()
+        self._gramos_escritos()
 
     def _leer(self) -> int | None:
         texto = self.campo.text().strip()
         return int(texto) if texto.isdigit() else None
 
+    def _gramos_escritos(self, _texto: str = "") -> None:
+        """Se teclearon gramos: el monto pasa a ser lo que cuestan."""
+        if self._llenando:
+            return
+        self._monto_pedido = None
+        self._monto_invalido = False
+        gramos = self._leer()
+        precio = ""
+        if gramos is not None and 0 < gramos <= self._tope:
+            precio = self._formatear_clp(self._precio_por_gramos(self._precio_kilo, gramos), False)
+        self._llenando = True
+        try:
+            self.campo_pesos.setText(precio)
+        finally:
+            self._llenando = False
+        self._actualizar()
+
+    def _pesos_escritos(self, texto: str) -> None:
+        """Se tecleó un monto: los gramos pasan a ser los que corresponden (fase 27)."""
+        if self._llenando:
+            return
+        self._monto_pedido = None
+        self._monto_invalido = False
+        if texto.strip():
+            try:
+                self._monto_pedido = self._parsear_clp(texto)
+            except ValueError:
+                self._monto_invalido = True
+            if self._monto_pedido is not None and self._monto_pedido < 0:
+                self._monto_pedido, self._monto_invalido = None, True
+        gramos = (
+            self._gramos_por_monto(self._precio_kilo, self._monto_pedido)
+            if self._monto_pedido
+            else 0
+        )
+        self._llenando = True
+        try:
+            self.campo.setText(str(gramos) if gramos > 0 else "")
+        finally:
+            self._llenando = False
+        self._actualizar()
+
     def _actualizar(self) -> None:
         gramos = self._leer()
         self.error.clear()
         self.error.hide()
+        self.nota.hide()
+        if self._monto_invalido:
+            self.vista.setText(" ")
+            self.error.setText("Escriba el monto en pesos, por ejemplo 2.000.")
+            self.error.show()
+            self._aceptar.setEnabled(False)
+            return
         if gramos is None or gramos <= 0:
             self.vista.setText(" ")
             self._aceptar.setEnabled(False)
@@ -473,6 +561,13 @@ class DialogoPeso(QDialog):
             return
         precio = self._precio_por_gramos(self._precio_kilo, gramos)
         self.vista.setText(f"{self._formatear_peso(gramos)}  ·  {self._formatear_clp(precio)}")
+        if self._monto_pedido is not None and precio != self._monto_pedido:
+            # A más de $1.000 el kilo, no todo monto sale justo: se cobra lo del peso.
+            self.nota.setText(
+                f"Lo más cercano a {self._formatear_clp(self._monto_pedido)}: "
+                f"se cobran {self._formatear_clp(precio)}."
+            )
+            self.nota.show()
         self._aceptar.setEnabled(True)
 
     def _confirmar(self) -> None:

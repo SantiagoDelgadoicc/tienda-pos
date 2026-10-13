@@ -226,7 +226,7 @@ def generar(destino: Path) -> list[Path]:
     generadas.append(_guardar(ventana, destino, "15-efectivo"))
 
     # 16 y 17. Venta por peso (D-037): el jamón escaneado, el pan buscado por nombre, y la
-    # ventana del peso con el precio a la vista.
+    # ventana del peso con el precio a la vista y, desde la fase 27, el monto al lado.
     from tienda_pos.db.seed import catalogo_demo
     from tienda_pos.ui.dialogos import DialogoPeso
 

@@ -25,7 +25,7 @@ from tienda_pos.repositories import productos as repo_productos
 from tienda_pos.repositories import ventas as repo_ventas
 from tienda_pos.services import auth, catalogo, reportes
 from tienda_pos.services import venta as servicio_venta
-from tienda_pos.utils.money import formatear_peso, precio_por_gramos
+from tienda_pos.utils.money import formatear_peso, gramos_por_monto, precio_por_gramos
 
 CAJA = "Caja 1"
 
@@ -76,6 +76,38 @@ class TestPrecio:
     )
     def test_el_peso_se_lee_como_en_la_caja(self, gramos, texto) -> None:
         assert formatear_peso(gramos) == texto
+
+
+class TestGramosPorMonto:
+    """Fase 27: "deme $2.000 de marraqueta" y el programa dice cuántos gramos son."""
+
+    @pytest.mark.parametrize(
+        ("kilo", "monto", "gramos", "se_cobra"),
+        [
+            (2990, 2000, 669, 2000),  # justo, aunque cada gramo vale casi $3
+            (500, 2000, 4000, 2000),
+            (1000, 1234, 1234, 1234),
+            (12990, 1000, 77, 1000),
+            (7990, 2000, 250, 1998),  # no hay peso que dé $2.000: el más cercano
+            (7990, 1, 1, 8),  # al menos un gramo
+        ],
+    )
+    def test_el_peso_que_mas_se_acerca(self, kilo, monto, gramos, se_cobra) -> None:
+        assert gramos_por_monto(kilo, monto) == gramos
+        assert precio_por_gramos(kilo, gramos) == se_cobra
+
+    @pytest.mark.parametrize(("kilo", "monto"), [(0, 2000), (2990, 0), (2990, -500)])
+    def test_sin_precio_o_sin_monto_no_hay_peso(self, kilo, monto) -> None:
+        assert gramos_por_monto(kilo, monto) == 0
+
+    @pytest.mark.parametrize("kilo", [990, 1000, 1290, 2490, 2990, 3490, 7990, 12990])
+    def test_nunca_hay_un_peso_mas_cercano_que_el_elegido(self, kilo) -> None:
+        # Contra la fuerza bruta: los precios de todos los pesos posibles, en orden.
+        precios = [precio_por_gramos(kilo, g) for g in range(1, 5000 * 1000 // kilo + 10)]
+        for monto in range(10, 5000, 37):
+            mejor = min(abs(precio - monto) for precio in precios)
+            elegido = precio_por_gramos(kilo, gramos_por_monto(kilo, monto))
+            assert abs(elegido - monto) == mejor, monto
 
 
 class TestCarrito:

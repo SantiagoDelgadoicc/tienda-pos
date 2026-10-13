@@ -71,25 +71,15 @@ def precio_por_gramos(precio_kilo_clp: int, gramos: int) -> int:
 def gramos_por_monto(precio_kilo_clp: int, monto_clp: int) -> int:
     """Los gramos que hay que dar cuando el cliente pide "deme $2.000 de pan" (fase 27).
 
-    Es la cuenta al revés de `precio_por_gramos`, que sigue siendo la que fija lo que se cobra:
-    la línea guarda gramos, no pesos. Por eso no siempre se llega al monto justo. A $2.990 el
-    kilo cada gramo vale casi $3, y entre 668 g ($1.997) y 669 g ($2.000) no hay nada. Se
-    elige el peso cuyo precio queda más cerca de lo pedido; si un precio justo existe, es ese.
-    Entre dos igual de cerca, el que se acerca más a la proporción exacta. Devuelve 0 si el
-    monto o el precio del kilo no son positivos.
+    Al gramo más cercano, la mitad hacia arriba, y al menos uno: $2.000 a $1.300 el kilo son
+    1.538,46 g, que se pesan 1.538 g. **Se cobra el monto pedido, no el precio de esos gramos**
+    (`LineaCarrito.monto_clp`): lo pidió el cliente, a quien la fracción de gramo no le importa.
+    Devuelve 0 si el monto o el precio del kilo no son positivos.
     """
     precio_kilo_clp, monto_clp = int(precio_kilo_clp), int(monto_clp)
     if precio_kilo_clp <= 0 or monto_clp <= 0:
         return 0
-    ideal = (monto_clp * 1000 * 2 + precio_kilo_clp) // (precio_kilo_clp * 2)  # redondeado
-    candidatos = [g for g in (ideal - 1, ideal, ideal + 1) if g >= 1]
-    return min(
-        candidatos,
-        key=lambda g: (
-            abs(precio_por_gramos(precio_kilo_clp, g) - monto_clp),
-            abs(g * precio_kilo_clp - monto_clp * 1000),
-        ),
-    )
+    return max(1, (monto_clp * 1000 * 2 + precio_kilo_clp) // (precio_kilo_clp * 2))
 
 
 def formatear_peso(gramos: int) -> str:

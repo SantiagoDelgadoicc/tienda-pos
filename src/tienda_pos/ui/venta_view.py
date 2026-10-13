@@ -786,16 +786,18 @@ class VentaView(QWidget):
             return
 
         gramos: int | None = None
+        monto: int | None = None
         if producto.por_peso:
             # El pan, el pollo o el jamón (D-037): el código dice qué es, y el peso lo teclea
-            # el cajero después de pesarlo.
-            gramos = self.pedir_gramos(producto.nombre, producto.precio_clp)
-            if gramos is None:
+            # el cajero después de pesarlo, o el monto que pidió el cliente (fase 27).
+            pesada = self.pedir_gramos(producto.nombre, producto.precio_clp)
+            if pesada is None:
                 self.enfocar_escaneo()
                 return
+            gramos, monto = pesada
 
         try:
-            self._carrito.agregar(producto, gramos=gramos)
+            self._carrito.agregar(producto, gramos=gramos, monto_clp=monto)
         except ErrorDominio as error:
             self._avisar(str(error), exito=False)
             self.enfocar_escaneo()
@@ -807,18 +809,24 @@ class VentaView(QWidget):
         if gramos is None:
             aviso = f"{producto.nombre} · {formatear_clp(producto.precio_clp)}"
         else:
-            aviso = (
-                f"{producto.nombre} · {formatear_peso(gramos)} · "
-                f"{formatear_clp(precio_por_gramos(producto.precio_clp, gramos))}"
-            )
+            if monto is None:
+                monto = precio_por_gramos(producto.precio_clp, gramos)
+            aviso = f"{producto.nombre} · {formatear_peso(gramos)} · {formatear_clp(monto)}"
         self._avisar(aviso, exito=True)
         self.enfocar_escaneo()
 
     def pedir_gramos(
-        self, nombre: str, precio_kilo_clp: int, gramos_iniciales: int | None = None
-    ) -> int | None:
-        """Pregunta el peso. Aparte para que las pruebas puedan contestar sin abrir la ventana."""
-        return dialogos.DialogoPeso(nombre, precio_kilo_clp, self, gramos_iniciales).pedir()
+        self,
+        nombre: str,
+        precio_kilo_clp: int,
+        gramos_iniciales: int | None = None,
+        monto_inicial: int | None = None,
+    ) -> tuple[int, int | None] | None:
+        """Pregunta el peso, o el monto pedido: devuelve (gramos, monto o None), o None si se
+        canceló. Aparte para que las pruebas puedan contestar sin abrir la ventana."""
+        return dialogos.DialogoPeso(
+            nombre, precio_kilo_clp, self, gramos_iniciales, monto_inicial
+        ).pedir()
 
     def cambiar_peso(self, codigo: str | None = None) -> None:
         """Vuelve a pesar una línea por peso: el cliente pidió un poco más, o se pesó mal."""
@@ -828,12 +836,15 @@ class VentaView(QWidget):
         linea = self._carrito.linea_de(codigo)
         if linea is None or not linea.por_peso:  # pragma: no cover - lo filtra quien llama
             return
-        gramos = self.pedir_gramos(linea.nombre, linea.precio_unit_clp, linea.gramos)
-        if gramos is None:
+        pesada = self.pedir_gramos(
+            linea.nombre, linea.precio_unit_clp, linea.gramos, linea.monto_clp
+        )
+        if pesada is None:
             self.enfocar_escaneo()
             return
+        gramos, monto = pesada
         try:
-            self._carrito.cambiar_gramos(codigo, gramos)
+            self._carrito.cambiar_gramos(codigo, gramos, monto)
         except ErrorDominio as error:
             self._avisar(str(error), exito=False)
             self.enfocar_escaneo()

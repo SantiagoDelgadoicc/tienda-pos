@@ -389,8 +389,9 @@ class DialogoPeso(QDialog):
 
     Desde la fase 27 también se puede escribir **el monto**, al lado: el cliente pide "deme
     $2.000 de marraqueta" y el programa dice cuántos gramos son. Los dos campos se llenan el uno
-    al otro; el de los gramos es siempre el que vale, porque la línea guarda gramos y el precio
-    sale de ellos. Si el kilo no da justo, se dice cuánto se cobra de verdad.
+    al otro. Si lo último que se escribió fue el monto, **se cobra ese monto justo** y los gramos
+    van al gramo más cercano: la fracción de gramo no le importa al cliente. Tras cerrar con
+    Aceptar, `monto` tiene lo pedido, o None si se escribieron los gramos.
     """
 
     def __init__(
@@ -399,6 +400,7 @@ class DialogoPeso(QDialog):
         precio_kilo_clp: int,
         padre: QWidget | None = None,
         gramos_iniciales: int | None = None,
+        monto_inicial: int | None = None,
     ) -> None:
         from PySide6.QtGui import QIntValidator
         from PySide6.QtWidgets import QLineEdit
@@ -429,6 +431,7 @@ class DialogoPeso(QDialog):
         # Mientras un campo llena al otro, el otro no contesta: si no, se persiguen.
         self._llenando = False
         self.gramos: int | None = None
+        self.monto: int | None = None
 
         disposicion = QVBoxLayout(self)
         disposicion.setContentsMargins(24, 24, 24, 20)
@@ -455,7 +458,7 @@ class DialogoPeso(QDialog):
         campos.addLayout(columna_gramos, 1)
 
         columna_pesos = QVBoxLayout()
-        columna_pesos.addWidget(QLabel("o en pesos"))
+        columna_pesos.addWidget(QLabel("En pesos"))
         self.campo_pesos = QLineEdit()
         self.campo_pesos.setPlaceholderText("Por ejemplo: 2.000")
         self.campo_pesos.setMaxLength(12)
@@ -469,11 +472,6 @@ class DialogoPeso(QDialog):
         self.vista = QLabel()
         self.vista.setObjectName("valorSubtotal")
         disposicion.addWidget(self.vista)
-        self.nota = QLabel()
-        self.nota.setObjectName("subtitulo")
-        self.nota.setWordWrap(True)
-        self.nota.hide()
-        disposicion.addWidget(self.nota)
         self.error = QLabel()
         self.error.setObjectName("mensajeError")
         self.error.setWordWrap(True)
@@ -490,7 +488,12 @@ class DialogoPeso(QDialog):
         caja.accepted.connect(self._confirmar)
         caja.rejected.connect(self.reject)
         disposicion.addWidget(caja)
-        self._gramos_escritos()
+        if monto_inicial is not None and precio_kilo_clp > 0:
+            # Volver a pesar una línea pedida por monto: se ve el monto, no solo sus gramos.
+            self.campo_pesos.setText(formatear_clp(monto_inicial, False))
+            self.campo_pesos.selectAll()
+        else:
+            self._gramos_escritos()
 
     def _leer(self) -> int | None:
         texto = self.campo.text().strip()
@@ -542,7 +545,6 @@ class DialogoPeso(QDialog):
         gramos = self._leer()
         self.error.clear()
         self.error.hide()
-        self.nota.hide()
         if self._monto_invalido:
             self.vista.setText(" ")
             self.error.setText("Escriba el monto en pesos, por ejemplo 2.000.")
@@ -559,27 +561,28 @@ class DialogoPeso(QDialog):
             self.error.show()
             self._aceptar.setEnabled(False)
             return
-        precio = self._precio_por_gramos(self._precio_kilo, gramos)
+        precio = (
+            self._monto_pedido
+            if self._monto_pedido is not None
+            else self._precio_por_gramos(self._precio_kilo, gramos)
+        )
         self.vista.setText(f"{self._formatear_peso(gramos)}  ·  {self._formatear_clp(precio)}")
-        if self._monto_pedido is not None and precio != self._monto_pedido:
-            # A más de $1.000 el kilo, no todo monto sale justo: se cobra lo del peso.
-            self.nota.setText(
-                f"Lo más cercano a {self._formatear_clp(self._monto_pedido)}: "
-                f"se cobran {self._formatear_clp(precio)}."
-            )
-            self.nota.show()
         self._aceptar.setEnabled(True)
 
     def _confirmar(self) -> None:
         gramos = self._leer()
         if gramos is None or not 0 < gramos <= self._tope:
             return
+        if self._monto_invalido:
+            return
         self.gramos = gramos
+        self.monto = self._monto_pedido
         self.accept()
 
-    def pedir(self) -> int | None:
-        """Abre el diálogo y devuelve los gramos, o None si se canceló."""
-        return self.gramos if ejecutar_y_soltar(self) else None
+    def pedir(self) -> tuple[int, int | None] | None:
+        """Abre el diálogo. Devuelve los gramos y el monto pedido (None si se pesó), o None si
+        se canceló."""
+        return (self.gramos, self.monto) if ejecutar_y_soltar(self) and self.gramos else None
 
 
 class DialogoVuelto(QDialog):
@@ -614,35 +617,59 @@ class DialogoVuelto(QDialog):
         self._parsear = parsear_clp
         self.recibido: int | None = None
 
-        disposicion = QVBoxLayout(self)
-        disposicion.setContentsMargins(26, 24, 26, 20)
-        disposicion.setSpacing(10)
+        from PySide6.QtWidgets import QFrame
 
+        disposicion = QVBoxLayout(self)
+        disposicion.setContentsMargins(28, 24, 28, 22)
+        disposicion.setSpacing(6)
+
+        # Arriba lo que se cobra; al medio lo que entrega el cliente; abajo, en su franja, lo
+        # que se le devuelve. Cada cifra en su sitio y a su tamaño, sin frases en letra gigante.
         rotulo = QLabel("Total a pagar")
         rotulo.setObjectName("etiquetaTotalFuerte")
         disposicion.addWidget(rotulo)
         total = QLabel(formatear_clp(total_clp))
         total.setObjectName("valorTotal")
         disposicion.addWidget(total)
-        disposicion.addSpacing(6)
+        disposicion.addSpacing(10)
+        separador = QFrame()
+        separador.setObjectName("separador")
+        separador.setFixedHeight(1)
+        disposicion.addWidget(separador)
+        disposicion.addSpacing(12)
 
-        disposicion.addWidget(QLabel("¿Con cuánto paga el cliente?"))
+        disposicion.addWidget(QLabel("Paga con"))
         self.campo = QLineEdit("" if recibido_inicial is None else formatear_clp(recibido_inicial, False))
         self.campo.setObjectName("campoPago")
-        self.campo.setPlaceholderText("Vacío = paga justo")
         self.campo.setMaxLength(14)
         self.campo.selectAll()
         self.campo.textChanged.connect(self._actualizar)
         disposicion.addWidget(self.campo)
+        pista = QLabel("Si paga justo, deje el campo vacío y pulse Enter.")
+        pista.setObjectName("subtitulo")
+        pista.setWordWrap(True)
+        disposicion.addWidget(pista)
+        disposicion.addSpacing(12)
 
+        franja = QFrame()
+        franja.setObjectName("cajaVuelto")
+        fila = QHBoxLayout(franja)
+        fila.setContentsMargins(18, 12, 18, 12)
+        self.rotulo_vuelto = QLabel("Vuelto")
+        self.rotulo_vuelto.setObjectName("rotuloVuelto")
+        fila.addWidget(self.rotulo_vuelto)
+        fila.addStretch(1)
         self.vuelto = QLabel()
         self.vuelto.setObjectName("valorVuelto")
-        disposicion.addWidget(self.vuelto)
+        fila.addWidget(self.vuelto)
+        disposicion.addWidget(franja)
+        disposicion.addSpacing(4)
         self.aviso = QLabel()
         self.aviso.setObjectName("mensajeError")
         self.aviso.setWordWrap(True)
         self.aviso.hide()  # su estilo lleva fondo: vacío se vería como un recuadro sin motivo
         disposicion.addWidget(self.aviso)
+        disposicion.addSpacing(6)
 
         caja = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -681,15 +708,18 @@ class DialogoVuelto(QDialog):
         vuelto, motivo = self._vuelto()
         self.aviso.hide()
         if vuelto is None:
-            self.vuelto.setText(" ")
+            self.rotulo_vuelto.setText("Vuelto")
+            self.vuelto.setText("—")
             self.aviso.setText(motivo)
             self.aviso.show()
             self._cobrar.setEnabled(False)
             return
         if not self.campo.text().strip():
-            self.vuelto.setText("Paga justo, sin vuelto")
+            self.rotulo_vuelto.setText("Paga justo")
+            self.vuelto.setText(self._formatear(0))
         else:
-            self.vuelto.setText(f"Vuelto  {self._formatear(vuelto)}")
+            self.rotulo_vuelto.setText("Vuelto")
+            self.vuelto.setText(self._formatear(vuelto))
         if vuelto >= self._revisar:
             self.aviso.setText(f"Revise el monto: el vuelto es de {self._formatear(vuelto)}.")
             self.aviso.show()

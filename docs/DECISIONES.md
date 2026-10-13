@@ -1365,13 +1365,17 @@ unidad".** Lo decidieron Santiago y el cliente; el diseño concreto lo aprobó S
    cosa y se puede agregar.
 10. *Añadido el 2026-10-12 (fase 27), pedido por el cliente:* **también se puede pedir por
     monto**. El cliente dice "deme $2.000 de marraqueta" y el cajero hacía la cuenta de cabeza.
-    La ventana del peso tiene al lado un campo **"o en pesos"**, y cada campo llena el otro. **La
-    línea sigue guardando gramos** y el precio sigue saliendo de ellos (punto 3): el monto solo
-    sirve para calcular el peso (`utils/money.gramos_por_monto`), y no se guarda. Por eso, a más
-    de $1.000 el kilo, no todo monto sale justo: se elige el peso cuyo precio más se acerca, y si
-    no coincide, la ventana dice lo que se cobra ($2.000 de jamón a $7.990 son 250 g, $1.998).
-    Sin cambios de base ni de protocolo. *Cobrar el monto exacto pedido* exigiría guardar en la
-    línea un precio que no sale de los gramos: es un cambio del modelo de datos y no se hizo.
+    La ventana del peso tiene al lado un campo **"En pesos"**, y cada campo llena el otro.
+    **Lo pedido por monto se cobra justo** (decidido por Santiago el 2026-10-12, a la vista de
+    la primera versión, que cobraba el precio del peso más cercano y avisaba de la diferencia):
+    $2.000 de marraqueta a $1.300 el kilo son 1.538,46 g, se pesan 1.538 g y se cobran $2.000.
+    La fracción de gramo no importa. Es una excepción al punto 3: la línea del carrito lleva
+    `monto_clp` y, si lo tiene, su importe es ese y no kilo × gramos
+    (`utils/money.gramos_por_monto` da los gramos, al gramo más cercano). Sumar a una línea
+    conserva lo que costaba cada parte; volver a pesar escribiendo gramos la devuelve al precio
+    de los gramos. **Sin cambio de base**: `venta_linea.subtotal_clp` ya guardaba el importe de
+    cada línea, y los informes lo leen de ahí. **Protocolo a la versión 11**: el monto viaja con
+    el carrito, y el servidor comprueba que corresponda a los gramos.
 
 **Consecuencias.** Esquema y protocolo a la **versión 7**: las dos cajas se actualizan juntas, como
 siempre. 53 pruebas nuevas (`test_venta_por_peso.py`, `test_ui_peso.py` y en catálogo), entre ellas

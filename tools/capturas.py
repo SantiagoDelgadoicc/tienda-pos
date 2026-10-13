@@ -234,7 +234,7 @@ def generar(destino: Path) -> list[Path]:
     ventana.mostrar_venta()
     ventana.vista_venta.carrito.vaciar()
     pesos = iter([350, 640])
-    ventana.vista_venta.pedir_gramos = lambda *a, **k: next(pesos)
+    ventana.vista_venta.pedir_gramos = lambda *a, **k: (next(pesos), None)
     for codigo in (codigo_demo(0), jamon, "2000001"):
         ventana.vista_venta.agregar_por_codigo(codigo)
     generadas.append(_guardar(ventana, destino, "16-venta-por-peso"))

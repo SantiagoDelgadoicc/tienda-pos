@@ -30,9 +30,11 @@ def pesos(ventana, monkeypatch):
     respuestas: list[int | None] = []
     preguntas: list[tuple] = []
 
-    def pedir(nombre, precio_kilo, gramos_iniciales=None):
+    def pedir(nombre, precio_kilo, gramos_iniciales=None, monto_inicial=None):
         preguntas.append((nombre, precio_kilo, gramos_iniciales))
-        return respuestas.pop(0)
+        respuesta = respuestas.pop(0)
+        # Un número son gramos pesados; una tupla, (gramos, monto pedido) (fase 27).
+        return respuesta if respuesta is None or isinstance(respuesta, tuple) else (respuesta, None)
 
     monkeypatch.setattr(ventana.vista_venta, "pedir_gramos", pedir)
     return respuestas, preguntas
@@ -122,6 +124,33 @@ class TestCobrar:
         assert venta.total_clp == 2290 + 5993
 
 
+class TestPorMonto:
+    """Fase 27: lo pedido por monto se cobra justo, en la pantalla y en la venta guardada."""
+
+    def test_se_agrega_y_se_cobra_el_monto_justo(self, ventana, conexion, pesos) -> None:
+        respuestas, _ = pesos
+        respuestas.append((250, 2000))  # $2.000 de jamón a $7.990: 250,3 g
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(JAMON)
+        assert vista.tabla.item(0, venta_view.COL_CANTIDAD).text() == "250 g"
+        assert vista.tabla.item(0, venta_view.COL_SUBTOTAL).text() == "$2.000"
+        vista.cobrar()
+        venta = repo_ventas.del_dia(conexion)[-1]
+        (linea,) = repo_ventas.lineas_de(conexion, venta.id)
+        assert (linea.gramos, linea.subtotal_clp, venta.total_clp) == (250, 2000, 2000)
+
+    def test_volver_a_pesar_trae_el_monto(self, ventana, pesos, monkeypatch) -> None:
+        respuestas, _ = pesos
+        respuestas.append((250, 2000))
+        vista = ventana.vista_venta
+        vista.agregar_por_codigo(JAMON)
+        visto = []
+        monkeypatch.setattr(vista, "pedir_gramos", lambda *a: visto.append(a) or (350, None))
+        vista.aumentar_cantidad(JAMON)
+        assert visto == [("Jamón pierna", 7990, 250, 2000)]
+        assert vista.valor_total.text() == "$2.797"  # se pesó: vuelve al precio de los gramos
+
+
 class TestDialogoPeso:
     def test_ensena_el_precio_mientras_se_teclea(self, ventana) -> None:
         dialogo = dialogos.DialogoPeso("Jamón pierna", 7990, ventana)
@@ -146,38 +175,38 @@ class TestDialogoPeso:
         dialogo = dialogos.DialogoPeso("Jamón pierna", 7990, ventana)
         dialogo.campo.setText("350")
         assert dialogo.campo_pesos.text() == "2.797"
-        assert dialogo.nota.isHidden()
+        dialogo._confirmar()
+        assert (dialogo.gramos, dialogo.monto) == (350, None)
 
     def test_al_reabrir_trae_el_monto_de_la_linea(self, ventana) -> None:
         dialogo = dialogos.DialogoPeso("Jamón pierna", 7990, ventana, gramos_iniciales=350)
         assert dialogo.campo_pesos.text() == "2.797"
 
-    def test_el_monto_dice_cuantos_gramos_son(self, ventana) -> None:
-        """Fase 27: "deme $2.000 de marraqueta"."""
-        dialogo = dialogos.DialogoPeso("Pan marraqueta", 2990, ventana)
+    def test_al_reabrir_una_linea_pedida_por_monto_trae_el_monto(self, ventana) -> None:
+        dialogo = dialogos.DialogoPeso(
+            "Pan marraqueta", 1300, ventana, gramos_iniciales=1538, monto_inicial=2000
+        )
+        assert (dialogo.campo.text(), dialogo.campo_pesos.text()) == ("1538", "2.000")
+        assert dialogo.vista.text() == "1,538 kg  ·  $2.000"
+
+    def test_el_monto_se_cobra_justo(self, ventana) -> None:
+        """Fase 27: "deme $2.000 de marraqueta". Son 1.538,46 g: se pesan 1.538 y se cobran
+        $2.000 justos, no los $1.999 que costarían esos gramos."""
+        dialogo = dialogos.DialogoPeso("Pan marraqueta", 1300, ventana)
         dialogo.campo_pesos.setText("2.000")
-        assert dialogo.campo.text() == "669"
-        assert dialogo.vista.text() == "669 g  ·  $2.000"
-        assert dialogo.nota.isHidden()
+        assert dialogo.campo.text() == "1538"
+        assert dialogo.vista.text() == "1,538 kg  ·  $2.000"
         assert dialogo.campo_pesos.text() == "2.000"  # no se reescribe lo que tecleó
         dialogo._confirmar()
-        assert dialogo.gramos == 669
-
-    def test_si_el_kilo_no_da_justo_dice_lo_que_se_cobra(self, ventana) -> None:
-        dialogo = dialogos.DialogoPeso("Jamón pierna", 7990, ventana)
-        dialogo.campo_pesos.setText("$2000")
-        assert dialogo.vista.text() == "250 g  ·  $1.998"
-        assert not dialogo.nota.isHidden()
-        assert dialogo.nota.text() == "Lo más cercano a $2.000: se cobran $1.998."
-        dialogo._confirmar()
-        assert dialogo.gramos == 250
+        assert (dialogo.gramos, dialogo.monto) == (1538, 2000)
 
     def test_volver_a_los_gramos_olvida_el_monto(self, ventana) -> None:
         dialogo = dialogos.DialogoPeso("Jamón pierna", 7990, ventana)
         dialogo.campo_pesos.setText("2000")
         dialogo.campo.setText("300")
         assert dialogo.campo_pesos.text() == "2.397"
-        assert dialogo.nota.isHidden()
+        dialogo._confirmar()
+        assert (dialogo.gramos, dialogo.monto) == (300, None)
 
     def test_un_monto_que_no_es_monto(self, ventana) -> None:
         dialogo = dialogos.DialogoPeso("Pan marraqueta", 2990, ventana)
@@ -205,13 +234,13 @@ class TestDialogoPeso:
         from PySide6.QtCore import Qt
         from PySide6.QtTest import QTest
 
-        dialogo = dialogos.DialogoPeso("Pan marraqueta", 2990, ventana)
+        dialogo = dialogos.DialogoPeso("Pan marraqueta", 1300, ventana)
         dialogo.show()
         dialogo.campo_pesos.setFocus()
         QTest.keyClicks(dialogo.campo_pesos, "2000")
-        assert dialogo.campo.text() == "669"
+        assert dialogo.campo.text() == "1538"
         QTest.keyClick(dialogo.campo_pesos, Qt.Key.Key_Return)
-        assert dialogo.gramos == 669
+        assert (dialogo.gramos, dialogo.monto) == (1538, 2000)
         dialogo.deleteLater()
 
     def test_el_descuento_de_una_linea_por_peso_dice_los_gramos(self, ventana, pesos) -> None:

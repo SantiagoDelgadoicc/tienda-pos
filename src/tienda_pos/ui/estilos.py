@@ -848,17 +848,31 @@ QLabel#valorTotal {{
     letter-spacing: -1.7px;
     color: {p.exito};
 }}
-/* El vuelto (fase 25): lo que el cajero cuenta en la mano, así que va casi tan grande como el
-   total y en el mismo verde. El monto que se teclea, grande también: se escribe de pie. */
-QLabel#valorVuelto {{
-    font-size: 36px;
+/* El vuelto (fase 25): lo que el cajero cuenta en la mano, así que va grande y en el mismo
+   verde que el total, en una franja de lavado verde con su rótulo al lado. El monto que se
+   teclea, grande también: se escribe de pie. Sin texto de relleno en el campo: en letra de ese
+   tamaño se leía como un dato (fase 27). */
+QFrame#cajaVuelto {{
+    background-color: {p.exito_suave};
+    border: none;
+    border-radius: {RADIO_ANIDADO}px;
+}}
+QLabel#rotuloVuelto {{
+    background: transparent;
+    color: {p.exito};
+    font-size: 16px;
     font-weight: 700;
-    letter-spacing: -1.2px;
+}}
+QLabel#valorVuelto {{
+    background: transparent;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -1px;
     color: {p.exito};
 }}
 QLineEdit#campoPago {{
-    font-size: 26px;
-    font-weight: 700;
+    font-size: 24px;
+    font-weight: 600;
     padding: 10px 14px;
 }}
 

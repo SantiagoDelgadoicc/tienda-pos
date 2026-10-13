@@ -82,32 +82,77 @@ class TestGramosPorMonto:
     """Fase 27: "deme $2.000 de marraqueta" y el programa dice cuántos gramos son."""
 
     @pytest.mark.parametrize(
-        ("kilo", "monto", "gramos", "se_cobra"),
+        ("kilo", "monto", "gramos"),
         [
-            (2990, 2000, 669, 2000),  # justo, aunque cada gramo vale casi $3
-            (500, 2000, 4000, 2000),
-            (1000, 1234, 1234, 1234),
-            (12990, 1000, 77, 1000),
-            (7990, 2000, 250, 1998),  # no hay peso que dé $2.000: el más cercano
-            (7990, 1, 1, 8),  # al menos un gramo
+            (1300, 2000, 1538),  # 1.538,46 g
+            (2990, 2000, 669),  # 668,9 g
+            (7990, 2000, 250),  # 250,3 g
+            (500, 2000, 4000),
+            (2000, 1001, 501),  # 500,5 g: la mitad hacia arriba
+            (7990, 1, 1),  # al menos un gramo
         ],
     )
-    def test_el_peso_que_mas_se_acerca(self, kilo, monto, gramos, se_cobra) -> None:
+    def test_al_gramo_mas_cercano(self, kilo, monto, gramos) -> None:
         assert gramos_por_monto(kilo, monto) == gramos
-        assert precio_por_gramos(kilo, gramos) == se_cobra
 
     @pytest.mark.parametrize(("kilo", "monto"), [(0, 2000), (2990, 0), (2990, -500)])
     def test_sin_precio_o_sin_monto_no_hay_peso(self, kilo, monto) -> None:
         assert gramos_por_monto(kilo, monto) == 0
 
-    @pytest.mark.parametrize("kilo", [990, 1000, 1290, 2490, 2990, 3490, 7990, 12990])
-    def test_nunca_hay_un_peso_mas_cercano_que_el_elegido(self, kilo) -> None:
-        # Contra la fuerza bruta: los precios de todos los pesos posibles, en orden.
-        precios = [precio_por_gramos(kilo, g) for g in range(1, 5000 * 1000 // kilo + 10)]
-        for monto in range(10, 5000, 37):
-            mejor = min(abs(precio - monto) for precio in precios)
-            elegido = precio_por_gramos(kilo, gramos_por_monto(kilo, monto))
-            assert abs(elegido - monto) == mejor, monto
+
+class TestCarritoPorMonto:
+    """Lo pedido por monto se cobra justo, aunque sus gramos costarían otra cosa."""
+
+    def test_la_linea_cobra_el_monto_pedido(self, jamon) -> None:
+        carrito = servicio_venta.Carrito()
+        linea = carrito.agregar(jamon, gramos=250, monto_clp=2000)
+        assert (linea.gramos, linea.subtotal_clp, carrito.total_clp) == (250, 2000, 2000)
+
+    def test_sumar_gramos_a_una_linea_por_monto_conserva_lo_pedido(self, jamon) -> None:
+        carrito = servicio_venta.Carrito()
+        carrito.agregar(jamon, gramos=250, monto_clp=2000)
+        linea = carrito.agregar(jamon, gramos=350)  # y 350 g pesados: $2.797
+        assert (linea.gramos, linea.subtotal_clp) == (600, 4797)
+
+    def test_sumar_un_monto_a_una_linea_pesada(self, jamon) -> None:
+        carrito = servicio_venta.Carrito()
+        carrito.agregar(jamon, gramos=350)
+        linea = carrito.agregar(jamon, gramos=250, monto_clp=2000)
+        assert (linea.gramos, linea.subtotal_clp) == (600, 4797)
+
+    def test_volver_a_pesar_sin_monto_cobra_los_gramos(self, jamon) -> None:
+        carrito = servicio_venta.Carrito()
+        carrito.agregar(jamon, gramos=250, monto_clp=2000)
+        carrito.cambiar_gramos(jamon.codigo_barras, 350)
+        assert carrito.total_clp == 2797
+        carrito.cambiar_gramos(jamon.codigo_barras, 375, 3000)
+        assert carrito.total_clp == 3000
+
+    @pytest.mark.parametrize("monto", [0, -2000, 9000, True])
+    def test_un_monto_que_no_corresponde_al_peso(self, jamon, monto) -> None:
+        with pytest.raises(DatosInvalidos):
+            servicio_venta.Carrito().agregar(jamon, gramos=250, monto_clp=monto)
+
+    def test_un_producto_por_unidad_no_lleva_monto(self, leche) -> None:
+        with pytest.raises(DatosInvalidos):
+            servicio_venta.Carrito().agregar(leche, monto_clp=2000)
+
+    def test_se_cobra_y_se_guarda_el_monto(self, conexion, jamon) -> None:
+        carrito = servicio_venta.Carrito()
+        carrito.agregar(jamon, gramos=250, monto_clp=2000)
+        venta = _cobrar(conexion, carrito)
+        (linea,) = repo_ventas.lineas_de(conexion, venta.id)
+        assert (venta.total_clp, linea.gramos, linea.subtotal_clp) == (2000, 250, 2000)
+        assert repo_productos.obtener_por_id(conexion, jamon.id).stock == 2000 - 250
+
+    def test_el_servidor_revisa_el_monto_que_llega_por_la_red(self, conexion, jamon) -> None:
+        carrito = servicio_venta.Carrito()
+        carrito.agregar(jamon, gramos=250, monto_clp=2000)
+        datos = carrito.a_dict()
+        assert servicio_venta.Carrito.desde_dict(datos).total_clp == 2000
+        datos["lineas"][0]["monto_clp"] = 900  # una caja que mandara un monto incoherente
+        with pytest.raises(DatosInvalidos):
+            _cobrar(conexion, servicio_venta.Carrito.desde_dict(datos))
 
 
 class TestCarrito:

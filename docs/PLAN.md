@@ -412,9 +412,9 @@ Boleta electrónica, impresoras y cajón de dinero **quedan fuera**: es otro pro
 ### Cómo retomar (estado al 2026-10-12)
 
 **Dónde está todo:** rama `diseño`, todo subido a GitHub. `main` tiene hasta la fase 24 anotada
-(PR #12, fusionado); **las fases 24 a 27 están en `diseño` sin PR** (6 commits por delante de
-`main`). **793 pruebas en verde.** Esquema de la base en la **versión 8**, protocolo entre cajas en
-la **10**.
+(PR #12, fusionado); **las fases 24 a 27 están en `diseño` sin PR** (7 commits por delante de
+`main`). **798 pruebas en verde.** Esquema de la base en la **versión 8**, protocolo entre cajas en
+la **11**.
 
 **La tienda funciona con la versión de la fase 26** desde el **2026-10-10**: los dos PC
 actualizados con `ACTUALIZAR-ESTE-PC.bat`, y Santiago informó que todo salió bien. Fue la primera
@@ -449,7 +449,8 @@ Soprole 200ml" (tenía su código de barras como precio; sección 11 de `DESPLIE
 - La boleta electrónica, que es otro proyecto (`docs/BOLETA-ELECTRONICA-SII.md`).
 
 **Fase 27 (2026-10-12), hecha en código y sin instalar:** pedir un producto por peso dando el
-monto. Falta regenerar capturas y PDF, el `.exe`, el pendrive y llevarla a la tienda.
+monto, que se cobra justo, y la ventana del vuelto rediseñada. **Protocolo a la 11**: los dos PC
+se actualizan juntos. Falta regenerar capturas y PDF, el pendrive y llevarla a la tienda.
 
 **Pendiente de Santiago:** abrir y fusionar el PR de las fases 24 a 27; cotizar las fases 25 a
 27; cerrar la fase 20 (falta `GUION-DEMO.md`; el `README.md` se puso al día el 2026-10-12).
@@ -898,22 +899,27 @@ monto y vale en las dos cajas; nadie puede cobrar un total distinto del que se m
 calculaba de cabeza cuántos gramos son. Ahora escribe el monto y el programa dice los gramos,
 sin perder lo de siempre (gramos → precio). Ver D-037, punto 10.
 
-- [x] `utils/money.gramos_por_monto`: el peso cuyo precio más se acerca al monto; si hay uno
-      justo, ese. Probado contra la fuerza bruta con ocho precios por kilo
-- [x] Ventana del peso: campo **"o en pesos"** al lado de los gramos (`Tab` para pasar), cada uno
-      llena el otro; si el kilo no da justo, una línea dice lo que se cobra de verdad
+- [x] `utils/money.gramos_por_monto`: los gramos de un monto, al gramo más cercano
+- [x] Ventana del peso: campo **"En pesos"** al lado de los gramos (`Tab` para pasar), cada uno
+      llena el otro
+- [x] **Se cobra el monto justo** (Santiago, 2026-10-12, tras probar la primera versión, que
+      cobraba el peso más cercano y avisaba de la diferencia): `LineaCarrito.monto_clp`. Sumar a
+      la línea conserva lo de cada parte; volver a pesar con gramos vuelve al precio del peso
+- [x] El servidor comprueba que el monto corresponda a los gramos. **Protocolo a la versión 11**
 - [x] Montos que no son montos, negativos, de más de 50 kg y productos a $0 el kilo
 - [x] Pruebas en `test_venta_por_peso.py` y `test_ui_peso.py`, con teclas de verdad
+- [x] **Ventana del vuelto rediseñada** (pedido de Santiago, de paso): sin el texto de relleno en
+      letra gigante, "Paga con" con una pista debajo, y el vuelto en una franja verde con su
+      rótulo al lado
 - [x] Manual, sección 6: "Deme dos mil pesos de pan"
 - [ ] Capturas y PDF del manual regenerados
-- [ ] `.exe`, pendrive e instalación en los dos PC
+- [ ] Pendrive e instalación en los dos PC
 
-**Sin cambios de base ni de protocolo:** la línea sigue guardando gramos y el monto no se
-guarda. Basta actualizar los dos PC; da igual cuál primero.
+**Sin cambio de base** (`venta_linea.subtotal_clp` ya guardaba el importe de la línea), pero
+**protocolo a la 11**: los dos PC se actualizan juntos.
 
-**Criterio de aceptación:** "$2.000 de marraqueta" a $2.990 el kilo dice 669 g y cobra $2.000;
-"$2.000 de jamón" a $7.990 dice 250 g y avisa que se cobran $1.998; escribir los gramos funciona
-como antes.
+**Criterio de aceptación:** "$2.000 de marraqueta" a $1.300 el kilo dice 1.538 g y cobra
+$2.000 justos, en la pantalla y en la venta guardada; escribir los gramos funciona como antes.
 
 ---
 
